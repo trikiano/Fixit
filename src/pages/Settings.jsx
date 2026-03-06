@@ -1,0 +1,510 @@
+import React, { useState, useEffect } from 'react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import PageHeader from "@/components/ui/PageHeader";
+import { Settings, Store, Palette, Globe, Bell, Shield, Receipt, CheckCircle } from 'lucide-react';
+
+const CURRENCIES = [
+  { code: 'EUR', symbol: '€', label: 'Euro (€)' },
+  { code: 'USD', symbol: '$', label: 'Dollar US ($)' },
+  { code: 'GBP', symbol: '£', label: 'Livre Sterling (£)' },
+  { code: 'MAD', symbol: 'DH', label: 'Dirham Marocain (DH)' },
+  { code: 'DZD', symbol: 'DA', label: 'Dinar Algérien (DA)' },
+  { code: 'TND', symbol: 'DT', label: 'Dinar Tunisien (DT)' },
+  { code: 'XOF', symbol: 'CFA', label: 'Franc CFA (CFA)' },
+  { code: 'CAD', symbol: 'CA$', label: 'Dollar Canadien (CA$)' },
+  { code: 'CHF', symbol: 'CHF', label: 'Franc Suisse (CHF)' },
+];
+
+const THEMES = [
+  { id: 'dark', label: 'Sombre', description: 'Fond foncé, sobre et professionnel' },
+  { id: 'light', label: 'Clair', description: 'Fond blanc, lumineux' },
+  { id: 'blue', label: 'Bleu profond', description: 'Thème bleu nuit' },
+];
+
+const TAX_RATES = ['0', '5.5', '10', '20', '21', 'Personnalisé'];
+
+const LANGS = [
+  { code: 'fr', label: 'Français' },
+  { code: 'en', label: 'English' },
+  { code: 'ar', label: 'العربية' },
+];
+
+const DEFAULT_SETTINGS = {
+  // Boutique
+  shop_name: 'TechRepair Pro',
+  shop_address: '',
+  shop_phone: '',
+  shop_email: '',
+  shop_website: '',
+  shop_logo: '',
+  // Devise & Taxes
+  currency: 'EUR',
+  tax_rate: '20',
+  custom_tax: '',
+  price_include_tax: true,
+  // Apparence
+  theme: 'dark',
+  language: 'fr',
+  date_format: 'DD/MM/YYYY',
+  // Réparation
+  default_warranty_repair: '90',
+  default_warranty_sale: '365',
+  repair_prefix: 'REP',
+  sale_prefix: 'VNT',
+  // Notifications
+  notif_repair_ready: true,
+  notif_low_stock: true,
+  notif_warranty_expire: true,
+  notif_email: true,
+  notif_sms: false,
+  notif_whatsapp: false,
+  // Caisse
+  require_close_reason: true,
+  auto_print_receipt: false,
+  show_tax_on_receipt: true,
+  // Sécurité
+  two_fa_admin: false,
+  session_timeout: '60',
+  min_password_length: '8',
+};
+
+function useSettings() {
+  const [settings, setSettings] = useState(() => {
+    try {
+      const stored = localStorage.getItem('app_settings');
+      return stored ? { ...DEFAULT_SETTINGS, ...JSON.parse(stored) } : DEFAULT_SETTINGS;
+    } catch { return DEFAULT_SETTINGS; }
+  });
+  const [saved, setSaved] = useState(false);
+
+  const save = (newSettings) => {
+    localStorage.setItem('app_settings', JSON.stringify(newSettings));
+    setSettings(newSettings);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+    // Apply theme
+    applyTheme(newSettings.theme);
+  };
+
+  const update = (key, value) => setSettings(p => ({ ...p, [key]: value }));
+
+  useEffect(() => { applyTheme(settings.theme); }, []);
+
+  return { settings, update, save, saved };
+}
+
+function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === 'light') {
+    root.style.setProperty('--background', '0 0% 97%');
+    root.style.setProperty('--foreground', '222 47% 8%');
+    root.style.setProperty('--card', '0 0% 100%');
+    root.style.setProperty('--card-foreground', '222 47% 8%');
+    root.style.setProperty('--muted', '220 13% 91%');
+    root.style.setProperty('--muted-foreground', '220 9% 46%');
+    root.style.setProperty('--border', '220 13% 86%');
+    root.style.setProperty('--input', '220 13% 86%');
+    root.style.setProperty('--popover', '0 0% 100%');
+    root.style.setProperty('--popover-foreground', '222 47% 8%');
+    root.style.setProperty('--secondary', '220 13% 91%');
+    root.style.setProperty('--secondary-foreground', '222 47% 8%');
+    root.style.setProperty('--accent', '220 13% 91%');
+    root.style.setProperty('--accent-foreground', '222 47% 8%');
+  } else if (theme === 'blue') {
+    root.style.setProperty('--background', '224 71% 4%');
+    root.style.setProperty('--foreground', '213 31% 91%');
+    root.style.setProperty('--card', '224 71% 7%');
+    root.style.setProperty('--card-foreground', '213 31% 91%');
+    root.style.setProperty('--muted', '223 47% 11%');
+    root.style.setProperty('--muted-foreground', '215 16% 47%');
+    root.style.setProperty('--border', '216 34% 17%');
+    root.style.setProperty('--input', '216 34% 17%');
+    root.style.setProperty('--popover', '224 71% 7%');
+    root.style.setProperty('--popover-foreground', '213 31% 91%');
+    root.style.setProperty('--secondary', '222 47% 12%');
+    root.style.setProperty('--secondary-foreground', '213 31% 91%');
+    root.style.setProperty('--accent', '216 34% 17%');
+    root.style.setProperty('--accent-foreground', '213 31% 91%');
+  } else {
+    // dark (default)
+    root.style.setProperty('--background', '222 47% 6%');
+    root.style.setProperty('--foreground', '210 40% 98%');
+    root.style.setProperty('--card', '222 47% 10%');
+    root.style.setProperty('--card-foreground', '210 40% 98%');
+    root.style.setProperty('--muted', '222 47% 14%');
+    root.style.setProperty('--muted-foreground', '215 20% 55%');
+    root.style.setProperty('--border', '222 47% 18%');
+    root.style.setProperty('--input', '222 47% 18%');
+    root.style.setProperty('--popover', '222 47% 10%');
+    root.style.setProperty('--popover-foreground', '210 40% 98%');
+    root.style.setProperty('--secondary', '222 47% 15%');
+    root.style.setProperty('--secondary-foreground', '210 40% 98%');
+    root.style.setProperty('--accent', '222 47% 18%');
+    root.style.setProperty('--accent-foreground', '210 40% 98%');
+  }
+}
+
+export default function SettingsPage() {
+  const { settings, update, save, saved } = useSettings();
+  const selectedCurrency = CURRENCIES.find(c => c.code === settings.currency) || CURRENCIES[0];
+
+  return (
+    <div>
+      <PageHeader title="Paramètres" subtitle="Configuration générale de l'application">
+        <Button onClick={() => save(settings)} className="gap-2">
+          {saved ? <CheckCircle className="h-4 w-4 text-green-400" /> : <Settings className="h-4 w-4" />}
+          {saved ? 'Sauvegardé !' : 'Sauvegarder'}
+        </Button>
+      </PageHeader>
+
+      <Tabs defaultValue="boutique" className="space-y-4">
+        <TabsList className="flex flex-wrap gap-1 h-auto bg-muted/40 p-1 rounded-xl">
+          <TabsTrigger value="boutique" className="gap-2 text-xs"><Store className="h-3.5 w-3.5" />Boutique</TabsTrigger>
+          <TabsTrigger value="devise" className="gap-2 text-xs"><Globe className="h-3.5 w-3.5" />Devise & Taxes</TabsTrigger>
+          <TabsTrigger value="apparence" className="gap-2 text-xs"><Palette className="h-3.5 w-3.5" />Apparence</TabsTrigger>
+          <TabsTrigger value="reparation" className="gap-2 text-xs"><Receipt className="h-3.5 w-3.5" />Réparation</TabsTrigger>
+          <TabsTrigger value="notifications" className="gap-2 text-xs"><Bell className="h-3.5 w-3.5" />Notifications</TabsTrigger>
+          <TabsTrigger value="caisse" className="gap-2 text-xs"><Store className="h-3.5 w-3.5" />Caisse</TabsTrigger>
+          <TabsTrigger value="securite" className="gap-2 text-xs"><Shield className="h-3.5 w-3.5" />Sécurité</TabsTrigger>
+        </TabsList>
+
+        {/* Boutique */}
+        <TabsContent value="boutique">
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2"><Store className="h-4 w-4 text-primary" />Informations de la boutique</CardTitle>
+              <CardDescription>Nom, coordonnées et identité visuelle</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Nom de la boutique</Label>
+                  <Input value={settings.shop_name} onChange={e => update('shop_name', e.target.value)} placeholder="TechRepair Pro" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Téléphone</Label>
+                  <Input value={settings.shop_phone} onChange={e => update('shop_phone', e.target.value)} placeholder="+33 1 23 45 67 89" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Email</Label>
+                  <Input value={settings.shop_email} onChange={e => update('shop_email', e.target.value)} placeholder="contact@boutique.fr" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Site web</Label>
+                  <Input value={settings.shop_website} onChange={e => update('shop_website', e.target.value)} placeholder="https://www.boutique.fr" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Adresse complète</Label>
+                <Input value={settings.shop_address} onChange={e => update('shop_address', e.target.value)} placeholder="123 Rue de la Paix, 75001 Paris" />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Devise & Taxes */}
+        <TabsContent value="devise">
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2"><Globe className="h-4 w-4 text-primary" />Devise & Taxes</CardTitle>
+              <CardDescription>Configuration monétaire et fiscale</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-1.5">
+                <Label>Devise principale</Label>
+                <Select value={settings.currency} onValueChange={v => update('currency', v)}>
+                  <SelectTrigger className="w-full max-w-xs">
+                    <SelectValue>
+                      <span className="font-medium">{selectedCurrency.symbol} — {selectedCurrency.label}</span>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60 overflow-y-auto">
+                    {CURRENCIES.map(c => (
+                      <SelectItem key={c.code} value={c.code}>
+                        <span className="font-mono font-bold w-10 inline-block">{c.symbol}</span>
+                        <span className="ml-2">{c.label}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Symbole actuel : <span className="font-bold text-foreground text-sm">{selectedCurrency.symbol}</span></p>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label>Taux de TVA</Label>
+                  <Select value={settings.tax_rate} onValueChange={v => update('tax_rate', v)}>
+                    <SelectTrigger className="w-full max-w-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">0% — Exonéré</SelectItem>
+                      <SelectItem value="5.5">5,5% — Taux réduit</SelectItem>
+                      <SelectItem value="10">10% — Taux intermédiaire</SelectItem>
+                      <SelectItem value="20">20% — Taux normal (France)</SelectItem>
+                      <SelectItem value="21">21% — Taux normal (Belgique)</SelectItem>
+                      <SelectItem value="19">19% — Taux normal (Allemagne)</SelectItem>
+                      <SelectItem value="7.7">7,7% — Taux normal (Suisse)</SelectItem>
+                      <SelectItem value="Personnalisé">Personnalisé</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {settings.tax_rate === 'Personnalisé' && (
+                  <div className="space-y-1.5">
+                    <Label>Taux personnalisé (%)</Label>
+                    <Input type="number" min="0" max="100" value={settings.custom_tax} onChange={e => update('custom_tax', e.target.value)} placeholder="Ex: 14" className="max-w-xs" />
+                  </div>
+                )}
+                <div className="flex items-center gap-3">
+                  <Switch checked={settings.price_include_tax} onCheckedChange={v => update('price_include_tax', v)} />
+                  <div>
+                    <Label>Prix TTC par défaut</Label>
+                    <p className="text-xs text-muted-foreground">Les prix affichés incluent la TVA</p>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-1.5">
+                <Label>Format de date</Label>
+                <Select value={settings.date_format} onValueChange={v => update('date_format', v)}>
+                  <SelectTrigger className="w-full max-w-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="DD/MM/YYYY">DD/MM/YYYY (ex: 06/03/2026)</SelectItem>
+                    <SelectItem value="MM/DD/YYYY">MM/DD/YYYY (ex: 03/06/2026)</SelectItem>
+                    <SelectItem value="YYYY-MM-DD">YYYY-MM-DD (ex: 2026-03-06)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Apparence */}
+        <TabsContent value="apparence">
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2"><Palette className="h-4 w-4 text-primary" />Apparence & Langue</CardTitle>
+              <CardDescription>Thème visuel et localisation</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold">Thème de l'interface</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {THEMES.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => { update('theme', t.id); applyTheme(t.id); }}
+                      className={`relative p-4 rounded-xl border-2 text-left transition-all ${settings.theme === t.id ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'}`}
+                    >
+                      <div className={`h-10 w-full rounded-lg mb-3 ${t.id === 'light' ? 'bg-gray-100 border border-gray-200' : t.id === 'blue' ? 'bg-blue-950' : 'bg-zinc-900'}`}>
+                        <div className={`h-full w-1/3 rounded-l-lg ${t.id === 'light' ? 'bg-gray-200' : t.id === 'blue' ? 'bg-blue-900' : 'bg-zinc-800'}`} />
+                      </div>
+                      <p className="text-sm font-semibold">{t.label}</p>
+                      <p className="text-xs text-muted-foreground">{t.description}</p>
+                      {settings.theme === t.id && (
+                        <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                          <CheckCircle className="h-3 w-3 text-primary-foreground" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-1.5">
+                <Label>Langue de l'interface</Label>
+                <Select value={settings.language} onValueChange={v => update('language', v)}>
+                  <SelectTrigger className="w-full max-w-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {LANGS.map(l => <SelectItem key={l.code} value={l.code}>{l.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Réparation */}
+        <TabsContent value="reparation">
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2"><Receipt className="h-4 w-4 text-primary" />Atelier & Réparation</CardTitle>
+              <CardDescription>Paramètres par défaut pour les tickets de réparation</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Garantie réparation par défaut (jours)</Label>
+                  <Select value={settings.default_warranty_repair} onValueChange={v => update('default_warranty_repair', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="30">30 jours</SelectItem>
+                      <SelectItem value="60">60 jours</SelectItem>
+                      <SelectItem value="90">90 jours</SelectItem>
+                      <SelectItem value="180">6 mois</SelectItem>
+                      <SelectItem value="365">1 an</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Garantie vente par défaut (jours)</Label>
+                  <Select value={settings.default_warranty_sale} onValueChange={v => update('default_warranty_sale', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="90">90 jours</SelectItem>
+                      <SelectItem value="180">6 mois</SelectItem>
+                      <SelectItem value="365">1 an</SelectItem>
+                      <SelectItem value="730">2 ans</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Préfixe tickets réparation</Label>
+                  <Input value={settings.repair_prefix} onChange={e => update('repair_prefix', e.target.value.toUpperCase())} placeholder="REP" className="max-w-xs font-mono" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Préfixe numéros de vente</Label>
+                  <Input value={settings.sale_prefix} onChange={e => update('sale_prefix', e.target.value.toUpperCase())} placeholder="VNT" className="max-w-xs font-mono" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Notifications */}
+        <TabsContent value="notifications">
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2"><Bell className="h-4 w-4 text-primary" />Notifications automatiques</CardTitle>
+              <CardDescription>Canaux et événements déclencheurs</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold">Canaux d'envoi</Label>
+                {[
+                  { key: 'notif_email', label: 'Email', desc: 'Notifications par email' },
+                  { key: 'notif_sms', label: 'SMS', desc: 'Notifications par SMS' },
+                  { key: 'notif_whatsapp', label: 'WhatsApp', desc: 'Messages WhatsApp automatiques' },
+                ].map(item => (
+                  <div key={item.key} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                    <div>
+                      <p className="text-sm font-medium">{item.label}</p>
+                      <p className="text-xs text-muted-foreground">{item.desc}</p>
+                    </div>
+                    <Switch checked={settings[item.key]} onCheckedChange={v => update(item.key, v)} />
+                  </div>
+                ))}
+              </div>
+              <Separator />
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold">Événements déclencheurs</Label>
+                {[
+                  { key: 'notif_repair_ready', label: 'Réparation prête', desc: 'Notifier le client quand la réparation est prête' },
+                  { key: 'notif_low_stock', label: 'Stock bas', desc: 'Alerter quand un produit atteint le seuil minimum' },
+                  { key: 'notif_warranty_expire', label: 'Expiration garantie', desc: 'Rappel 7 jours avant expiration' },
+                ].map(item => (
+                  <div key={item.key} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                    <div>
+                      <p className="text-sm font-medium">{item.label}</p>
+                      <p className="text-xs text-muted-foreground">{item.desc}</p>
+                    </div>
+                    <Switch checked={settings[item.key]} onCheckedChange={v => update(item.key, v)} />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Caisse */}
+        <TabsContent value="caisse">
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2"><Store className="h-4 w-4 text-primary" />Caisse & Tickets</CardTitle>
+              <CardDescription>Comportement de la caisse et des reçus</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {[
+                { key: 'require_close_reason', label: 'Justification obligatoire en cas d\'écart de caisse', desc: 'Impossible de fermer la caisse avec un écart sans justification' },
+                { key: 'auto_print_receipt', label: 'Impression automatique du ticket', desc: 'Imprimer le reçu dès la validation d\'une vente' },
+                { key: 'show_tax_on_receipt', label: 'Afficher la TVA sur le ticket', desc: 'Détail de la TVA sur les reçus clients' },
+              ].map(item => (
+                <div key={item.key} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                  <div>
+                    <p className="text-sm font-medium">{item.label}</p>
+                    <p className="text-xs text-muted-foreground">{item.desc}</p>
+                  </div>
+                  <Switch checked={settings[item.key]} onCheckedChange={v => update(item.key, v)} />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Sécurité */}
+        <TabsContent value="securite">
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2"><Shield className="h-4 w-4 text-primary" />Sécurité & Accès</CardTitle>
+              <CardDescription>Paramètres de sécurité et contrôle d'accès</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                <div>
+                  <p className="text-sm font-medium">Double authentification (2FA) Admin</p>
+                  <p className="text-xs text-muted-foreground">Obligatoire pour les comptes administrateurs</p>
+                </div>
+                <Switch checked={settings.two_fa_admin} onCheckedChange={v => update('two_fa_admin', v)} />
+              </div>
+              <Separator />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Délai d'expiration de session (minutes)</Label>
+                  <Select value={settings.session_timeout} onValueChange={v => update('session_timeout', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">15 minutes</SelectItem>
+                      <SelectItem value="30">30 minutes</SelectItem>
+                      <SelectItem value="60">1 heure</SelectItem>
+                      <SelectItem value="120">2 heures</SelectItem>
+                      <SelectItem value="480">8 heures (journée)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Longueur minimale du mot de passe</Label>
+                  <Select value={settings.min_password_length} onValueChange={v => update('min_password_length', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="6">6 caractères</SelectItem>
+                      <SelectItem value="8">8 caractères (recommandé)</SelectItem>
+                      <SelectItem value="10">10 caractères</SelectItem>
+                      <SelectItem value="12">12 caractères (fort)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

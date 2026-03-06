@@ -61,6 +61,8 @@ import Expenses from './pages/Expenses';
 import StockMovements from './pages/StockMovements';
 import AuditLogs from './pages/AuditLogs';
 import Notifications from './pages/Notifications';
+import Settings from './pages/Settings';
+import POS from './pages/POS';
 import __Layout from './Layout.jsx';
 
 
@@ -79,6 +81,8 @@ export const PAGES = {
     "StockMovements": StockMovements,
     "AuditLogs": AuditLogs,
     "Notifications": Notifications,
+    "Settings": Settings,
+    "POS": POS,
 }
 
 export const pagesConfig = {
