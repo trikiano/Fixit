@@ -56,7 +56,7 @@ export default function SettingsPage() {
   return (
     <div>
       <PageHeader title="Paramètres" subtitle="Configuration générale de l'application">
-        <Button onClick={() => save(settings)} className="gap-2">
+        <Button onClick={save} className="gap-2">
           {saved ? <CheckCircle className="h-4 w-4 text-green-400" /> : <Settings className="h-4 w-4" />}
           {saved ? 'Sauvegardé !' : 'Sauvegarder'}
         </Button>
