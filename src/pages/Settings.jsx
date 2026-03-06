@@ -36,8 +36,22 @@ const LANGS = [
 ];
 
 export default function SettingsPage() {
-  const { settings, update, save, saved } = useSettings();
-  const selectedCurrency = CURRENCIES.find(c => c.code === settings.currency) || CURRENCIES[0];
+  const { settings, saveSettings } = useAppSettings();
+  const [local, setLocal] = useState(settings);
+  const [saved, setSaved] = useState(false);
+
+  // Keep local in sync if settings change externally
+  useEffect(() => { setLocal(settings); }, [settings]);
+
+  const update = (key, value) => setLocal(p => ({ ...p, [key]: value }));
+
+  const save = () => {
+    saveSettings(local);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  const selectedCurrency = CURRENCIES.find(c => c.code === local.currency) || CURRENCIES[0];
 
   return (
     <div>
