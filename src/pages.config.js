@@ -54,6 +54,13 @@ import Repairs from './pages/Repairs';
 import Sales from './pages/Sales';
 import Suppliers from './pages/Suppliers';
 import PurchaseOrders from './pages/PurchaseOrders';
+import CashRegister from './pages/CashRegister';
+import Warranties from './pages/Warranties';
+import Promotions from './pages/Promotions';
+import Expenses from './pages/Expenses';
+import StockMovements from './pages/StockMovements';
+import AuditLogs from './pages/AuditLogs';
+import Notifications from './pages/Notifications';
 import __Layout from './Layout.jsx';
 
 
@@ -65,6 +72,13 @@ export const PAGES = {
     "Sales": Sales,
     "Suppliers": Suppliers,
     "PurchaseOrders": PurchaseOrders,
+    "CashRegister": CashRegister,
+    "Warranties": Warranties,
+    "Promotions": Promotions,
+    "Expenses": Expenses,
+    "StockMovements": StockMovements,
+    "AuditLogs": AuditLogs,
+    "Notifications": Notifications,
 }
 
 export const pagesConfig = {
