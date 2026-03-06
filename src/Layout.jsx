@@ -71,17 +71,14 @@ function LayoutInner({ children, currentPageName }) {
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-      {/* Mobile overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/60 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar */}
       <aside className={cn(
         "fixed lg:static inset-y-0 left-0 z-50 w-64 bg-card border-r border-border flex flex-col transition-transform duration-300",
         sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
-        {/* Logo */}
         <div className="h-16 flex items-center px-5 border-b border-border gap-3">
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
             <Wrench className="h-4 w-4 text-primary-foreground" />
@@ -95,7 +92,6 @@ function LayoutInner({ children, currentPageName }) {
           </Button>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-1">
           {navGroups.map(group => (
             <div key={group.label} className="mb-2">
@@ -129,7 +125,6 @@ function LayoutInner({ children, currentPageName }) {
           ))}
         </nav>
 
-        {/* User */}
         {user && (
           <div className="p-3 border-t border-border">
             <div className="flex items-center gap-3 px-2 py-2">
@@ -148,9 +143,7 @@ function LayoutInner({ children, currentPageName }) {
         )}
       </aside>
 
-      {/* Main */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
         <header className="h-16 border-b border-border flex items-center px-4 lg:px-6 gap-4 bg-card/50 backdrop-blur">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
@@ -173,7 +166,6 @@ function LayoutInner({ children, currentPageName }) {
           </div>
         </header>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 lg:p-6">
           {children}
         </div>
@@ -182,7 +174,6 @@ function LayoutInner({ children, currentPageName }) {
   );
 }
 
-// eslint-disable-next-line
 export default function Layout({ children, currentPageName }) {
   return (
     <SettingsProvider>

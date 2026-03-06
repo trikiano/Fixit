@@ -350,7 +350,7 @@ export default function SettingsPage() {
                     <p className="text-sm font-medium">{item.label}</p>
                     <p className="text-xs text-muted-foreground">{item.desc}</p>
                   </div>
-                  <Switch checked={settings[item.key]} onCheckedChange={v => update(item.key, v)} />
+                  <Switch checked={local[item.key]} onCheckedChange={v => update(item.key, v)} />
                 </div>
               ))}
             </CardContent>
