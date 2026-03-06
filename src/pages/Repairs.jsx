@@ -185,7 +185,7 @@ export default function Repairs() {
               <div><Label>Acompte (€)</Label><Input type="number" value={form.deposit_amount} onChange={e => setForm({...form, deposit_amount: parseFloat(e.target.value) || 0})} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Garantie (jours)</Label><Input type="number" value={form.warranty_days} onChange={e => setForm({...form, warranty_days: parseInt(e.target.value) || 0})} /></div>
+              <div><Label>Garantie (jours)</Label><Input type="number" value={form.warranty_days} onChange={e => setForm({...form, warranty_days: parseInt(e.target.value) || 0})} placeholder={settings.default_warranty_repair || '90'} /></div>
             </div>
             <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} /></div>
             <div className="flex justify-end gap-2">
