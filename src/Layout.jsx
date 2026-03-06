@@ -55,10 +55,11 @@ const navGroups = [
   }
 ];
 
-export default function Layout({ children, currentPageName }) {
+function LayoutInner({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [collapsed, setCollapsed] = useState({});
+  const { settings } = useAppSettings();
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
