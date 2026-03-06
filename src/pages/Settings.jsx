@@ -84,26 +84,26 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label>Nom de la boutique</Label>
-                  <Input value={settings.shop_name} onChange={e => update('shop_name', e.target.value)} placeholder="TechRepair Pro" />
+                  <Input value={local.shop_name} onChange={e => update('shop_name', e.target.value)} placeholder="TechRepair Pro" />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Téléphone</Label>
-                  <Input value={settings.shop_phone} onChange={e => update('shop_phone', e.target.value)} placeholder="+33 1 23 45 67 89" />
+                  <Input value={local.shop_phone} onChange={e => update('shop_phone', e.target.value)} placeholder="+33 1 23 45 67 89" />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label>Email</Label>
-                  <Input value={settings.shop_email} onChange={e => update('shop_email', e.target.value)} placeholder="contact@boutique.fr" />
+                  <Input value={local.shop_email} onChange={e => update('shop_email', e.target.value)} placeholder="contact@boutique.fr" />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Site web</Label>
-                  <Input value={settings.shop_website} onChange={e => update('shop_website', e.target.value)} placeholder="https://www.boutique.fr" />
+                  <Input value={local.shop_website} onChange={e => update('shop_website', e.target.value)} placeholder="https://www.boutique.fr" />
                 </div>
               </div>
               <div className="space-y-1.5">
                 <Label>Adresse complète</Label>
-                <Input value={settings.shop_address} onChange={e => update('shop_address', e.target.value)} placeholder="123 Rue de la Paix, 75001 Paris" />
+                <Input value={local.shop_address} onChange={e => update('shop_address', e.target.value)} placeholder="123 Rue de la Paix, 75001 Paris" />
               </div>
             </CardContent>
           </Card>
@@ -119,7 +119,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
               <div className="space-y-1.5">
                 <Label>Devise principale</Label>
-                <Select value={settings.currency} onValueChange={v => update('currency', v)}>
+                <Select value={local.currency} onValueChange={v => update('currency', v)}>
                   <SelectTrigger className="w-full max-w-xs">
                     <SelectValue>
                       <span className="font-medium">{selectedCurrency.symbol} — {selectedCurrency.label}</span>
