@@ -46,7 +46,7 @@ export default function POS() {
 
   const saleMutation = useMutation({
     mutationFn: async () => {
-      const saleNum = `VNT-${Date.now().toString(36).toUpperCase()}`;
+      const saleNum = generateTicketNumber('sale');
       const saleItems = cart.map(item => ({
         product_id: item.id, product_name: item.name,
         quantity: item.qty, unit_price: item.sell_price, discount: 0, total: item.qty * item.sell_price
@@ -213,7 +213,7 @@ export default function POS() {
                   <div key={item.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium truncate">{item.name}</p>
-                      <p className="text-xs text-primary font-bold">{(item.sell_price || 0).toFixed(2)} €</p>
+                      <p className="text-xs text-primary font-bold">{formatCurrency(item.sell_price || 0)}</p>
                     </div>
                     <div className="flex items-center gap-1">
                       <button onClick={() => updateQty(item.id, -1)} className="h-6 w-6 rounded-md bg-muted flex items-center justify-center hover:bg-muted/80">
@@ -252,7 +252,7 @@ export default function POS() {
                 <Separator />
                 <div className="flex justify-between font-bold">
                   <span className="text-sm">Total</span>
-                  <span className="text-lg text-primary">{total.toFixed(2)} €</span>
+                  <span className="text-lg text-primary">{formatCurrency(total)}</span>
                 </div>
               </div>
 
@@ -280,7 +280,7 @@ export default function POS() {
                 disabled={cart.length === 0 || saleMutation.isPending}
               >
                 <CheckCircle className="h-4 w-4" />
-                {saleMutation.isPending ? 'Traitement...' : `Encaisser ${total.toFixed(2)} €`}
+                {saleMutation.isPending ? 'Traitement...' : `Encaisser ${formatCurrency(total)}`}
               </Button>
             </div>
           </Card>
