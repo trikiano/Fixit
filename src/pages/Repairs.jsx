@@ -52,6 +52,7 @@ const emptyForm = {
 };
 
 export default function Repairs() {
+  const { formatCurrency, generateTicketNumber, settings } = useAppSettings();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -63,7 +64,7 @@ export default function Repairs() {
 
   const saveMutation = useMutation({
     mutationFn: (data) => {
-      const ticketNum = data.ticket_number || `REP-${Date.now().toString(36).toUpperCase()}`;
+      const ticketNum = data.ticket_number || generateTicketNumber('repair');
       const payload = { ...data, ticket_number: ticketNum };
       return editing ? base44.entities.Repair.update(editing.id, payload) : base44.entities.Repair.create(payload);
     },
@@ -106,7 +107,7 @@ export default function Repairs() {
     )},
     { header: "Statut", render: r => <StatusBadge status={r.status} /> },
     { header: "Priorité", render: r => <StatusBadge status={r.priority} /> },
-    { header: "Coût", render: r => <span className="text-sm font-medium">{(r.final_cost || r.estimated_cost || 0).toFixed(2)} €</span> },
+    { header: "Coût", render: r => <span className="text-sm font-medium">{formatCurrency(r.final_cost || r.estimated_cost || 0)}</span> },
     { header: "Date", render: r => <span className="text-xs text-muted-foreground">{r.created_date ? format(new Date(r.created_date), 'dd/MM/yyyy') : '-'}</span> },
   ];
 
