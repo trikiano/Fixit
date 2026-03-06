@@ -15,6 +15,7 @@ import { ShoppingCart, Plus, Search, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function Sales() {
+  const { formatCurrency, generateTicketNumber } = useAppSettings();
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -67,7 +68,7 @@ export default function Sales() {
   const total = items.reduce((s, i) => s + (i.total || 0), 0);
 
   const handleSave = () => {
-    const saleNum = `VNT-${Date.now().toString(36).toUpperCase()}`;
+    const saleNum = generateTicketNumber('sale');
     saveMutation.mutate({
       sale_number: editing?.sale_number || saleNum, client_name: clientName, type: 'vente',
       items, subtotal: total, discount_total: items.reduce((s, i) => s + (i.discount || 0), 0),
@@ -88,7 +89,7 @@ export default function Sales() {
     { header: "N° Vente", render: r => <span className="text-sm font-mono font-medium text-primary">{r.sale_number || '-'}</span> },
     { header: "Client", render: r => <span className="text-sm">{r.client_name || 'Anonyme'}</span> },
     { header: "Type", render: r => <StatusBadge status={r.type === 'vente' ? 'completee' : r.type} /> },
-    { header: "Total", render: r => <span className="text-sm font-bold">{(r.total || 0).toFixed(2)} €</span> },
+    { header: "Total", render: r => <span className="text-sm font-bold">{formatCurrency(r.total || 0)}</span> },
     { header: "Paiement", render: r => <span className="text-xs capitalize">{r.payment_method?.replace('_', ' ')}</span> },
     { header: "Statut", render: r => <StatusBadge status={r.status} /> },
     { header: "Date", render: r => <span className="text-xs text-muted-foreground">{r.created_date ? format(new Date(r.created_date), 'dd/MM/yyyy HH:mm') : '-'}</span> },
