@@ -143,7 +143,7 @@ export default function SettingsPage() {
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <Label>Taux de TVA</Label>
-                  <Select value={settings.tax_rate} onValueChange={v => update('tax_rate', v)}>
+                  <Select value={local.tax_rate} onValueChange={v => update('tax_rate', v)}>
                     <SelectTrigger className="w-full max-w-xs">
                       <SelectValue />
                     </SelectTrigger>
@@ -159,14 +159,14 @@ export default function SettingsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                {settings.tax_rate === 'Personnalisé' && (
+                {local.tax_rate === 'Personnalisé' && (
                   <div className="space-y-1.5">
                     <Label>Taux personnalisé (%)</Label>
-                    <Input type="number" min="0" max="100" value={settings.custom_tax} onChange={e => update('custom_tax', e.target.value)} placeholder="Ex: 14" className="max-w-xs" />
+                    <Input type="number" min="0" max="100" value={local.custom_tax} onChange={e => update('custom_tax', e.target.value)} placeholder="Ex: 14" className="max-w-xs" />
                   </div>
                 )}
                 <div className="flex items-center gap-3">
-                  <Switch checked={settings.price_include_tax} onCheckedChange={v => update('price_include_tax', v)} />
+                  <Switch checked={local.price_include_tax} onCheckedChange={v => update('price_include_tax', v)} />
                   <div>
                     <Label>Prix TTC par défaut</Label>
                     <p className="text-xs text-muted-foreground">Les prix affichés incluent la TVA</p>
@@ -178,7 +178,7 @@ export default function SettingsPage() {
 
               <div className="space-y-1.5">
                 <Label>Format de date</Label>
-                <Select value={settings.date_format} onValueChange={v => update('date_format', v)}>
+                <Select value={local.date_format} onValueChange={v => update('date_format', v)}>
                   <SelectTrigger className="w-full max-w-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="DD/MM/YYYY">DD/MM/YYYY (ex: 06/03/2026)</SelectItem>
@@ -206,14 +206,14 @@ export default function SettingsPage() {
                     <button
                       key={t.id}
                       onClick={() => { update('theme', t.id); applyTheme(t.id); }}
-                      className={`relative p-4 rounded-xl border-2 text-left transition-all ${settings.theme === t.id ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'}`}
+                      className={`relative p-4 rounded-xl border-2 text-left transition-all ${local.theme === t.id ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'}`}
                     >
                       <div className={`h-10 w-full rounded-lg mb-3 ${t.id === 'light' ? 'bg-gray-100 border border-gray-200' : t.id === 'blue' ? 'bg-blue-950' : 'bg-zinc-900'}`}>
                         <div className={`h-full w-1/3 rounded-l-lg ${t.id === 'light' ? 'bg-gray-200' : t.id === 'blue' ? 'bg-blue-900' : 'bg-zinc-800'}`} />
                       </div>
                       <p className="text-sm font-semibold">{t.label}</p>
                       <p className="text-xs text-muted-foreground">{t.description}</p>
-                      {settings.theme === t.id && (
+                      {local.theme === t.id && (
                         <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
                           <CheckCircle className="h-3 w-3 text-primary-foreground" />
                         </div>
@@ -227,7 +227,7 @@ export default function SettingsPage() {
 
               <div className="space-y-1.5">
                 <Label>Langue de l'interface</Label>
-                <Select value={settings.language} onValueChange={v => update('language', v)}>
+                <Select value={local.language} onValueChange={v => update('language', v)}>
                   <SelectTrigger className="w-full max-w-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {LANGS.map(l => <SelectItem key={l.code} value={l.code}>{l.label}</SelectItem>)}
@@ -249,7 +249,7 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label>Garantie réparation par défaut (jours)</Label>
-                  <Select value={settings.default_warranty_repair} onValueChange={v => update('default_warranty_repair', v)}>
+                  <Select value={local.default_warranty_repair} onValueChange={v => update('default_warranty_repair', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="30">30 jours</SelectItem>
@@ -262,7 +262,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Garantie vente par défaut (jours)</Label>
-                  <Select value={settings.default_warranty_sale} onValueChange={v => update('default_warranty_sale', v)}>
+                  <Select value={local.default_warranty_sale} onValueChange={v => update('default_warranty_sale', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="90">90 jours</SelectItem>
@@ -276,11 +276,11 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label>Préfixe tickets réparation</Label>
-                  <Input value={settings.repair_prefix} onChange={e => update('repair_prefix', e.target.value.toUpperCase())} placeholder="REP" className="max-w-xs font-mono" />
+                  <Input value={local.repair_prefix} onChange={e => update('repair_prefix', e.target.value.toUpperCase())} placeholder="REP" className="max-w-xs font-mono" />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Préfixe numéros de vente</Label>
-                  <Input value={settings.sale_prefix} onChange={e => update('sale_prefix', e.target.value.toUpperCase())} placeholder="VNT" className="max-w-xs font-mono" />
+                  <Input value={local.sale_prefix} onChange={e => update('sale_prefix', e.target.value.toUpperCase())} placeholder="VNT" className="max-w-xs font-mono" />
                 </div>
               </div>
             </CardContent>
@@ -307,7 +307,7 @@ export default function SettingsPage() {
                       <p className="text-sm font-medium">{item.label}</p>
                       <p className="text-xs text-muted-foreground">{item.desc}</p>
                     </div>
-                    <Switch checked={settings[item.key]} onCheckedChange={v => update(item.key, v)} />
+                    <Switch checked={local[item.key]} onCheckedChange={v => update(item.key, v)} />
                   </div>
                 ))}
               </div>
@@ -324,7 +324,7 @@ export default function SettingsPage() {
                       <p className="text-sm font-medium">{item.label}</p>
                       <p className="text-xs text-muted-foreground">{item.desc}</p>
                     </div>
-                    <Switch checked={settings[item.key]} onCheckedChange={v => update(item.key, v)} />
+                    <Switch checked={local[item.key]} onCheckedChange={v => update(item.key, v)} />
                   </div>
                 ))}
               </div>
@@ -370,13 +370,13 @@ export default function SettingsPage() {
                   <p className="text-sm font-medium">Double authentification (2FA) Admin</p>
                   <p className="text-xs text-muted-foreground">Obligatoire pour les comptes administrateurs</p>
                 </div>
-                <Switch checked={settings.two_fa_admin} onCheckedChange={v => update('two_fa_admin', v)} />
+                <Switch checked={local.two_fa_admin} onCheckedChange={v => update('two_fa_admin', v)} />
               </div>
               <Separator />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label>Délai d'expiration de session (minutes)</Label>
-                  <Select value={settings.session_timeout} onValueChange={v => update('session_timeout', v)}>
+                  <Select value={local.session_timeout} onValueChange={v => update('session_timeout', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="15">15 minutes</SelectItem>
@@ -389,7 +389,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Longueur minimale du mot de passe</Label>
-                  <Select value={settings.min_password_length} onValueChange={v => update('min_password_length', v)}>
+                  <Select value={local.min_password_length} onValueChange={v => update('min_password_length', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="6">6 caractères</SelectItem>
