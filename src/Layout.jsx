@@ -180,6 +180,13 @@ function LayoutInner({ children, currentPageName }) {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function Layout({ children, currentPageName }) {
+  return (
+    <SettingsProvider>
+      <LayoutInner currentPageName={currentPageName}>{children}</LayoutInner>
     </SettingsProvider>
   );
 }
