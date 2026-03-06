@@ -16,6 +16,7 @@ import { fr } from 'date-fns/locale';
 const COLORS = ['hsl(217,91%,60%)', 'hsl(160,60%,45%)', 'hsl(30,80%,55%)', 'hsl(280,65%,60%)', 'hsl(340,75%,55%)'];
 
 export default function Dashboard() {
+  const { formatCurrency, settings } = useAppSettings();
   const { data: sales = [] } = useQuery({ queryKey: ['sales'], queryFn: () => base44.entities.Sale.list('-created_date', 100) });
   const { data: repairs = [] } = useQuery({ queryKey: ['repairs'], queryFn: () => base44.entities.Repair.list('-created_date', 100) });
   const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: () => base44.entities.Product.list() });
@@ -54,7 +55,7 @@ export default function Dashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Chiffre d'affaires" value={`${totalCA.toFixed(2)} €`} icon={DollarSign} subtitle="Toutes ventes" />
+        <StatCard title="Chiffre d'affaires" value={formatCurrency(totalCA)} icon={DollarSign} subtitle="Toutes ventes" />
         <StatCard title="Ventes" value={todaySales.length} icon={ShoppingCart} subtitle="Transactions" />
         <StatCard title="Réparations actives" value={activeRepairs.length} icon={Wrench} subtitle="En cours" />
         <StatCard title="Clients" value={clients.length} icon={Users} subtitle="Total enregistrés" />
