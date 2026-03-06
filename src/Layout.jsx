@@ -155,9 +155,19 @@ export default function Layout({ children, currentPageName }) {
           </Button>
           <div className="flex-1" />
           <div className="flex items-center gap-2">
+            <Link to={createPageUrl("POS")} title="Caisse POS">
+              <Button variant="ghost" size="icon" className="relative bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30">
+                <ShoppingBag className="h-4 w-4" />
+              </Button>
+            </Link>
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-4 w-4" />
             </Button>
+            <Link to={createPageUrl("Settings")}>
+              <Button variant="ghost" size="icon">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </Link>
           </div>
         </header>
 
