@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
-import { SettingsProvider } from "@/components/settings/SettingsContext";
+import { SettingsProvider, useAppSettings } from "@/components/settings/SettingsContext";
 import {
   LayoutDashboard, Users, Package, Wrench, ShoppingCart,
   Truck, Shield, DollarSign, Receipt, Tag, Bell,
