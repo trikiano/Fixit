@@ -49,6 +49,7 @@ const navGroups = [
       { name: "Dépenses", icon: ClipboardList, page: "Expenses" },
       { name: "Journal Audit", icon: ScrollText, page: "AuditLogs" },
       { name: "Notifications", icon: Bell, page: "Notifications" },
+      { name: "Paramètres", icon: Settings, page: "Settings" },
     ]
   }
 ];
