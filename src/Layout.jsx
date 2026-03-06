@@ -182,6 +182,7 @@ function LayoutInner({ children, currentPageName }) {
   );
 }
 
+// eslint-disable-next-line
 export default function Layout({ children, currentPageName }) {
   return (
     <SettingsProvider>
