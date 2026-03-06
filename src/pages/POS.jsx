@@ -41,6 +41,7 @@ export default function POS() {
   const [lastSaleNum, setLastSaleNum] = useState('');
   const qc = useQueryClient();
 
+  const { formatCurrency, settings, generateTicketNumber } = useAppSettings();
   const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: () => base44.entities.Product.list() });
 
   const saleMutation = useMutation({
