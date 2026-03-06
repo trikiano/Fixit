@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, Package, Wrench, ShoppingCart,
   Truck, Shield, DollarSign, Receipt, Tag, Bell,
   ClipboardList, Settings, Menu, X, ChevronDown,
-  LogOut, BarChart3, Warehouse, ScrollText
+  LogOut, Warehouse, ScrollText, ShoppingBag
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
