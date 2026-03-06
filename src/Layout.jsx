@@ -88,7 +88,7 @@ function LayoutInner({ children, currentPageName }) {
             <Wrench className="h-4 w-4 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-sm font-bold text-foreground" id="shop-name-header">TechRepair Pro</h1>
+            <h1 className="text-sm font-bold text-foreground">{settings.shop_name || 'TechRepair Pro'}</h1>
             <p className="text-[10px] text-muted-foreground">Gestion Boutique</p>
           </div>
           <Button variant="ghost" size="icon" className="ml-auto lg:hidden" onClick={() => setSidebarOpen(false)}>
