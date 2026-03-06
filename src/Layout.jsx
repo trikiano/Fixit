@@ -69,6 +69,7 @@ export default function Layout({ children, currentPageName }) {
   };
 
   return (
+    <SettingsProvider>
     <div className="flex h-screen bg-background overflow-hidden">
       {/* Mobile overlay */}
       {sidebarOpen && (
