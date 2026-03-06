@@ -70,7 +70,6 @@ function LayoutInner({ children, currentPageName }) {
   };
 
   return (
-    <SettingsProvider>
     <div className="flex h-screen bg-background overflow-hidden">
       {/* Mobile overlay */}
       {sidebarOpen && (
