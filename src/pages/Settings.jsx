@@ -135,6 +135,7 @@ export default function SettingsPage() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">Symbole actuel : <span className="font-bold text-foreground text-sm">{selectedCurrency.symbol}</span></p>
+                <p className="text-xs text-emerald-400 mt-1">✓ Appliqué sur toutes les pages et le POS</p>
               </div>
 
               <Separator />
