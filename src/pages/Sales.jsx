@@ -12,6 +12,7 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import DataTable from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
 import { ShoppingCart, Plus, Search, Trash2 } from 'lucide-react';
+import ClientSelector from "@/components/ui/ClientSelector";
 import { format } from 'date-fns';
 
 export default function Sales() {

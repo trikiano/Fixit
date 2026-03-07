@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Wifi, User, Phone, CreditCard } from 'lucide-react';
+import { Wifi, CreditCard } from 'lucide-react';
+import ClientSelector from "@/components/ui/ClientSelector";
 
 export default function NewSaleModal({ open, onClose, packages, accounts, onSave }) {
   const empty = {
