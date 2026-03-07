@@ -24,6 +24,7 @@ const navGroups = [
     items: [
       { name: "Clients", icon: Users, page: "Clients" },
       { name: "Ventes", icon: ShoppingCart, page: "Sales" },
+      { name: "Forfaits Internet", icon: Wifi, page: "InternetSales" },
       { name: "Caisse", icon: DollarSign, page: "CashRegister" },
       { name: "Promotions", icon: Tag, page: "Promotions" },
     ]
