@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import {
   Search, ShoppingCart, Trash2, Plus, Minus, CheckCircle,
-  Package, ArrowLeft, Tag, User, CreditCard, Banknote, Smartphone
+  Package, ArrowLeft, Tag, CreditCard, Banknote, Smartphone
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
