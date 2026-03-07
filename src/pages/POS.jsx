@@ -195,10 +195,12 @@ export default function POS() {
         <div className="w-80 xl:w-96 flex flex-col gap-3 overflow-hidden">
           <Card className="flex-1 flex flex-col overflow-hidden border-border/50">
             <div className="p-3 border-b border-border/50">
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input placeholder="Nom du client (optionnel)" value={clientName} onChange={e => setClientName(e.target.value)} className="pl-8 h-8 text-sm" />
-              </div>
+              <ClientSelector
+                clientName={clientName}
+                clientPhone={''}
+                onSelect={(name) => setClientName(name || 'Client comptoir')}
+                defaultPassager={true}
+              />
             </div>
 
             {/* Cart items */}

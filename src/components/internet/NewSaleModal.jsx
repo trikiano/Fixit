@@ -56,15 +56,14 @@ export default function NewSaleModal({ open, onClose, packages, accounts, onSave
 
         <div className="space-y-4 mt-2">
           {/* Client */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-1"><User className="h-3 w-3" />Nom client *</Label>
-              <Input value={form.client_name} onChange={e => set('client_name', e.target.value)} placeholder="Nom complet" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-1"><Phone className="h-3 w-3" />Téléphone *</Label>
-              <Input value={form.client_phone} onChange={e => set('client_phone', e.target.value)} placeholder="06 xx xx xx xx" />
-            </div>
+          <div className="space-y-1.5">
+            <Label>Client *</Label>
+            <ClientSelector
+              clientName={form.client_name}
+              clientPhone={form.client_phone}
+              onSelect={(name, phone) => { set('client_name', name); set('client_phone', phone); }}
+              defaultPassager={false}
+            />
           </div>
 
           {/* Forfait */}
