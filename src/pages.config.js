@@ -47,42 +47,44 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
-import Dashboard from './pages/Dashboard';
+import AuditLogs from './pages/AuditLogs';
+import CashRegister from './pages/CashRegister';
 import Clients from './pages/Clients';
+import Dashboard from './pages/Dashboard';
+import Expenses from './pages/Expenses';
+import Notifications from './pages/Notifications';
+import POS from './pages/POS';
 import Products from './pages/Products';
+import Promotions from './pages/Promotions';
+import PurchaseOrders from './pages/PurchaseOrders';
 import Repairs from './pages/Repairs';
 import Sales from './pages/Sales';
-import Suppliers from './pages/Suppliers';
-import PurchaseOrders from './pages/PurchaseOrders';
-import CashRegister from './pages/CashRegister';
-import Warranties from './pages/Warranties';
-import Promotions from './pages/Promotions';
-import Expenses from './pages/Expenses';
-import StockMovements from './pages/StockMovements';
-import AuditLogs from './pages/AuditLogs';
-import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
-import POS from './pages/POS';
+import StockMovements from './pages/StockMovements';
+import Suppliers from './pages/Suppliers';
+import Warranties from './pages/Warranties';
+import InternetSales from './pages/InternetSales';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "Dashboard": Dashboard,
+    "AuditLogs": AuditLogs,
+    "CashRegister": CashRegister,
     "Clients": Clients,
+    "Dashboard": Dashboard,
+    "Expenses": Expenses,
+    "Notifications": Notifications,
+    "POS": POS,
     "Products": Products,
+    "Promotions": Promotions,
+    "PurchaseOrders": PurchaseOrders,
     "Repairs": Repairs,
     "Sales": Sales,
-    "Suppliers": Suppliers,
-    "PurchaseOrders": PurchaseOrders,
-    "CashRegister": CashRegister,
-    "Warranties": Warranties,
-    "Promotions": Promotions,
-    "Expenses": Expenses,
-    "StockMovements": StockMovements,
-    "AuditLogs": AuditLogs,
-    "Notifications": Notifications,
     "Settings": Settings,
-    "POS": POS,
+    "StockMovements": StockMovements,
+    "Suppliers": Suppliers,
+    "Warranties": Warranties,
+    "InternetSales": InternetSales,
 }
 
 export const pagesConfig = {
