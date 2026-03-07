@@ -120,7 +120,15 @@ export default function Sales() {
           <DialogHeader><DialogTitle>{editing ? `Vente ${editing.sale_number}` : 'Nouvelle vente'}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Nom client</Label><Input value={clientName} onChange={e => setClientName(e.target.value)} /></div>
+              <div>
+                <Label>Client</Label>
+                <ClientSelector
+                  clientName={clientName}
+                  clientPhone={''}
+                  onSelect={(name) => setClientName(name)}
+                  defaultPassager={true}
+                />
+              </div>
               <div><Label>Paiement</Label>
                 <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                   <SelectTrigger><SelectValue /></SelectTrigger>

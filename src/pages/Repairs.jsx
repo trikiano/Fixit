@@ -151,9 +151,14 @@ export default function Repairs() {
                 </Select>
               </div>
             )}
-            <div className="grid grid-cols-2 gap-4">
-              <div><Label>Nom client *</Label><Input value={form.client_name} onChange={e => setForm({...form, client_name: e.target.value})} /></div>
-              <div><Label>Téléphone client *</Label><Input value={form.client_phone} onChange={e => setForm({...form, client_phone: e.target.value})} /></div>
+            <div>
+              <Label>Client *</Label>
+              <ClientSelector
+                clientName={form.client_name}
+                clientPhone={form.client_phone}
+                onSelect={(name, phone) => setForm(f => ({ ...f, client_name: name, client_phone: phone }))}
+                defaultPassager={false}
+              />
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div><Label>Type appareil</Label>
