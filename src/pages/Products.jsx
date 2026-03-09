@@ -61,7 +61,7 @@ export default function Products() {
   const closeDialog = () => { setDialogOpen(false); setEditing(null); setForm(emptyForm); };
   const openEdit = (p) => {
     setEditing(p);
-    setForm({ name: p.name, sku: p.sku || '', category: p.category || 'telephone', brand: p.brand || '', model: p.model || '', buy_price: p.buy_price || 0, sell_price: p.sell_price || 0, quantity: p.quantity || 0, min_stock: p.min_stock || 2, location: p.location || '', imei: p.imei || '', serial_number: p.serial_number || '', condition: p.condition || 'neuf', barcode: p.barcode || '' });
+    setForm({ name: p.name, sku: p.sku || '', category: p.category || 'telephone', brand: p.brand || '', model: p.model || '', buy_price: p.buy_price || 0, sell_price: p.sell_price || 0, quantity: p.quantity || 0, min_stock: p.min_stock || 2, location: p.location || '', imei: p.imei || '', serial_number: p.serial_number || '', condition: p.condition || 'neuf', barcode: p.barcode || '', image_url: p.image_url || '' });
     setDialogOpen(true);
   };
 
