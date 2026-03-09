@@ -80,7 +80,7 @@ export default function Clients() {
       {filtered.length === 0 && !isLoading ? (
         <EmptyState icon={Users} title="Aucun client" description="Ajoutez votre premier client" actionLabel="Ajouter" onAction={() => setDialogOpen(true)} />
       ) : (
-        <DataTable columns={columns} data={filtered} isLoading={isLoading} onRowClick={openEdit} />
+        <DataTable columns={columns} data={filtered} isLoading={isLoading} onRowClick={setSelectedClient} />
       )}
 
       <Dialog open={dialogOpen} onOpenChange={v => !v && closeDialog()}>
