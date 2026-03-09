@@ -167,6 +167,8 @@ export default function Repairs() {
         <DataTable columns={columns} data={filtered} isLoading={isLoading} onRowClick={openEdit} />
       )}
 
+      </CashRegisterGuard>
+
       <Dialog open={dialogOpen} onOpenChange={v => !v && closeDialog()}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editing ? `Réparation ${editing.ticket_number}` : 'Nouvelle réparation'}</DialogTitle></DialogHeader>
