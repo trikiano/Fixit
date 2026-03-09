@@ -31,7 +31,7 @@ const conditions = [
   { value: 'occasion', label: 'Occasion' },
 ];
 
-const emptyForm = { name: '', sku: '', category: 'telephone', brand: '', model: '', buy_price: 0, sell_price: 0, quantity: 0, min_stock: 2, location: '', imei: '', serial_number: '', condition: 'neuf', barcode: '' };
+const emptyForm = { name: '', sku: '', category: 'telephone', brand: '', model: '', buy_price: 0, sell_price: 0, quantity: 0, min_stock: 2, location: '', imei: '', serial_number: '', condition: 'neuf', barcode: '', image_url: '' };
 
 export default function Products() {
   const [search, setSearch] = useState('');
