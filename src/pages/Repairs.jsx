@@ -59,8 +59,21 @@ export default function Repairs() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const clientName = urlParams.get('client_name') || '';
+    const clientPhone = urlParams.get('client_phone') || '';
+    return { ...emptyForm, client_name: clientName, client_phone: clientPhone };
+  });
+  const [autoOpen] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return !!(urlParams.get('client_name'));
+  });
   const qc = useQueryClient();
+
+  React.useEffect(() => {
+    if (autoOpen) setDialogOpen(true);
+  }, [autoOpen]);
 
   const { data: repairs = [], isLoading } = useQuery({ queryKey: ['repairs'], queryFn: () => base44.entities.Repair.list('-created_date') });
 
