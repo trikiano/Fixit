@@ -52,6 +52,7 @@ import CashRegister from './pages/CashRegister';
 import Clients from './pages/Clients';
 import Dashboard from './pages/Dashboard';
 import Expenses from './pages/Expenses';
+import InternetSales from './pages/InternetSales';
 import Notifications from './pages/Notifications';
 import POS from './pages/POS';
 import Products from './pages/Products';
@@ -63,7 +64,6 @@ import Settings from './pages/Settings';
 import StockMovements from './pages/StockMovements';
 import Suppliers from './pages/Suppliers';
 import Warranties from './pages/Warranties';
-import InternetSales from './pages/InternetSales';
 import __Layout from './Layout.jsx';
 
 
@@ -73,6 +73,7 @@ export const PAGES = {
     "Clients": Clients,
     "Dashboard": Dashboard,
     "Expenses": Expenses,
+    "InternetSales": InternetSales,
     "Notifications": Notifications,
     "POS": POS,
     "Products": Products,
@@ -84,7 +85,6 @@ export const PAGES = {
     "StockMovements": StockMovements,
     "Suppliers": Suppliers,
     "Warranties": Warranties,
-    "InternetSales": InternetSales,
 }
 
 export const pagesConfig = {

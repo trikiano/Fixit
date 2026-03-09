@@ -10,15 +10,17 @@ import { Badge } from "@/components/ui/badge";
 import PageHeader from "@/components/ui/PageHeader";
 import DataTable from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
-import { Package, Plus, Search, AlertTriangle } from 'lucide-react';
+import { Package, Plus, Search, AlertTriangle, Upload, X } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 const categories = [
   { value: 'telephone', label: 'Téléphone' },
+  { value: 'ordinateur', label: 'Ordinateur / PC' },
+  { value: 'tablette', label: 'Tablette' },
+  { value: 'chargeur', label: 'Chargeur' },
+  { value: 'cable', label: 'Câble' },
   { value: 'accessoire', label: 'Accessoire' },
   { value: 'piece_detachee', label: 'Pièce détachée' },
-  { value: 'ordinateur', label: 'Ordinateur' },
-  { value: 'tablette', label: 'Tablette' },
   { value: 'console', label: 'Console' },
   { value: 'autre', label: 'Autre' },
 ];
