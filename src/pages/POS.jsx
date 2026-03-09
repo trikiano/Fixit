@@ -173,12 +173,16 @@ export default function POS() {
                       inCart ? "border-primary bg-primary/10" : "border-border/50 bg-card hover:border-primary/50"
                     )}
                   >
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
-                      <Package className="h-5 w-5 text-primary" />
-                    </div>
+                    {product.image_url ? (
+                      <img src={product.image_url} alt={product.name} className="h-16 w-full rounded-lg object-cover mb-2" />
+                    ) : (
+                      <div className="h-16 w-full rounded-lg bg-primary/10 flex items-center justify-center mb-2">
+                        <Package className="h-7 w-7 text-primary/60" />
+                      </div>
+                    )}
                     <p className="text-sm font-semibold leading-tight line-clamp-2">{product.name}</p>
                     {product.brand && <p className="text-xs text-muted-foreground mt-0.5">{product.brand}</p>}
-                    <p className="text-sm font-bold text-primary mt-2">{(product.sell_price || 0).toFixed(2)} €</p>
+                    <p className="text-sm font-bold text-primary mt-1">{(product.sell_price || 0).toFixed(2)} €</p>
                     <p className="text-xs text-muted-foreground">Stock: {product.quantity}</p>
                     {inCart && (
                       <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
