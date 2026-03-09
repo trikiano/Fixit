@@ -123,6 +123,7 @@ export default function Repairs() {
     )},
     { header: "Statut", render: r => <StatusBadge status={r.status} /> },
     { header: "Priorité", render: r => <StatusBadge status={r.priority} /> },
+    { header: "Pièces", render: r => r.parts_used?.length > 0 ? <span className="text-xs bg-muted px-2 py-1 rounded-full">🔧 {r.parts_used.length}</span> : <span className="text-xs text-muted-foreground">—</span> },
     { header: "Coût", render: r => <span className="text-sm font-medium">{formatCurrency(r.final_cost || r.estimated_cost || 0)}</span> },
     { header: "Date", render: r => <span className="text-xs text-muted-foreground">{r.created_date ? format(new Date(r.created_date), 'dd/MM/yyyy') : '-'}</span> },
   ];
