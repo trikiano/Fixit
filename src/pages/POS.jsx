@@ -18,6 +18,7 @@ import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 import { useAppSettings } from "@/components/settings/SettingsContext";
 import ClientSelector from "@/components/ui/ClientSelector";
+import CashRegisterGuard from "@/components/ui/CashRegisterGuard";
 
 const PAYMENT_METHODS = [
   { value: 'especes', label: 'Espèces', icon: Banknote },
