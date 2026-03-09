@@ -81,7 +81,11 @@ export default function CashRegister() {
         <StatCard title="Solde attendu" value={`${expectedBalance.toFixed(2)} €`} icon={DollarSign} />
       </div>
 
-      <DataTable columns={columns} data={registers} isLoading={isLoading} emptyMessage="Aucune caisse enregistrée" />
+      <DataTable columns={columns} data={registers} isLoading={isLoading} emptyMessage="Aucune caisse enregistrée" onRowClick={setSelectedRegister} />
+
+      {selectedRegister && (
+        <CashRegisterDetail register={selectedRegister} onClose={() => setSelectedRegister(null)} />
+      )}
 
       {/* Open Dialog */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
