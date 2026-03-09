@@ -95,7 +95,8 @@ export default function Repairs() {
       device_password: r.device_password || '', problem_description: r.problem_description || '', diagnosis: r.diagnosis || '',
       status: r.status || 'reception', priority: r.priority || 'normale', technician: r.technician || '',
       estimated_cost: r.estimated_cost || 0, final_cost: r.final_cost || 0, deposit_amount: r.deposit_amount || 0,
-      warranty_days: r.warranty_days || 90, notes: r.notes || '', ticket_number: r.ticket_number || ''
+      warranty_days: r.warranty_days || 90, notes: r.notes || '', ticket_number: r.ticket_number || '',
+      parts_used: r.parts_used || []
     });
     setDialogOpen(true);
   };
