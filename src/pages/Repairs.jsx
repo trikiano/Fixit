@@ -16,6 +16,8 @@ import EmptyState from "@/components/ui/EmptyState";
 import { Wrench, Plus, Search } from 'lucide-react';
 import ClientSelector from "@/components/ui/ClientSelector";
 import PartsManager from "@/components/repairs/PartsManager";
+import RepairPayments from "@/components/repairs/RepairPayments";
+import CashRegisterGuard from "@/components/ui/CashRegisterGuard";
 import { format } from 'date-fns';
 
 const deviceTypes = [
