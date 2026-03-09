@@ -225,6 +225,11 @@ export default function Repairs() {
               parts={form.parts_used || []}
               onChange={parts => setForm(f => ({ ...f, parts_used: parts }))}
             />
+            <RepairPayments
+              payments={form.payments || []}
+              finalCost={form.final_cost || form.estimated_cost || 0}
+              onChange={payments => setForm(f => ({ ...f, payments }))}
+            />
             <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} /></div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={closeDialog}>Annuler</Button>
