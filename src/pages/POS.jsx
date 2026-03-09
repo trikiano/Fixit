@@ -27,8 +27,15 @@ const PAYMENT_METHODS = [
 ];
 
 const CATEGORY_LABELS = {
-  telephone: 'Téléphones', accessoire: 'Accessoires', piece_detachee: 'Pièces',
-  ordinateur: 'Ordinateurs', tablette: 'Tablettes', console: 'Consoles', autre: 'Autre'
+  telephone: '📱 Téléphones',
+  ordinateur: '💻 PC / Ordis',
+  tablette: '🖥️ Tablettes',
+  chargeur: '🔌 Chargeurs',
+  cable: '🔗 Câbles',
+  accessoire: '🎧 Accessoires',
+  piece_detachee: '🔧 Pièces',
+  console: '🎮 Consoles',
+  autre: '📦 Autre',
 };
 
 export default function POS() {
