@@ -20,6 +20,7 @@ export default function Clients() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
+  const [selectedClient, setSelectedClient] = useState(null);
   const [form, setForm] = useState({ full_name: '', phone: '', email: '', address: '', segment: 'particulier', notes: '', credit_balance: 0 });
   const qc = useQueryClient();
 
