@@ -11,6 +11,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import StatusBadge from "@/components/ui/StatusBadge";
 import DataTable from "@/components/ui/DataTable";
 import StatCard from "@/components/ui/StatCard";
+import CashRegisterDetail from "@/components/cashregister/CashRegisterDetail";
 import { DollarSign, Lock, Unlock, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 
