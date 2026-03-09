@@ -50,7 +50,7 @@ const emptyForm = {
   client_name: '', client_phone: '', device_type: 'smartphone', device_brand: '', device_model: '',
   device_imei: '', device_password: '', problem_description: '', diagnosis: '', status: 'reception',
   priority: 'normale', technician: '', estimated_cost: 0, final_cost: 0, deposit_amount: 0,
-  warranty_days: 90, notes: ''
+  warranty_days: 90, notes: '', parts_used: []
 };
 
 export default function Repairs() {
