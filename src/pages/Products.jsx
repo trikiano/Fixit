@@ -73,9 +73,18 @@ export default function Products() {
 
   const columns = [
     { header: "Produit", render: r => (
-      <div>
-        <p className="font-medium text-sm">{r.name}</p>
-        <p className="text-xs text-muted-foreground">{r.brand} {r.model} {r.sku ? `• ${r.sku}` : ''}</p>
+      <div className="flex items-center gap-3">
+        {r.image_url ? (
+          <img src={r.image_url} alt={r.name} className="h-10 w-10 rounded-lg object-cover flex-shrink-0 border border-border/50" />
+        ) : (
+          <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+            <Package className="h-5 w-5 text-muted-foreground" />
+          </div>
+        )}
+        <div>
+          <p className="font-medium text-sm">{r.name}</p>
+          <p className="text-xs text-muted-foreground">{r.brand} {r.model} {r.sku ? `• ${r.sku}` : ''}</p>
+        </div>
       </div>
     )},
     { header: "Catégorie", render: r => <Badge variant="outline" className="text-xs">{categories.find(c => c.value === r.category)?.label || r.category}</Badge> },
