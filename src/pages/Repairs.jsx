@@ -15,6 +15,7 @@ import DataTable from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
 import { Wrench, Plus, Search } from 'lucide-react';
 import ClientSelector from "@/components/ui/ClientSelector";
+import PartsManager from "@/components/repairs/PartsManager";
 import { format } from 'date-fns';
 
 const deviceTypes = [
