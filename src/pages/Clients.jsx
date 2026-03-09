@@ -83,6 +83,10 @@ export default function Clients() {
         <DataTable columns={columns} data={filtered} isLoading={isLoading} onRowClick={setSelectedClient} />
       )}
 
+      {selectedClient && (
+        <ClientDetailPanel client={selectedClient} onClose={() => setSelectedClient(null)} />
+      )}
+
       <Dialog open={dialogOpen} onOpenChange={v => !v && closeDialog()}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{editingClient ? 'Modifier client' : 'Nouveau client'}</DialogTitle></DialogHeader>
