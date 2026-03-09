@@ -21,6 +21,7 @@ export default function CashRegister() {
   const [openingBalance, setOpeningBalance] = useState(0);
   const [closingBalance, setClosingBalance] = useState(0);
   const [differenceReason, setDifferenceReason] = useState('');
+  const [selectedRegister, setSelectedRegister] = useState(null);
   const qc = useQueryClient();
 
   const { data: registers = [], isLoading } = useQuery({ queryKey: ['cashRegisters'], queryFn: () => base44.entities.CashRegister.list('-created_date') });
