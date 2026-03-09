@@ -12,6 +12,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import StatusBadge from "@/components/ui/StatusBadge";
 import DataTable from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
+import ClientDetailPanel from "@/components/clients/ClientDetailPanel";
 import { Users, Plus, Search, Phone, Mail, Ban, Star } from 'lucide-react';
 import { format } from 'date-fns';
 
