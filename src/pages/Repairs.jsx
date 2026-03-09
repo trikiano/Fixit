@@ -142,6 +142,7 @@ export default function Repairs() {
 
   return (
     <div>
+      <CashRegisterGuard operationType="une réparation">
       <PageHeader title="Atelier Réparation" subtitle={`${repairs.length} réparations`}>
         <Button onClick={() => setDialogOpen(true)}><Plus className="h-4 w-4 mr-2" />Nouvelle réparation</Button>
       </PageHeader>
