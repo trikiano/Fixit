@@ -51,6 +51,8 @@ export default function POS() {
   const [discount, setDiscount] = useState(0);
   const [successOpen, setSuccessOpen] = useState(false);
   const [lastSaleNum, setLastSaleNum] = useState('');
+  const [showRepairModal, setShowRepairModal] = useState(false);
+  const [showForfaitModal, setShowForfaitModal] = useState(false);
   const qc = useQueryClient();
 
   const { formatCurrency, settings, generateTicketNumber } = useAppSettings();
