@@ -57,6 +57,21 @@ export default function POS() {
 
   const { formatCurrency, settings, generateTicketNumber } = useAppSettings();
   const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: () => base44.entities.Product.list() });
+  const { data: packages = [] } = useQuery({ queryKey: ['internet-packages'], queryFn: () => base44.entities.InternetPackage.list() });
+
+  const repairMutation = useMutation({
+    mutationFn: async (data) => {
+      const { formatCurrency: _f, ...repairData } = data;
+      const ticketNum = generateTicketNumber('repair');
+      return base44.entities.Repair.create({ ...repairData, ticket_number: ticketNum });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['repairs'] }),
+  });
+
+  const internetSaleMutation = useMutation({
+    mutationFn: (data) => base44.entities.InternetSale.create(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['internet-sales'] }),
+  });
 
   const saleMutation = useMutation({
     mutationFn: async () => {
