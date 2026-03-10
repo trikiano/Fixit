@@ -18,7 +18,6 @@ import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 import { useAppSettings } from "@/components/settings/SettingsContext";
 import ClientSelector from "@/components/ui/ClientSelector";
-import CashRegisterGuard from "@/components/ui/CashRegisterGuard";
 
 const PAYMENT_METHODS = [
   { value: 'especes', label: 'Espèces', icon: Banknote },
@@ -123,7 +122,6 @@ export default function POS() {
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
   return (
-    <CashRegisterGuard operationType="une vente">
     <div className="h-[calc(100vh-4rem)] flex flex-col">
       {/* Header */}
       <div className="flex items-center gap-3 px-1 pb-4">

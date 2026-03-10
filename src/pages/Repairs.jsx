@@ -17,7 +17,6 @@ import { Wrench, Plus, Search } from 'lucide-react';
 import ClientSelector from "@/components/ui/ClientSelector";
 import PartsManager from "@/components/repairs/PartsManager";
 import RepairPayments from "@/components/repairs/RepairPayments";
-import CashRegisterGuard from "@/components/ui/CashRegisterGuard";
 import { format } from 'date-fns';
 
 const deviceTypes = [
@@ -132,7 +131,6 @@ export default function Repairs() {
 
   return (
     <div>
-      <CashRegisterGuard operationType="une réparation">
       <PageHeader title="Atelier Réparation" subtitle={`${repairs.length} réparations`}>
         <Button onClick={() => setDialogOpen(true)}><Plus className="h-4 w-4 mr-2" />Nouvelle réparation</Button>
       </PageHeader>
@@ -156,8 +154,6 @@ export default function Repairs() {
       ) : (
         <DataTable columns={columns} data={filtered} isLoading={isLoading} onRowClick={openEdit} />
       )}
-
-      </CashRegisterGuard>
 
       <Dialog open={dialogOpen} onOpenChange={v => !v && closeDialog()}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
