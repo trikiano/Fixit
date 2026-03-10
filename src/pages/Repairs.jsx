@@ -127,16 +127,6 @@ export default function Repairs() {
     { header: "Priorité", render: r => <StatusBadge status={r.priority} /> },
     { header: "Pièces", render: r => r.parts_used?.length > 0 ? <span className="text-xs bg-muted px-2 py-1 rounded-full">🔧 {r.parts_used.length}</span> : <span className="text-xs text-muted-foreground">—</span> },
     { header: "Coût", render: r => <span className="text-sm font-medium">{formatCurrency(r.final_cost || r.estimated_cost || 0)}</span> },
-    { header: "Payé / Restant", render: r => {
-      const paid = (r.payments || []).reduce((s, p) => s + (p.amount || 0), 0);
-      const total = r.final_cost || r.estimated_cost || 0;
-      const remaining = Math.max(0, total - paid);
-      if (total === 0) return <span className="text-xs text-muted-foreground">—</span>;
-      return <div className="text-xs">
-        <span className="text-green-500 font-medium">{paid.toFixed(2)} €</span>
-        {remaining > 0 && <span className="text-orange-400 ml-1">/ -{remaining.toFixed(2)} €</span>}
-      </div>;
-    }},
     { header: "Date", render: r => <span className="text-xs text-muted-foreground">{r.created_date ? format(new Date(r.created_date), 'dd/MM/yyyy') : '-'}</span> },
   ];
 
