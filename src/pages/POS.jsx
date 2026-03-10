@@ -330,6 +330,12 @@ export default function POS() {
         </div>
       </div>
 
+      {/* Quick Repair Modal */}
+      <QuickRepairModal open={showRepairModal} onClose={() => setShowRepairModal(false)} onSave={repairMutation.mutateAsync} />
+
+      {/* Quick Forfait Modal */}
+      <NewSaleModal open={showForfaitModal} onClose={() => setShowForfaitModal(false)} packages={packages} accounts={ACCOUNTS} onSave={internetSaleMutation.mutateAsync} />
+
       {/* Success Dialog */}
       <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
         <DialogContent className="max-w-sm text-center">
