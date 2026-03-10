@@ -153,6 +153,14 @@ export default function POS() {
           <ShoppingCart className="h-5 w-5 text-primary" /> Caisse POS
         </h1>
         {cartCount > 0 && <Badge className="bg-primary text-primary-foreground">{cartCount} article{cartCount > 1 ? 's' : ''}</Badge>}
+        <div className="ml-auto flex gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5 border-orange-500/50 text-orange-400 hover:bg-orange-500/10" onClick={() => setShowRepairModal(true)}>
+            <Wrench className="h-3.5 w-3.5" /> Maintenance
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5 border-blue-500/50 text-blue-400 hover:bg-blue-500/10" onClick={() => setShowForfaitModal(true)}>
+            <Wifi className="h-3.5 w-3.5" /> Forfait
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 flex gap-4 overflow-hidden min-h-0">
