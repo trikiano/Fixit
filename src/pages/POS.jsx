@@ -11,13 +11,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import {
   Search, ShoppingCart, Trash2, Plus, Minus, CheckCircle,
-  Package, ArrowLeft, Tag, CreditCard, Banknote, Smartphone
+  Package, ArrowLeft, Tag, CreditCard, Banknote, Smartphone, Wrench, Wifi
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 import { useAppSettings } from "@/components/settings/SettingsContext";
 import ClientSelector from "@/components/ui/ClientSelector";
+import QuickRepairModal from "@/components/pos/QuickRepairModal";
+import NewSaleModal from "@/components/internet/NewSaleModal";
+
+const ACCOUNTS = ['Compte Principal', 'Compte 2', 'Application A', 'Application B'];
 
 const PAYMENT_METHODS = [
   { value: 'especes', label: 'Espèces', icon: Banknote },
