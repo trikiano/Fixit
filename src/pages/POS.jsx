@@ -19,7 +19,6 @@ import { cn } from '@/lib/utils';
 import { useAppSettings } from "@/components/settings/SettingsContext";
 import ClientSelector from "@/components/ui/ClientSelector";
 
-
 const PAYMENT_METHODS = [
   { value: 'especes', label: 'Espèces', icon: Banknote },
   { value: 'carte', label: 'Carte', icon: CreditCard },
