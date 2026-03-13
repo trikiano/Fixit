@@ -49,6 +49,7 @@ export default function Suppliers() {
     { header: "Total", render: r => <span className="text-sm font-medium">{(r.total_amount || 0).toFixed(2)} €</span> },
     { header: "Actions", render: r => (
       <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+        <Button size="sm" variant="ghost" className="text-xs" onClick={() => openEdit(r)}>Modifier</Button>
         <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => setDetailSupplier(r)}>
           <Eye className="h-3 w-3" /> Détails
         </Button>
