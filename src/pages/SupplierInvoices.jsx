@@ -59,10 +59,20 @@ export default function SupplierInvoices() {
       const newRemaining = invoice.total_amount - newPaid;
       const newStatus = newRemaining <= 0 ? 'soldee' : 'partielle';
       const newPayments = [...(invoice.payments || []), { date: payment.date, amount, method: payment.method, notes: payment.notes }];
-      return base44.entities.SupplierInvoice.update(invoice.id, {
+      const updated = await base44.entities.SupplierInvoice.update(invoice.id, {
         amount_paid: newPaid, remaining_debt: Math.max(newRemaining, 0),
         status: newStatus, payments: newPayments,
       });
+      // Créer automatiquement une dépense pour ce paiement
+      await base44.entities.Expense.create({
+        description: `Paiement facture ${invoice.invoice_number} — ${invoice.supplier_name}`,
+        amount,
+        category: 'fournitures',
+        payment_method: payment.method,
+        date: payment.date,
+        notes: payment.notes || `Facture fournisseur ${invoice.invoice_number}`,
+      });
+      return updated;
     },
     onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: ['supplierInvoices'] });
