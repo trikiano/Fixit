@@ -76,6 +76,7 @@ export default function SupplierInvoices() {
     },
     onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: ['supplierInvoices'] });
+      qc.invalidateQueries({ queryKey: ['expenses'] });
       setSelected(updated);
       setPaymentOpen(false);
       setPaymentForm({ amount: '', method: 'especes', date: format(new Date(), 'yyyy-MM-dd'), notes: '' });
