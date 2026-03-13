@@ -72,6 +72,8 @@ export default function Suppliers() {
       ) : (
         <DataTable columns={columns} data={filtered} isLoading={isLoading} onRowClick={setDetailSupplier} />
       )}
+      <SupplierDetailPanel supplier={detailSupplier} open={!!detailSupplier} onClose={() => setDetailSupplier(null)} />
+
       <Dialog open={dialogOpen} onOpenChange={v => !v && closeDialog()}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{editing ? 'Modifier fournisseur' : 'Nouveau fournisseur'}</DialogTitle></DialogHeader>
