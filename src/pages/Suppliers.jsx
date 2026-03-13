@@ -70,7 +70,7 @@ export default function Suppliers() {
       {filtered.length === 0 && !isLoading ? (
         <EmptyState icon={Truck} title="Aucun fournisseur" actionLabel="Ajouter" onAction={() => setDialogOpen(true)} />
       ) : (
-        <DataTable columns={columns} data={filtered} isLoading={isLoading} onRowClick={openEdit} />
+        <DataTable columns={columns} data={filtered} isLoading={isLoading} onRowClick={setDetailSupplier} />
       )}
       <Dialog open={dialogOpen} onOpenChange={v => !v && closeDialog()}>
         <DialogContent className="max-w-lg">
