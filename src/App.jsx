@@ -57,6 +57,7 @@ const AuthenticatedApp = () => {
           }
         />
       ))}
+      <Route path="/SupplierInvoices" element={<LayoutWrapper currentPageName="SupplierInvoices"><SupplierInvoices /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
