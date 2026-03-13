@@ -43,6 +43,7 @@ const navGroups = [
       { name: "Mouvements Stock", icon: Warehouse, page: "StockMovements" },
       { name: "Fournisseurs", icon: Truck, page: "Suppliers" },
       { name: "Commandes Achat", icon: Receipt, page: "PurchaseOrders" },
+      { name: "Factures Fournisseurs", icon: FileText, page: "SupplierInvoices" },
     ]
   },
   {
