@@ -47,6 +47,13 @@ export default function Suppliers() {
     { header: "Conditions", render: r => <span className="text-xs capitalize">{r.payment_terms?.replace('_', ' ')}</span> },
     { header: "Commandes", render: r => <span className="text-sm">{r.total_orders || 0}</span> },
     { header: "Total", render: r => <span className="text-sm font-medium">{(r.total_amount || 0).toFixed(2)} €</span> },
+    { header: "Actions", render: r => (
+      <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+        <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => setDetailSupplier(r)}>
+          <Eye className="h-3 w-3" /> Détails
+        </Button>
+      </div>
+    )},
   ];
 
   return (
