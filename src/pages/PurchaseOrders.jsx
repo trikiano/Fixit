@@ -75,11 +75,36 @@ export default function PurchaseOrders() {
       }
 
       const newStatus = allReceived ? 'recue' : 'partielle';
-      return base44.entities.PurchaseOrder.update(order.id, { items: updatedItems, status: newStatus });
+      const updatedOrder = await base44.entities.PurchaseOrder.update(order.id, { items: updatedItems, status: newStatus });
+
+      // Créer automatiquement une facture fournisseur pour les articles reçus
+      const receivedTotal = receivedItems.reduce((s, r) => {
+        const item = order.items.find(i => i.product_id === r.product_id);
+        return s + (r.qty_now * (item?.unit_price || 0));
+      }, 0);
+      if (receivedTotal > 0) {
+        const invoiceNum = `FACT-${order.order_number}`;
+        const description = `Réception commande ${order.order_number} — ${receivedItems.filter(r => r.qty_now > 0).map(r => `${r.product_name} x${r.qty_now}`).join(', ')}`;
+        await base44.entities.SupplierInvoice.create({
+          invoice_number: invoiceNum,
+          supplier_id: order.supplier_id,
+          supplier_name: order.supplier_name,
+          description,
+          invoice_date: format(new Date(), 'yyyy-MM-dd'),
+          total_amount: receivedTotal,
+          amount_paid: 0,
+          remaining_debt: receivedTotal,
+          status: 'en_attente',
+          payments: [],
+          purchase_order_id: order.id,
+        });
+      }
+      return updatedOrder;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['purchaseOrders'] });
       qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['supplierInvoices'] });
       setReceptionOpen(false);
       setEditing(null);
     },
