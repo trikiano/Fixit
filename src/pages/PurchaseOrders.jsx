@@ -46,6 +46,9 @@ export default function PurchaseOrders() {
 
   const receptionMutation = useMutation({
     mutationFn: async ({ order, receivedItems }) => {
+      // Fetch fresh products to get current stock
+      const freshProducts = await base44.entities.Product.list();
+
       let allReceived = true;
       const updatedItems = order.items.map(item => {
         const rec = receivedItems.find(r => r.product_id === item.product_id);
@@ -57,13 +60,14 @@ export default function PurchaseOrders() {
       // Update stock for each product received
       for (const rec of receivedItems) {
         if (rec.qty_now > 0 && rec.product_id) {
-          const prod = products.find(p => p.id === rec.product_id);
+          const prod = freshProducts.find(p => p.id === rec.product_id);
           if (prod) {
-            const newQty = (prod.quantity || 0) + rec.qty_now;
+            const prevQty = prod.quantity || 0;
+            const newQty = prevQty + rec.qty_now;
             await base44.entities.Product.update(prod.id, { quantity: newQty });
             await base44.entities.StockMovement.create({
               product_id: prod.id, product_name: prod.name, type: 'entree',
-              quantity: rec.qty_now, previous_stock: prod.quantity || 0, new_stock: newQty,
+              quantity: rec.qty_now, previous_stock: prevQty, new_stock: newQty,
               reason: `Réception commande ${order.order_number}`, reference_type: 'achat', reference_id: order.id,
             });
           }
