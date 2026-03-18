@@ -203,9 +203,9 @@ export default function Repairs() {
               <div><Label>Technicien</Label><Input value={form.technician} onChange={e => setForm({...form, technician: e.target.value})} /></div>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <div><Label>Coût estimé (€)</Label><Input type="number" value={form.estimated_cost} onChange={e => setForm({...form, estimated_cost: parseFloat(e.target.value) || 0})} /></div>
-              <div><Label>Coût final (€)</Label><Input type="number" value={form.final_cost} onChange={e => setForm({...form, final_cost: parseFloat(e.target.value) || 0})} /></div>
-              <div><Label>Acompte (€)</Label><Input type="number" value={form.deposit_amount} onChange={e => setForm({...form, deposit_amount: parseFloat(e.target.value) || 0})} /></div>
+              <div><Label>Coût estimé ({settings.currency_symbol || '€'})</Label><Input type="number" value={form.estimated_cost} onChange={e => setForm({...form, estimated_cost: parseFloat(e.target.value) || 0})} /></div>
+              <div><Label>Coût final ({settings.currency_symbol || '€'})</Label><Input type="number" value={form.final_cost} onChange={e => setForm({...form, final_cost: parseFloat(e.target.value) || 0})} /></div>
+              <div><Label>Acompte ({settings.currency_symbol || '€'})</Label><Input type="number" value={form.deposit_amount} onChange={e => setForm({...form, deposit_amount: parseFloat(e.target.value) || 0})} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div><Label>Garantie (jours)</Label><Input type="number" value={form.warranty_days} onChange={e => setForm({...form, warranty_days: parseInt(e.target.value) || 0})} placeholder={settings.default_warranty_repair || '90'} /></div>

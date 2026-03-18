@@ -12,6 +12,7 @@ import DataTable from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
 import { Package, Plus, Search, AlertTriangle, Upload, X } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import { useAppSettings } from "@/components/settings/SettingsContext";
 
 const categories = [
   { value: 'telephone', label: 'Téléphone' },
@@ -34,6 +35,8 @@ const conditions = [
 const emptyForm = { name: '', sku: '', category: 'telephone', brand: '', model: '', buy_price: 0, sell_price: 0, quantity: 0, min_stock: 2, location: '', imei: '', serial_number: '', condition: 'neuf', barcode: '', image_url: '' };
 
 export default function Products() {
+  const { formatCurrency, settings } = useAppSettings();
+  const sym = settings.currency_symbol || '€';
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -88,8 +91,8 @@ export default function Products() {
       </div>
     )},
     { header: "Catégorie", render: r => <Badge variant="outline" className="text-xs">{categories.find(c => c.value === r.category)?.label || r.category}</Badge> },
-    { header: "Prix achat", render: r => <span className="text-sm">{(r.buy_price || 0).toFixed(2)} €</span> },
-    { header: "Prix vente", render: r => <span className="text-sm font-medium">{(r.sell_price || 0).toFixed(2)} €</span> },
+    { header: "Prix achat", render: r => <span className="text-sm">{formatCurrency(r.buy_price || 0)}</span> },
+    { header: "Prix vente", render: r => <span className="text-sm font-medium">{formatCurrency(r.sell_price || 0)}</span> },
     { header: "Stock", render: r => (
       <div className="flex items-center gap-2">
         <span className={cn("text-sm font-bold", r.quantity <= (r.min_stock || 2) ? "text-destructive" : "text-foreground")}>{r.quantity || 0}</span>
@@ -180,8 +183,8 @@ export default function Products() {
                   <SelectContent>{conditions.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div><Label>Prix achat (€)</Label><Input type="number" value={form.buy_price} onChange={e => setForm({...form, buy_price: parseFloat(e.target.value) || 0})} /></div>
-              <div><Label>Prix vente (€) *</Label><Input type="number" value={form.sell_price} onChange={e => setForm({...form, sell_price: parseFloat(e.target.value) || 0})} /></div>
+              <div><Label>Prix achat ({sym})</Label><Input type="number" value={form.buy_price} onChange={e => setForm({...form, buy_price: parseFloat(e.target.value) || 0})} /></div>
+              <div><Label>Prix vente ({sym}) *</Label><Input type="number" value={form.sell_price} onChange={e => setForm({...form, sell_price: parseFloat(e.target.value) || 0})} /></div>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div><Label>Quantité</Label><Input type="number" value={form.quantity} onChange={e => setForm({...form, quantity: parseInt(e.target.value) || 0})} /></div>
