@@ -15,6 +15,7 @@ import DataTable from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
 import { FileText, Plus, Search, CreditCard, History, AlertCircle, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { useAppSettings } from "@/components/settings/SettingsContext";
 
 const statusConfig = {
   en_attente: { label: 'En attente', class: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
@@ -30,6 +31,7 @@ const emptyForm = {
 };
 
 export default function SupplierInvoices() {
+  const { formatCurrency } = useAppSettings();
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -99,9 +101,9 @@ export default function SupplierInvoices() {
     { header: "N° Facture", render: r => <span className="font-mono text-sm text-primary">{r.invoice_number}</span> },
     { header: "Fournisseur", render: r => <span className="text-sm font-medium">{r.supplier_name}</span> },
     { header: "Description", render: r => <span className="text-xs text-muted-foreground truncate max-w-[150px] block">{r.description}</span> },
-    { header: "Total", render: r => <span className="text-sm font-bold">{(r.total_amount || 0).toFixed(2)} €</span> },
-    { header: "Payé", render: r => <span className="text-sm text-green-400">{(r.amount_paid || 0).toFixed(2)} €</span> },
-    { header: "Reste dû", render: r => <span className={`text-sm font-bold ${(r.remaining_debt || 0) > 0 ? 'text-red-400' : 'text-green-400'}`}>{(r.remaining_debt || 0).toFixed(2)} €</span> },
+    { header: "Total", render: r => <span className="text-sm font-bold">{formatCurrency(r.total_amount || 0)}</span> },
+    { header: "Payé", render: r => <span className="text-sm text-green-400">{formatCurrency(r.amount_paid || 0)}</span> },
+    { header: "Reste dû", render: r => <span className={`text-sm font-bold ${(r.remaining_debt || 0) > 0 ? 'text-red-400' : 'text-green-400'}`}>{formatCurrency(r.remaining_debt || 0)}</span> },
     { header: "Statut", render: r => { const s = statusConfig[r.status] || {}; return <Badge variant="outline" className={s.class}>{s.label}</Badge>; } },
     { header: "Actions", render: r => (
       <div className="flex gap-1" onClick={e => e.stopPropagation()}>
@@ -117,7 +119,7 @@ export default function SupplierInvoices() {
 
   return (
     <div>
-      <PageHeader title="Factures Fournisseurs" subtitle={`${totalPending} impayée(s) — Dette totale: ${totalDebt.toFixed(2)} €`}>
+      <PageHeader title="Factures Fournisseurs" subtitle={`${totalPending} impayée(s) — Dette totale: ${formatCurrency(totalDebt)}`}>
         <Button onClick={() => setDialogOpen(true)}><Plus className="h-4 w-4 mr-2" />Nouvelle facture</Button>
       </PageHeader>
 
@@ -130,7 +132,7 @@ export default function SupplierInvoices() {
               <Card key={s.id} className="cursor-pointer border-red-500/20 hover:border-red-500/40" onClick={() => setFilterSupplier(filterSupplier === s.id ? '' : s.id)}>
                 <CardContent className="p-3">
                   <p className="text-xs text-muted-foreground truncate">{s.name}</p>
-                  <p className="text-lg font-bold text-red-400">{debt.toFixed(2)} €</p>
+                  <p className="text-lg font-bold text-red-400">{formatCurrency(debt)}</p>
                   <p className="text-xs text-muted-foreground">dette</p>
                 </CardContent>
               </Card>
@@ -175,7 +177,7 @@ export default function SupplierInvoices() {
             </div>
             <div><Label>Description</Label><Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Montant total (€) *</Label><Input type="number" value={form.total_amount} onChange={e => setForm({ ...form, total_amount: e.target.value })} /></div>
+              <div><Label>Montant total *</Label><Input type="number" value={form.total_amount} onChange={e => setForm({ ...form, total_amount: e.target.value })} /></div>
               <div><Label>Date facture</Label><Input type="date" value={form.invoice_date} onChange={e => setForm({ ...form, invoice_date: e.target.value })} /></div>
             </div>
             <div><Label>Date échéance</Label><Input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} /></div>
@@ -199,10 +201,10 @@ export default function SupplierInvoices() {
               <div className="p-3 rounded-lg bg-muted/30 text-sm space-y-1">
                 <p><span className="text-muted-foreground">Fournisseur:</span> <strong>{selected.supplier_name}</strong></p>
                 <p><span className="text-muted-foreground">Facture:</span> {selected.invoice_number}</p>
-                <p><span className="text-muted-foreground">Reste à payer:</span> <strong className="text-red-400">{(selected.remaining_debt || 0).toFixed(2)} €</strong></p>
+                <p><span className="text-muted-foreground">Reste à payer:</span> <strong className="text-red-400">{formatCurrency(selected.remaining_debt || 0)}</strong></p>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div><Label>Montant payé (€) *</Label><Input type="number" value={paymentForm.amount} max={selected.remaining_debt} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })} /></div>
+                <div><Label>Montant payé *</Label><Input type="number" value={paymentForm.amount} max={selected.remaining_debt} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })} /></div>
                 <div><Label>Date</Label><Input type="date" value={paymentForm.date} onChange={e => setPaymentForm({ ...paymentForm, date: e.target.value })} /></div>
               </div>
               <div><Label>Mode de paiement</Label>
@@ -244,11 +246,11 @@ export default function SupplierInvoices() {
                 </div>
                 <div className="p-3 rounded-lg bg-muted/30 space-y-1">
                   <p className="text-muted-foreground text-xs">Total facture</p>
-                  <p className="font-bold text-lg">{(selected.total_amount || 0).toFixed(2)} €</p>
+                  <p className="font-bold text-lg">{formatCurrency(selected.total_amount || 0)}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-muted/30 space-y-1">
                   <p className="text-muted-foreground text-xs">Reste dû</p>
-                  <p className={`font-bold text-lg ${(selected.remaining_debt || 0) > 0 ? 'text-red-400' : 'text-green-400'}`}>{(selected.remaining_debt || 0).toFixed(2)} €</p>
+                  <p className={`font-bold text-lg ${(selected.remaining_debt || 0) > 0 ? 'text-red-400' : 'text-green-400'}`}>{formatCurrency(selected.remaining_debt || 0)}</p>
                 </div>
               </div>
               {selected.description && <p className="text-sm text-muted-foreground">{selected.description}</p>}
@@ -262,7 +264,7 @@ export default function SupplierInvoices() {
                     {(selected.payments || []).map((p, i) => (
                       <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 text-sm">
                         <div>
-                          <p className="font-medium text-green-400">+{(p.amount || 0).toFixed(2)} €</p>
+                          <p className="font-medium text-green-400">+{formatCurrency(p.amount || 0)}</p>
                           <p className="text-xs text-muted-foreground">{p.method} — {p.date}</p>
                           {p.notes && <p className="text-xs text-muted-foreground">{p.notes}</p>}
                         </div>
@@ -271,7 +273,7 @@ export default function SupplierInvoices() {
                     ))}
                     <div className="flex justify-between pt-2 border-t border-border text-sm">
                       <span className="text-muted-foreground">Total payé</span>
-                      <span className="font-bold text-green-400">{(selected.amount_paid || 0).toFixed(2)} €</span>
+                      <span className="font-bold text-green-400">{formatCurrency(selected.amount_paid || 0)}</span>
                     </div>
                   </div>
                 )}
