@@ -16,7 +16,8 @@ import ClientSelector from "@/components/ui/ClientSelector";
 import { format } from 'date-fns';
 
 export default function Sales() {
-  const { formatCurrency, generateTicketNumber } = useAppSettings();
+  const { formatCurrency, generateTicketNumber, settings } = useAppSettings();
+  const sym = settings.currency_symbol || '€';
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -161,7 +162,7 @@ export default function Sales() {
                     <div className="col-span-2"><Label className="text-xs">Qté</Label><Input type="number" min={1} value={item.quantity} onChange={e => updateItem(idx, 'quantity', parseInt(e.target.value) || 1)} /></div>
                     <div className="col-span-2"><Label className="text-xs">Prix unit.</Label><Input type="number" value={item.unit_price} onChange={e => updateItem(idx, 'unit_price', parseFloat(e.target.value) || 0)} /></div>
                     <div className="col-span-2"><Label className="text-xs">Remise</Label><Input type="number" value={item.discount} onChange={e => updateItem(idx, 'discount', parseFloat(e.target.value) || 0)} /></div>
-                    <div className="col-span-1 text-right font-bold text-sm pt-5">{(item.total || 0).toFixed(2)}€</div>
+                    <div className="col-span-1 text-right font-bold text-sm pt-5">{(item.total || 0).toFixed(2)} {sym}</div>
                     <div className="col-span-1 pt-5"><Button variant="ghost" size="icon" onClick={() => removeItem(idx)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>
                   </div>
                 ))}
@@ -173,7 +174,7 @@ export default function Sales() {
               <div className="flex items-end justify-end">
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">Total</p>
-                  <p className="text-2xl font-bold text-primary">{total.toFixed(2)} €</p>
+                  <p className="text-2xl font-bold text-primary">{total.toFixed(2)} {sym}</p>
                 </div>
               </div>
             </div>
