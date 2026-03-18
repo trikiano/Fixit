@@ -8,6 +8,8 @@ import { CreditCard, Plus } from 'lucide-react';
 import { useAppSettings } from "@/components/settings/SettingsContext";
 
 export default function CardTopupModal({ open, onClose, cards, onSave }) {
+  const { settings } = useAppSettings();
+  const sym = settings.currency_symbol || 'DA';
   const [cardId, setCardId] = useState('');
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');

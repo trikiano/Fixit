@@ -21,6 +21,8 @@ const paymentColor = { especes: 'bg-green-500/10 text-green-700', carte: 'bg-blu
 
 export default function ServicesPage() {
   const qc = useQueryClient();
+  const { formatCurrency, settings } = useAppSettings();
+  const sym = settings.currency_symbol || 'DA';
   const [showNewSale, setShowNewSale] = useState(false);
   const [showTopup, setShowTopup] = useState(false);
   const [showCards, setShowCards] = useState(false);

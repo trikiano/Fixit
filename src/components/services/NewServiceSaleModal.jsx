@@ -15,6 +15,8 @@ const paymentMethods = [
 ];
 
 export default function NewServiceSaleModal({ open, onClose, services, cards, onSave }) {
+  const { formatCurrency, settings } = useAppSettings();
+  const sym = settings.currency_symbol || 'DA';
   const [form, setForm] = useState({
     client_name: '', client_phone: '',
     service_id: '', card_id: '',
