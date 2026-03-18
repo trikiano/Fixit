@@ -26,7 +26,11 @@ const categories = [
 
 const emptyForm = { description: '', amount: 0, category: 'autre', payment_method: 'especes', date: format(new Date(), 'yyyy-MM-dd'), notes: '' };
 
+import { useAppSettings } from "@/components/settings/SettingsContext";
+
 export default function Expenses() {
+  const { formatCurrency, settings } = useAppSettings();
+  const sym = settings.currency_symbol || '€';
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -48,7 +52,7 @@ export default function Expenses() {
 
   const columns = [
     { header: "Description", render: r => <span className="text-sm font-medium">{r.description}</span> },
-    { header: "Montant", render: r => <span className="text-sm font-bold text-destructive">{(r.amount || 0).toFixed(2)} €</span> },
+    { header: "Montant", render: r => <span className="text-sm font-bold text-destructive">{formatCurrency(r.amount || 0)}</span> },
     { header: "Catégorie", render: r => <span className="text-xs capitalize">{categories.find(c => c.value === r.category)?.label || r.category}</span> },
     { header: "Paiement", render: r => <span className="text-xs capitalize">{r.payment_method}</span> },
     { header: "Date", render: r => <span className="text-xs text-muted-foreground">{r.date || (r.created_date ? format(new Date(r.created_date), 'dd/MM/yyyy') : '-')}</span> },
@@ -56,7 +60,7 @@ export default function Expenses() {
 
   return (
     <div>
-      <PageHeader title="Dépenses" subtitle={`Total: ${totalExpenses.toFixed(2)} € — ${expenses.length} dépenses`}>
+      <PageHeader title="Dépenses" subtitle={`Total: ${formatCurrency(totalExpenses)} — ${expenses.length} dépenses`}>
         <Button onClick={() => setDialogOpen(true)}><Plus className="h-4 w-4 mr-2" />Nouvelle dépense</Button>
       </PageHeader>
       <div className="mb-4">
@@ -76,7 +80,7 @@ export default function Expenses() {
           <div className="space-y-4">
             <div><Label>Description *</Label><Input value={form.description} onChange={e => setForm({...form, description: e.target.value})} /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Montant (€) *</Label><Input type="number" value={form.amount} onChange={e => setForm({...form, amount: parseFloat(e.target.value) || 0})} /></div>
+              <div><Label>Montant ({sym}) *</Label><Input type="number" value={form.amount} onChange={e => setForm({...form, amount: parseFloat(e.target.value) || 0})} /></div>
               <div><Label>Date</Label><Input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
