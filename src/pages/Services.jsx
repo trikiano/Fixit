@@ -171,19 +171,19 @@ export default function ServicesPage() {
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="h-9 w-9 rounded-lg bg-green-500/10 flex items-center justify-center"><TrendingUp className="h-4 w-4 text-green-600" /></div>
-            <div><p className="text-xl font-bold text-green-600">{totalRevenue.toFixed(0)}</p><p className="text-xs text-muted-foreground">Total encaissé</p></div>
+            <div><p className="text-xl font-bold text-green-600">{totalRevenue.toFixed(0)} {sym}</p><p className="text-xs text-muted-foreground">Total encaissé</p></div>
           </CardContent>
         </Card>
         <Card className="border-blue-500/30">
           <CardContent className="p-4 flex items-center gap-3">
             <div className="h-9 w-9 rounded-lg bg-blue-500/10 flex items-center justify-center"><Wallet className="h-4 w-4 text-blue-600" /></div>
-            <div><p className="text-xl font-bold text-blue-600">{totalProfit.toFixed(0)}</p><p className="text-xs text-muted-foreground">Bénéfice total</p></div>
+            <div><p className="text-xl font-bold text-blue-600">{totalProfit.toFixed(0)} {sym}</p><p className="text-xs text-muted-foreground">Bénéfice total</p></div>
           </CardContent>
         </Card>
         <Card className="border-orange-500/30">
           <CardContent className="p-4 flex items-center gap-3">
             <div className="h-9 w-9 rounded-lg bg-orange-500/10 flex items-center justify-center"><CreditCard className="h-4 w-4 text-orange-500" /></div>
-            <div><p className="text-xl font-bold text-orange-500">{totalCardBalance.toFixed(0)}</p><p className="text-xs text-muted-foreground">Solde total cartes</p></div>
+            <div><p className="text-xl font-bold text-orange-500">{totalCardBalance.toFixed(0)} {sym}</p><p className="text-xs text-muted-foreground">Solde total cartes</p></div>
           </CardContent>
         </Card>
       </div>
@@ -216,22 +216,22 @@ export default function ServicesPage() {
                       {card.provider && <p className="text-xs text-muted-foreground">{card.provider}</p>}
                     </div>
                     <Badge variant="outline" className={`${(card.current_balance || 0) < 500 ? 'text-orange-500 border-orange-500/50' : 'text-green-600 border-green-500/50'}`}>
-                      {(card.current_balance || 0).toFixed(0)} {card.currency || 'DZD'}
+                      {(card.current_balance || 0).toFixed(0)} {sym}
                     </Badge>
                   </div>
                   <Separator className="mb-3" />
                   <div className="space-y-1.5 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground flex items-center gap-1"><ArrowDownCircle className="h-3 w-3 text-green-500" />Total rechargé</span>
-                      <span className="font-semibold text-green-600">+{totalLoaded.toFixed(0)}</span>
+                      <span className="font-semibold text-green-600">+{totalLoaded.toFixed(0)} {sym}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground flex items-center gap-1"><ArrowUpCircle className="h-3 w-3 text-red-500" />Total dépensé</span>
-                      <span className="font-semibold text-red-500">-{totalSpent.toFixed(0)}</span>
+                      <span className="font-semibold text-red-500">-{totalSpent.toFixed(0)} {sym}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{cardSales.length} vente(s)</span>
-                      <span className="font-semibold">{cardSales.reduce((s, x) => s + (x.sell_price || 0) - (x.cost_price || 0), 0).toFixed(0)} bénéfice</span>
+                      <span className="font-semibold">{cardSales.reduce((s, x) => s + (x.sell_price || 0) - (x.cost_price || 0), 0).toFixed(0)} {sym} bénéfice</span>
                     </div>
                   </div>
                   <Button size="sm" variant="outline" className="w-full mt-3 gap-2 text-green-700 border-green-500/50 hover:bg-green-500/10" onClick={() => setShowTopup(true)}>
@@ -284,7 +284,7 @@ export default function ServicesPage() {
                           {t.date ? format(new Date(t.date), 'dd/MM/yy HH:mm') : format(new Date(t.created_date), 'dd/MM/yy HH:mm')}
                         </td>
                         <td className="p-3 font-medium">{t.card_name}</td>
-                        <td className="p-3 text-right font-bold text-green-600 text-base">+{(t.amount || 0).toFixed(2)}</td>
+                        <td className="p-3 text-right font-bold text-green-600 text-base">+{(t.amount || 0).toFixed(2)} {sym}</td>
                         <td className="p-3 text-xs text-muted-foreground">{t.notes || '—'}</td>
                       </tr>
                     ))}
@@ -331,8 +331,8 @@ export default function ServicesPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm text-muted-foreground">{filtered.length} vente(s)</CardTitle>
                 <div className="flex gap-4 text-sm">
-                  <span className="text-green-600 font-semibold">Encaissé: {filtered.reduce((s, x) => s + (x.sell_price || 0), 0).toFixed(0)}</span>
-                  <span className="text-blue-600 font-semibold">Bénéfice: {filtered.reduce((s, x) => s + (x.sell_price || 0) - (x.cost_price || 0), 0).toFixed(0)}</span>
+                  <span className="text-green-600 font-semibold">Encaissé: {filtered.reduce((s, x) => s + (x.sell_price || 0), 0).toFixed(0)} {sym}</span>
+                  <span className="text-blue-600 font-semibold">Bénéfice: {filtered.reduce((s, x) => s + (x.sell_price || 0) - (x.cost_price || 0), 0).toFixed(0)} {sym}</span>
                 </div>
               </div>
             </CardHeader>
@@ -384,9 +384,9 @@ export default function ServicesPage() {
                                 {paymentLabel[s.payment_method] || s.payment_method}
                               </span>
                             </td>
-                            <td className="p-3 text-right text-muted-foreground">{(s.cost_price || 0).toFixed(2)}</td>
-                            <td className="p-3 text-right font-bold text-green-600">{(s.sell_price || 0).toFixed(2)}</td>
-                            <td className="p-3 text-right font-semibold text-blue-600">{profit.toFixed(2)}</td>
+                            <td className="p-3 text-right text-muted-foreground">{(s.cost_price || 0).toFixed(2)} {sym}</td>
+                            <td className="p-3 text-right font-bold text-green-600">{(s.sell_price || 0).toFixed(2)} {sym}</td>
+                            <td className="p-3 text-right font-semibold text-blue-600">{profit.toFixed(2)} {sym}</td>
                             <td className="p-3">
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
                                 onClick={() => { if (window.confirm('Supprimer cette vente ? Le solde de la carte sera rétabli.')) deleteSaleMutation.mutate(s); }}>
