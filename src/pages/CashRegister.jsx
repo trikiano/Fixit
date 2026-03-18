@@ -14,8 +14,11 @@ import StatCard from "@/components/ui/StatCard";
 import CashRegisterDetail from "@/components/cashregister/CashRegisterDetail";
 import { DollarSign, Lock, Unlock, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
+import { useAppSettings } from "@/components/settings/SettingsContext";
 
 export default function CashRegister() {
+  const { formatCurrency, settings } = useAppSettings();
+  const sym = settings.currency_symbol || '€';
   const [openDialog, setOpenDialog] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [openingBalance, setOpeningBalance] = useState(0);
@@ -53,13 +56,13 @@ export default function CashRegister() {
   const columns = [
     { header: "Date", render: r => <span className="text-sm font-medium">{r.date}</span> },
     { header: "Statut", render: r => <StatusBadge status={r.status} /> },
-    { header: "Ouverture", render: r => <span className="text-sm">{(r.opening_balance || 0).toFixed(2)} €</span> },
-    { header: "Clôture", render: r => <span className="text-sm">{r.closing_balance != null ? `${r.closing_balance.toFixed(2)} €` : '-'}</span> },
-    { header: "Espèces", render: r => <span className="text-sm">{(r.total_cash_sales || 0).toFixed(2)} €</span> },
-    { header: "Carte", render: r => <span className="text-sm">{(r.total_card_sales || 0).toFixed(2)} €</span> },
+    { header: "Ouverture", render: r => <span className="text-sm">{formatCurrency(r.opening_balance || 0)}</span> },
+    { header: "Clôture", render: r => <span className="text-sm">{r.closing_balance != null ? formatCurrency(r.closing_balance) : '-'}</span> },
+    { header: "Espèces", render: r => <span className="text-sm">{formatCurrency(r.total_cash_sales || 0)}</span> },
+    { header: "Carte", render: r => <span className="text-sm">{formatCurrency(r.total_card_sales || 0)}</span> },
     { header: "Écart", render: r => {
       const diff = r.difference || 0;
-      return <span className={`text-sm font-bold ${diff !== 0 ? 'text-destructive' : 'text-foreground'}`}>{diff.toFixed(2)} €</span>;
+      return <span className={`text-sm font-bold ${diff !== 0 ? 'text-destructive' : 'text-foreground'}`}>{formatCurrency(diff)}</span>;
     }},
   ];
 
@@ -75,10 +78,10 @@ export default function CashRegister() {
 
       {/* Today stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard title="Solde ouverture" value={`${(todayRegister?.opening_balance || 0).toFixed(2)} €`} icon={DollarSign} />
-        <StatCard title="Ventes espèces" value={`${todayCash.toFixed(2)} €`} icon={DollarSign} />
-        <StatCard title="Ventes carte" value={`${todayCard.toFixed(2)} €`} icon={DollarSign} />
-        <StatCard title="Solde attendu" value={`${expectedBalance.toFixed(2)} €`} icon={DollarSign} />
+        <StatCard title="Solde ouverture" value={formatCurrency(todayRegister?.opening_balance || 0)} icon={DollarSign} />
+        <StatCard title="Ventes espèces" value={formatCurrency(todayCash)} icon={DollarSign} />
+        <StatCard title="Ventes carte" value={formatCurrency(todayCard)} icon={DollarSign} />
+        <StatCard title="Solde attendu" value={formatCurrency(expectedBalance)} icon={DollarSign} />
       </div>
 
       <DataTable columns={columns} data={registers} isLoading={isLoading} emptyMessage="Aucune caisse enregistrée" onRowClick={setSelectedRegister} />
@@ -92,7 +95,7 @@ export default function CashRegister() {
         <DialogContent>
           <DialogHeader><DialogTitle>Ouvrir la caisse</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div><Label>Solde d'ouverture (€)</Label><Input type="number" value={openingBalance} onChange={e => setOpeningBalance(parseFloat(e.target.value) || 0)} /></div>
+            <div><Label>Solde d'ouverture ({sym})</Label><Input type="number" value={openingBalance} onChange={e => setOpeningBalance(parseFloat(e.target.value) || 0)} /></div>
             <Button onClick={() => openMutation.mutate()} className="w-full">Ouvrir</Button>
           </div>
         </DialogContent>
@@ -103,10 +106,10 @@ export default function CashRegister() {
         <DialogContent>
           <DialogHeader><DialogTitle>Fermer la caisse</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div><Label>Solde de fermeture (€)</Label><Input type="number" value={closingBalance} onChange={e => setClosingBalance(parseFloat(e.target.value) || 0)} /></div>
+            <div><Label>Solde de fermeture ({sym})</Label><Input type="number" value={closingBalance} onChange={e => setClosingBalance(parseFloat(e.target.value) || 0)} /></div>
             <div className="p-3 rounded-lg bg-muted/30">
-              <p className="text-sm text-muted-foreground">Solde attendu: <span className="font-bold text-foreground">{expectedBalance.toFixed(2)} €</span></p>
-              <p className="text-sm text-muted-foreground">Écart: <span className={`font-bold ${(closingBalance - expectedBalance) !== 0 ? 'text-destructive' : 'text-foreground'}`}>{(closingBalance - expectedBalance).toFixed(2)} €</span></p>
+              <p className="text-sm text-muted-foreground">Solde attendu: <span className="font-bold text-foreground">{formatCurrency(expectedBalance)}</span></p>
+              <p className="text-sm text-muted-foreground">Écart: <span className={`font-bold ${(closingBalance - expectedBalance) !== 0 ? 'text-destructive' : 'text-foreground'}`}>{formatCurrency(closingBalance - expectedBalance)}</span></p>
             </div>
             {(closingBalance - expectedBalance) !== 0 && (
               <div><Label>Raison de l'écart *</Label><Textarea value={differenceReason} onChange={e => setDifferenceReason(e.target.value)} placeholder="Justification obligatoire..." /></div>
