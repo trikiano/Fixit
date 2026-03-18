@@ -106,7 +106,7 @@ export default function NewServiceSaleModal({ open, onClose, services, cards, on
               <SelectContent>
                 {cards.filter(c => c.is_active !== false).map(c => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.name} — Solde: {(c.current_balance || 0).toFixed(2)} {c.currency || 'DZD'}
+                    {c.name} — Solde: {(c.current_balance || 0).toFixed(2)} {sym}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -135,7 +135,7 @@ export default function NewServiceSaleModal({ open, onClose, services, cards, on
           {(form.cost_price || form.sell_price) && (
             <div className={`text-sm rounded-lg p-2 flex justify-between ${profit >= 0 ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-500'}`}>
               <span>Bénéfice sur cette vente</span>
-              <span className="font-bold">{profit.toFixed(2)} DZD</span>
+              <span className="font-bold">{profit.toFixed(2)} {sym}</span>
             </div>
           )}
 

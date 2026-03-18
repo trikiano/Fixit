@@ -51,7 +51,7 @@ export default function CardTopupModal({ open, onClose, cards, onSave }) {
               <SelectContent>
                 {cards.filter(c => c.is_active !== false).map(c => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.name} — Solde: {(c.current_balance || 0).toFixed(2)} {c.currency || 'DZD'}
+                    {c.name} — Solde: {(c.current_balance || 0).toFixed(2)} {sym}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -60,7 +60,7 @@ export default function CardTopupModal({ open, onClose, cards, onSave }) {
           {selectedCard && (
             <div className="bg-muted/30 rounded-lg p-3 text-sm">
               <p className="text-muted-foreground">Solde actuel</p>
-              <p className="text-2xl font-bold text-primary">{(selectedCard.current_balance || 0).toFixed(2)} <span className="text-sm">{selectedCard.currency || 'DZD'}</span></p>
+              <p className="text-2xl font-bold text-primary">{(selectedCard.current_balance || 0).toFixed(2)} <span className="text-sm">{sym}</span></p>
               {selectedCard.card_number && <p className="text-xs text-muted-foreground mt-1">N° {selectedCard.card_number}</p>}
             </div>
           )}
