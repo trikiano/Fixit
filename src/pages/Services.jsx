@@ -14,6 +14,7 @@ import NewServiceSaleModal from "@/components/services/NewServiceSaleModal";
 import CardTopupModal from "@/components/services/CardTopupModal";
 import ManageCardsModal from "@/components/services/ManageCardsModal";
 import ManageServicesModal from "@/components/services/ManageServicesModal";
+import { useAppSettings } from "@/components/settings/SettingsContext";
 
 const paymentLabel = { especes: 'Espèces', carte: 'Carte', virement: 'Virement', credit_client: 'Crédit' };
 const paymentColor = { especes: 'bg-green-500/10 text-green-700', carte: 'bg-blue-500/10 text-blue-700', virement: 'bg-purple-500/10 text-purple-700', credit_client: 'bg-orange-500/10 text-orange-700' };

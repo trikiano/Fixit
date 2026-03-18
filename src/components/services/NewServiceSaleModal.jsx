@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ShoppingBag, AlertTriangle } from 'lucide-react';
+import { useAppSettings } from "@/components/settings/SettingsContext";
 
 const paymentMethods = [
   { value: 'especes', label: 'Espèces' },
