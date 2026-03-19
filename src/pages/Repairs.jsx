@@ -80,11 +80,32 @@ export default function Repairs() {
 
   const { data: repairs = [], isLoading } = useQuery({ queryKey: ['repairs'], queryFn: () => base44.entities.Repair.list('-created_date') });
 
+  const sendRepairSms = async (repairData, ticketNum) => {
+    if (!settings.sms_api_key || !settings.sms_provider || !repairData.client_phone) return;
+    const statusLabel = repairStatuses.find(s => s.value === repairData.status)?.label || repairData.status;
+    const cost = repairData.final_cost || repairData.estimated_cost || 0;
+    const message = `🔧 Ticket ${ticketNum}\nClient: ${repairData.client_name}\nAppareil: ${repairData.device_brand || ''} ${repairData.device_model || ''}\nStatut: ${statusLabel}\nProblème: ${repairData.problem_description}\n${cost > 0 ? `Coût: ${formatCurrency(cost)}\n` : ''}${settings.shop_name || 'TechRepair Pro'} - Merci !`;
+    try {
+      await base44.functions.invoke('sendSms', {
+        to: repairData.client_phone,
+        message,
+        provider: settings.sms_provider,
+        apiKey: settings.sms_api_key,
+        apiSecret: settings.sms_api_secret || '',
+        from: settings.sms_from || '',
+      });
+    } catch {}
+  };
+
   const saveMutation = useMutation({
-    mutationFn: (data) => {
+    mutationFn: async (data) => {
       const ticketNum = data.ticket_number || generateTicketNumber('repair');
       const payload = { ...data, ticket_number: ticketNum };
-      return editing ? base44.entities.Repair.update(editing.id, payload) : base44.entities.Repair.create(payload);
+      const result = editing
+        ? await base44.entities.Repair.update(editing.id, payload)
+        : await base44.entities.Repair.create(payload);
+      await sendRepairSms(payload, ticketNum);
+      return result;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['repairs'] }); closeDialog(); },
   });
