@@ -75,13 +75,16 @@ export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState(() => {
     try {
       const stored = localStorage.getItem('app_settings');
-      const merged = { ...DEFAULT_SETTINGS, ...(stored ? JSON.parse(stored) : {}) };
+      const parsed = stored ? JSON.parse(stored) : {};
+      // If no theme was explicitly saved, use default (light)
+      if (!parsed.theme) parsed.theme = 'light';
+      const merged = { ...DEFAULT_SETTINGS, ...parsed };
       merged.currency_symbol = CURRENCY_SYMBOLS[merged.currency] || merged.currency;
       return merged;
     } catch { return DEFAULT_SETTINGS; }
   });
 
-  useEffect(() => { applyTheme(settings.theme); }, []);
+  useEffect(() => { applyTheme(settings.theme); }, [settings.theme]);
 
   const saveSettings = (newSettings) => {
     const updated = {
