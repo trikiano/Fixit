@@ -1,15 +1,15 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
-  Search, Package, ArrowLeft, Delete, CheckCircle, Home, ChevronRight, Plus, X
+  Search, Package, ArrowLeft, Delete, CheckCircle, Home, ChevronRight, Plus, X, User, Phone
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 import { useAppSettings } from "@/components/settings/SettingsContext";
-import ClientSelector from "@/components/ui/ClientSelector";
 import { Button } from "@/components/ui/button";
 
 const CATEGORY_LABELS = {
