@@ -154,6 +154,44 @@ export default function POS() {
     },
   });
 
+  // --- SMS ticket ---
+  const [lastCartSnapshot, setLastCartSnapshot] = useState({ cart: [], clientName: '', clientPhone: '', total: 0, saleNum: '' });
+
+  const sendTicketSms = async () => {
+    const phone = lastCartSnapshot.clientPhone;
+    if (!phone || !settings.sms_api_key || !settings.sms_provider) return;
+    setSmsSending(true);
+    try {
+      const articlesLines = lastCartSnapshot.cart.map(item => {
+        const line = `• ${item.name} x${item.qty} = ${formatCurrency(item.qty * item.unit_price * (1 - (item.discount || 0) / 100))}`;
+        return line;
+      }).join('\n');
+
+      const template = settings.sms_ticket_template ||
+        `🧾 Ticket {numero}\nBoutique: {boutique}\nClient: {client}\n\nArticles:\n{articles}\n\nTOTAL: {total}\n\nMerci !`;
+
+      const message = template
+        .replace('{numero}', lastCartSnapshot.saleNum)
+        .replace('{boutique}', settings.shop_name || 'TechRepair Pro')
+        .replace('{client}', lastCartSnapshot.clientName || 'Client')
+        .replace('{articles}', articlesLines)
+        .replace('{total}', formatCurrency(lastCartSnapshot.total));
+
+      const res = await base44.functions.invoke('sendSms', {
+        to: phone,
+        message,
+        provider: settings.sms_provider,
+        apiKey: settings.sms_api_key,
+        apiSecret: settings.sms_api_secret || '',
+        from: settings.sms_from || '',
+      });
+      setSmsResult(res.data?.success ? 'ok' : 'error');
+    } catch {
+      setSmsResult('error');
+    }
+    setSmsSending(false);
+  };
+
   // --- Cart helpers ---
   const addToCart = (product) => {
     setTickets(prev => prev.map(t => {
