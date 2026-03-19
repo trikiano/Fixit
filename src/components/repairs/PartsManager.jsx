@@ -85,7 +85,7 @@ export default function PartsManager({ parts = [], onChange, repairId }) {
                     <p className="font-medium">{p.name}</p>
                     <p className="text-xs text-muted-foreground">{p.brand} — Stock: {p.quantity}</p>
                   </div>
-                  <span className="font-medium text-primary">{(p.buy_price || 0).toFixed(2)} €</span>
+                  <span className="font-medium text-primary">{formatCurrency(p.buy_price || 0)}</span>
                 </button>
               ))}
             </div>
@@ -132,7 +132,7 @@ export default function PartsManager({ parts = [], onChange, repairId }) {
                 />
               </div>
               <div className="col-span-1 text-right font-medium">
-                {(part.total || 0).toFixed(0)}€
+                {formatCurrency(part.total || 0)}
               </div>
               <div className="col-span-1 flex justify-end">
                 <button type="button" onClick={() => removePart(idx)} className="text-muted-foreground hover:text-destructive transition-colors">
@@ -143,7 +143,7 @@ export default function PartsManager({ parts = [], onChange, repairId }) {
           ))}
           <div className="px-3 py-2 bg-muted/20 border-t border-border/50 flex justify-between text-sm font-semibold">
             <span>Total pièces</span>
-            <span className="text-primary">{totalCost.toFixed(2)} €</span>
+            <span className="text-primary">{formatCurrency(totalCost)}</span>
           </div>
         </div>
       ) : (

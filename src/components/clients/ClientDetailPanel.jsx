@@ -93,7 +93,7 @@ export default function ClientDetailPanel({ client, onClose }) {
             <p className="text-xs text-muted-foreground">Achats</p>
           </div>
           <div className="text-center">
-            <p className="text-lg font-bold text-primary">{totalPurchases.toFixed(0)} €</p>
+            <p className="text-lg font-bold text-primary">{formatCurrency(totalPurchases)}</p>
             <p className="text-xs text-muted-foreground">Total dépensé</p>
           </div>
         </div>
@@ -135,7 +135,7 @@ export default function ClientDetailPanel({ client, onClose }) {
                       )}
                     </div>
                     <div className="text-right ml-3 shrink-0">
-                      <p className="text-sm font-bold">{(r.final_cost || r.estimated_cost || 0).toFixed(2)} €</p>
+                      <p className="text-sm font-bold">{formatCurrency(r.final_cost || r.estimated_cost || 0)}</p>
                       <p className="text-xs text-muted-foreground">{r.created_date ? format(new Date(r.created_date), 'dd/MM/yyyy') : '-'}</p>
                     </div>
                   </div>
@@ -164,13 +164,13 @@ export default function ClientDetailPanel({ client, onClose }) {
                       {s.items?.length > 0 && (
                         <div className="space-y-0.5">
                           {s.items.map((item, i) => (
-                            <p key={i} className="text-xs text-muted-foreground">• {item.product_name} x{item.quantity} — {(item.total || 0).toFixed(2)} €</p>
+                            <p key={i} className="text-xs text-muted-foreground">• {item.product_name} x{item.quantity} — {formatCurrency(item.total || 0)}</p>
                           ))}
                         </div>
                       )}
                     </div>
                     <div className="text-right ml-3 shrink-0">
-                      <p className="text-sm font-bold">{(s.total || 0).toFixed(2)} €</p>
+                      <p className="text-sm font-bold">{formatCurrency(s.total || 0)}</p>
                       <p className="text-xs text-muted-foreground">{s.created_date ? format(new Date(s.created_date), 'dd/MM/yyyy') : '-'}</p>
                     </div>
                   </div>
@@ -201,7 +201,7 @@ export default function ClientDetailPanel({ client, onClose }) {
                 </div>
               </div>
               <div><Label>Adresse</Label><Input value={form.address} onChange={e => setForm({...form, address: e.target.value})} /></div>
-              <div><Label>Crédit client (€)</Label><Input type="number" value={form.credit_balance} onChange={e => setForm({...form, credit_balance: parseFloat(e.target.value) || 0})} /></div>
+              <div><Label>Crédit client</Label><Input type="number" value={form.credit_balance} onChange={e => setForm({...form, credit_balance: parseFloat(e.target.value) || 0})} /></div>
               <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} /></div>
               <div className="flex items-center gap-3">
                 <Switch checked={client.is_blacklisted} onCheckedChange={val => toggleBlacklistMutation.mutate(val)} />

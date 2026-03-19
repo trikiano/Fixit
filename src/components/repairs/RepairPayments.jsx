@@ -33,10 +33,10 @@ export default function RepairPayments({ payments = [], finalCost = 0, onChange 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">💰 Paiements & Acomptes</h3>
         <div className="flex gap-3 text-xs">
-          <span className="text-muted-foreground">Total: <span className="font-bold text-foreground">{(finalCost || 0).toFixed(2)} €</span></span>
-          <span className="text-green-500">Payé: <span className="font-bold">{totalPaid.toFixed(2)} €</span></span>
+          <span className="text-muted-foreground">Total: <span className="font-bold text-foreground">{formatCurrency(finalCost || 0)}</span></span>
+          <span className="text-green-500">Payé: <span className="font-bold">{formatCurrency(totalPaid)}</span></span>
           <span className={remaining > 0 ? 'text-orange-400 font-semibold' : 'text-green-500'}>
-            Restant: <span className="font-bold">{remaining.toFixed(2)} €</span>
+            Restant: <span className="font-bold">{formatCurrency(remaining)}</span>
           </span>
         </div>
       </div>
@@ -57,7 +57,7 @@ export default function RepairPayments({ payments = [], finalCost = 0, onChange 
           {payments.map((p, i) => (
             <div key={i} className="flex items-center gap-2 text-sm bg-muted/30 rounded-md px-3 py-2">
               <span className="text-muted-foreground text-xs w-20 flex-shrink-0">{p.date || '—'}</span>
-              <span className="font-bold text-green-400 w-20 flex-shrink-0">{(p.amount || 0).toFixed(2)} €</span>
+              <span className="font-bold text-green-400 w-20 flex-shrink-0">{formatCurrency(p.amount || 0)}</span>
               <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                 {methodLabel[p.method] || p.method}
               </span>
@@ -79,7 +79,7 @@ export default function RepairPayments({ payments = [], finalCost = 0, onChange 
         <div className="border border-border/50 rounded-lg p-3 space-y-3 bg-muted/10">
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <Label className="text-xs">Montant (€) *</Label>
+              <Label className="text-xs">Montant *</Label>
               <Input type="number" placeholder={remaining > 0 ? remaining.toFixed(2) : '0.00'}
                 value={newPayment.amount}
                 onChange={e => setNewPayment(p => ({ ...p, amount: e.target.value }))}
