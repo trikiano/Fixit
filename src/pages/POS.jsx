@@ -101,6 +101,7 @@ export default function POS() {
       }));
       const subtotal = saleItems.reduce((s, i) => s + i.total, 0);
       for (const item of cart) {
+        if (item.isCustom) continue;
         const prod = products.find(p => p.id === item.id);
         if (prod) {
           await base44.entities.Product.update(prod.id, { quantity: Math.max(0, (prod.quantity || 0) - item.qty) });
