@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import PageHeader from "@/components/ui/PageHeader";
 import { Settings, Store, Palette, Globe, Bell, Shield, Receipt, CheckCircle, MessageSquare, Eye, EyeOff } from 'lucide-react';
 import { useAppSettings, applyTheme } from "@/components/settings/SettingsContext";
+import SmsSettingsTab from "@/components/settings/SmsSettingsTab";
 
 const CURRENCIES = [
   { code: 'EUR', symbol: '€', label: 'Euro (€)' },
