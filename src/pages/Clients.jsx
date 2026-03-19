@@ -30,6 +30,10 @@ export default function Clients() {
     mutationFn: (data) => editingClient ? base44.entities.Client.update(editingClient.id, data) : base44.entities.Client.create(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['clients'] }); closeDialog(); },
   });
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Client.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['clients'] }),
+  });
   const toggleBlacklistMutation = useMutation({
     mutationFn: ({ id, val }) => base44.entities.Client.update(id, { is_blacklisted: val }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['clients'] }),
