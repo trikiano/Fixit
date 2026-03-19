@@ -129,6 +129,22 @@ export default function Repairs() {
     { header: "Pièces", render: r => r.parts_used?.length > 0 ? <span className="text-xs bg-muted px-2 py-1 rounded-full">🔧 {r.parts_used.length}</span> : <span className="text-xs text-muted-foreground">—</span> },
     { header: "Coût", render: r => <span className="text-sm font-medium">{formatCurrency(r.final_cost || r.estimated_cost || 0)}</span> },
     { header: "Date", render: r => <span className="text-xs text-muted-foreground">{r.created_date ? format(new Date(r.created_date), 'dd/MM/yyyy') : '-'}</span> },
+    { header: "Caisse", render: r => {
+      const price = r.final_cost || r.estimated_cost || 0;
+      const totalPaid = (r.payments || []).reduce((s, p) => s + (p.amount || 0), 0);
+      const remaining = Math.max(0, price - totalPaid);
+      const label = `${r.client_name || ''} - ${r.device_brand || ''} ${r.device_model || ''}`.trim();
+      return (
+        <Link
+          to={`${createPageUrl('POS')}?preload=repair:${r.id}:${encodeURIComponent(label)}:${remaining || price}:${encodeURIComponent(r.client_name || '')}:${encodeURIComponent(r.client_phone || '')}`}
+          onClick={e => e.stopPropagation()}
+        >
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:text-primary" title="Payer en caisse">
+            <ShoppingCart className="h-3.5 w-3.5" />
+          </Button>
+        </Link>
+      );
+    }},
   ];
 
   return (
