@@ -177,6 +177,29 @@ export default function POS() {
     }));
   }, [activeTicketId]);
 
+  const addCustomItem = () => {
+    const price = parseFloat(customItemPrice);
+    if (!customItemLabel.trim() || isNaN(price) || price <= 0) return;
+    const PREFIXES = { maintenance: '🔧 ', avance: '💰 ', service: '📦 ' };
+    const customId = `custom_${customItemType}_${Date.now()}`;
+    const name = PREFIXES[customItemType] + customItemLabel.trim();
+    setTickets(prev => prev.map(t => {
+      if (t.id !== activeTicketId) return t;
+      const newCart = [...t.cart, { id: customId, name, qty: 1, unit_price: price, discount: 0, isCustom: true }];
+      return { ...t, cart: newCart, selectedCartIdx: newCart.length - 1, numpadBuffer: '' };
+    }));
+    setCustomItemLabel('');
+    setCustomItemPrice('');
+    setShowCustomItemDialog(false);
+  };
+
+  const openCustomItemDialog = (type) => {
+    setCustomItemType(type);
+    setCustomItemLabel('');
+    setCustomItemPrice('');
+    setShowCustomItemDialog(true);
+  };
+
   const removeSelected = () => {
     if (selectedCartIdx === null) return;
     const newCart = cart.filter((_, i) => i !== selectedCartIdx);
