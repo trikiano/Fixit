@@ -41,10 +41,16 @@ export default function POS() {
   const [successOpen, setSuccessOpen] = useState(false);
   const [lastSaleNum, setLastSaleNum] = useState('');
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showClientDialog, setShowClientDialog] = useState(false);
+  const [clientSearch, setClientSearch] = useState('');
+  const [user, setUser] = useState(null);
   const qc = useQueryClient();
 
   const { formatCurrency, generateTicketNumber } = useAppSettings();
   const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: () => base44.entities.Product.list() });
+  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list('-created_date', 500) });
+
+  useEffect(() => { base44.auth.me().then(setUser).catch(() => {}); }, []);
 
   // Active ticket helpers
   const ticket = tickets.find(t => t.id === activeTicketId) || tickets[0];
