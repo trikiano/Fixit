@@ -64,7 +64,7 @@ export default function CashRegisterDetail({ register, onClose }) {
             <div>
               <p>Journal de caisse — {register.date}</p>
               <p className="text-sm font-normal text-muted-foreground">
-                Ouverture: {(register.opening_balance || 0).toFixed(2)} € &nbsp;·&nbsp;
+                Ouverture: {formatCurrency(register.opening_balance || 0)} &nbsp;·&nbsp;
                 <StatusBadge status={register.status} />
               </p>
             </div>
@@ -75,28 +75,28 @@ export default function CashRegisterDetail({ register, onClose }) {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-muted/30 rounded-xl p-3 border border-border/50 text-center">
             <p className="text-xs text-muted-foreground mb-1">Ventes totales</p>
-            <p className="text-lg font-bold text-primary">{totalSales.toFixed(2)} €</p>
+            <p className="text-lg font-bold text-primary">{formatCurrency(totalSales)}</p>
             <p className="text-xs text-muted-foreground">{sales.length} ticket(s)</p>
           </div>
           <div className="bg-muted/30 rounded-xl p-3 border border-border/50 text-center">
             <p className="text-xs text-muted-foreground mb-1 flex items-center justify-center gap-1"><Banknote className="h-3 w-3" />Espèces</p>
-            <p className="text-lg font-bold">{totalCash.toFixed(2)} €</p>
+            <p className="text-lg font-bold">{formatCurrency(totalCash)}</p>
           </div>
           <div className="bg-muted/30 rounded-xl p-3 border border-border/50 text-center">
             <p className="text-xs text-muted-foreground mb-1 flex items-center justify-center gap-1"><CreditCard className="h-3 w-3" />Carte</p>
-            <p className="text-lg font-bold">{totalCard.toFixed(2)} €</p>
+            <p className="text-lg font-bold">{formatCurrency(totalCard)}</p>
           </div>
           <div className="bg-muted/30 rounded-xl p-3 border border-border/50 text-center">
             <p className="text-xs text-muted-foreground mb-1">Dépenses</p>
-            <p className="text-lg font-bold text-destructive">{totalExp.toFixed(2)} €</p>
+            <p className="text-lg font-bold text-destructive">{formatCurrency(totalExp)}</p>
           </div>
         </div>
 
         {register.status === 'fermee' && (
           <div className="p-3 rounded-xl border border-border/50 bg-muted/20 text-sm flex items-center justify-between">
-            <span className="text-muted-foreground">Solde attendu: <span className="font-bold text-foreground">{(register.expected_balance || 0).toFixed(2)} €</span></span>
-            <span className="text-muted-foreground">Solde réel: <span className="font-bold text-foreground">{(register.closing_balance || 0).toFixed(2)} €</span></span>
-            <span className="text-muted-foreground">Écart: <span className={`font-bold ${(register.difference || 0) !== 0 ? 'text-destructive' : 'text-foreground'}`}>{(register.difference || 0).toFixed(2)} €</span></span>
+            <span className="text-muted-foreground">Solde attendu: <span className="font-bold text-foreground">{formatCurrency(register.expected_balance || 0)}</span></span>
+            <span className="text-muted-foreground">Solde réel: <span className="font-bold text-foreground">{formatCurrency(register.closing_balance || 0)}</span></span>
+            <span className="text-muted-foreground">Écart: <span className={`font-bold ${(register.difference || 0) !== 0 ? 'text-destructive' : 'text-foreground'}`}>{formatCurrency(register.difference || 0)}</span></span>
           </div>
         )}
 
@@ -121,7 +121,7 @@ export default function CashRegisterDetail({ register, onClose }) {
                       <Badge variant="outline" className="text-xs">
                         {sale.payment_method === 'especes' ? '💵 Espèces' : sale.payment_method === 'carte' ? '💳 Carte' : sale.payment_method === 'mixte' ? '🔀 Mixte' : sale.payment_method}
                       </Badge>
-                      <span className="text-sm font-bold">{(sale.total || 0).toFixed(2)} €</span>
+                      <span className="text-sm font-bold">{formatCurrency(sale.total || 0)}</span>
                     </div>
                   </div>
                   {/* Produits */}
@@ -135,8 +135,8 @@ export default function CashRegisterDetail({ register, onClose }) {
                             <span className="text-muted-foreground">× {item.quantity}</span>
                           </div>
                           <div className="flex items-center gap-3 text-right">
-                            {item.discount > 0 && <span className="text-xs text-muted-foreground line-through">{((item.unit_price || 0) * item.quantity).toFixed(2)} €</span>}
-                            <span className="font-medium">{(item.total || 0).toFixed(2)} €</span>
+                            {item.discount > 0 && <span className="text-xs text-muted-foreground line-through">{formatCurrency((item.unit_price || 0) * item.quantity)}</span>}
+                            <span className="font-medium">{formatCurrency(item.total || 0)}</span>
                           </div>
                         </div>
                       ))}
@@ -144,7 +144,7 @@ export default function CashRegisterDetail({ register, onClose }) {
                   )}
                   <div className="px-4 py-1.5 flex items-center justify-between text-xs text-muted-foreground bg-muted/10">
                     <span>{fmtDate(sale.created_date)}</span>
-                    {sale.discount_total > 0 && <span className="text-orange-500">Remise: -{sale.discount_total.toFixed(2)} €</span>}
+                    {sale.discount_total > 0 && <span className="text-orange-500">Remise: -{formatCurrency(sale.discount_total)}</span>}
                   </div>
                 </div>
               ))}
@@ -160,7 +160,7 @@ export default function CashRegisterDetail({ register, onClose }) {
               {expenses.map(e => (
                 <div key={e.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border/50 bg-muted/20 text-sm">
                   <span>{e.description}</span>
-                  <span className="font-medium text-destructive">-{(e.amount || 0).toFixed(2)} €</span>
+                  <span className="font-medium text-destructive">-{formatCurrency(e.amount || 0)}</span>
                 </div>
               ))}
             </div>
