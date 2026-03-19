@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import PageHeader from "@/components/ui/PageHeader";
 import DataTable from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
-import { Package, Plus, Search, AlertTriangle, Upload, X } from 'lucide-react';
+import { Package, Plus, Search, AlertTriangle, Upload, X, Pencil, Trash2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useAppSettings } from "@/components/settings/SettingsContext";
 

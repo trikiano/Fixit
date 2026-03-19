@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import PageHeader from "@/components/ui/PageHeader";
 import DataTable from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
-import { ClipboardList, Plus, Search } from 'lucide-react';
+import { ClipboardList, Plus, Search, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 const categories = [
