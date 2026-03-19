@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import PageHeader from "@/components/ui/PageHeader";
-import { Settings, Store, Palette, Globe, Bell, Shield, Receipt, CheckCircle } from 'lucide-react';
+import { Settings, Store, Palette, Globe, Bell, Shield, Receipt, CheckCircle, MessageSquare, Eye, EyeOff } from 'lucide-react';
 import { useAppSettings, applyTheme } from "@/components/settings/SettingsContext";
 
 const CURRENCIES = [
