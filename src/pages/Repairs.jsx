@@ -236,6 +236,10 @@ export default function Repairs() {
               payments={form.payments || []}
               finalCost={form.final_cost || form.estimated_cost || 0}
               onChange={payments => setForm(f => ({ ...f, payments }))}
+              repairId={editing?.id || ''}
+              repairLabel={editing ? `${editing.client_name} - ${editing.device_brand || ''} ${editing.device_model || ''}`.trim() : ''}
+              clientName={form.client_name}
+              clientPhone={form.client_phone}
             />
             <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} /></div>
             <div className="flex justify-end gap-2">
