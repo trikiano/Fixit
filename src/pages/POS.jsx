@@ -241,7 +241,15 @@ export default function POS() {
           </button>
         </div>
 
-        <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">Caisse POS</span>
+        {/* Caissier connecté */}
+        {user && (
+          <div className="flex items-center gap-2 ml-2 px-3 py-1 rounded-md bg-muted/40 flex-shrink-0">
+            <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
+              {user.full_name?.[0] || user.email?.[0]?.toUpperCase()}
+            </div>
+            <span className="text-xs font-medium text-foreground hidden sm:block">{user.full_name || user.email}</span>
+          </div>
+        )}
       </div>
 
       {/* MAIN */}
