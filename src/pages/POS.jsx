@@ -43,6 +43,10 @@ export default function POS() {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showClientDialog, setShowClientDialog] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
+  const [showCustomItemDialog, setShowCustomItemDialog] = useState(false);
+  const [customItemType, setCustomItemType] = useState('maintenance'); // 'maintenance' | 'avance' | 'service'
+  const [customItemLabel, setCustomItemLabel] = useState('');
+  const [customItemPrice, setCustomItemPrice] = useState('');
   const [user, setUser] = useState(null);
   const qc = useQueryClient();
 
