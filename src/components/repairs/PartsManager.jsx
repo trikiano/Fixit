@@ -10,6 +10,7 @@ import { useAppSettings } from "@/components/settings/SettingsContext";
 
 export default function PartsManager({ parts = [], onChange, repairId }) {
   const qc = useQueryClient();
+  const { formatCurrency } = useAppSettings();
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
 

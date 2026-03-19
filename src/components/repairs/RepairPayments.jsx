@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { useAppSettings } from "@/components/settings/SettingsContext";
 
 export default function RepairPayments({ payments = [], finalCost = 0, onChange }) {
+  const { formatCurrency } = useAppSettings();
   const [showForm, setShowForm] = useState(false);
   const [newPayment, setNewPayment] = useState({
     amount: '', method: 'especes',

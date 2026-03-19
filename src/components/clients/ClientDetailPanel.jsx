@@ -19,6 +19,7 @@ import { createPageUrl } from '@/utils';
 
 export default function ClientDetailPanel({ client, onClose }) {
   const navigate = useNavigate();
+  const { formatCurrency } = useAppSettings();
   const qc = useQueryClient();
   const [form, setForm] = useState({
     full_name: client.full_name, phone: client.phone, email: client.email || '',
