@@ -64,6 +64,8 @@ export default function POS() {
   const [historySearch, setHistorySearch] = useState('');
   const [historyTab, setHistoryTab] = useState('repairs'); // 'repairs' | 'services'
   const [user, setUser] = useState(null);
+  const [smsSending, setSmsSending] = useState(false);
+  const [smsResult, setSmsResult] = useState(null); // null | 'ok' | 'error'
   const qc = useQueryClient();
 
   const { formatCurrency, generateTicketNumber } = useAppSettings();
