@@ -2,11 +2,14 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
 Deno.serve(async (req) => {
   try {
+    // Lire le body en premier (avant auth qui peut consommer le stream)
+    const body = await req.json();
+
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { to, message, provider, apiKey, apiSecret, from } = await req.json();
+    const { to, message, provider, apiKey, apiSecret, from } = body;
 
     if (!to || !message || !provider || !apiKey) {
       return Response.json({ error: 'Paramètres manquants' }, { status: 400 });
@@ -19,22 +22,23 @@ Deno.serve(async (req) => {
     let result;
 
     if (provider === 'twilio') {
-      // Twilio REST API
       const accountSid = apiKey;
       const authToken = apiSecret;
       const twilioFrom = from || '+15005550006';
       const encoded = btoa(`${accountSid}:${authToken}`);
       const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
         method: 'POST',
-        headers: { 'Authorization': `Basic ${encoded}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'Authorization': `Basic ${encoded}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
         body: new URLSearchParams({ To: phone, From: twilioFrom, Body: message }),
       });
       const data = await res.json();
-      if (!res.ok) return Response.json({ error: data.message || 'Erreur Twilio' }, { status: 400 });
+      if (!res.ok) return Response.json({ error: data.message || 'Erreur Twilio', details: data }, { status: 400 });
       result = { sid: data.sid, status: data.status };
 
     } else if (provider === 'vonage') {
-      // Vonage (Nexmo) SMS API
       const res = await fetch('https://rest.nexmo.com/sms/json', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -46,11 +50,14 @@ Deno.serve(async (req) => {
       result = { id: msg['message-id'], status: 'sent' };
 
     } else if (provider === 'infobip') {
-      // Infobip SMS API
-      const baseUrl = apiSecret; // apiSecret = baseUrl for infobip (ex: xxxxx.api.infobip.com)
+      const baseUrl = apiSecret;
       const res = await fetch(`https://${baseUrl}/sms/2/text/advanced`, {
         method: 'POST',
-        headers: { 'Authorization': `App ${apiKey}`, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        headers: {
+          'Authorization': `App ${apiKey}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
         body: JSON.stringify({
           messages: [{ destinations: [{ to: phone }], from: from || 'TechRepair', text: message }]
         }),
