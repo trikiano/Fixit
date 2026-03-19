@@ -66,6 +66,12 @@ export default function Clients() {
     { header: "Crédit", render: (r) => <span className="text-sm font-medium">{(r.credit_balance || 0).toFixed(2)}</span> },
     { header: "Points", render: (r) => <span className="text-sm">{r.loyalty_points || 0}</span> },
     { header: "Date", render: (r) => <span className="text-xs text-muted-foreground">{r.created_date ? format(new Date(r.created_date), 'dd/MM/yyyy') : '-'}</span> },
+    { header: "Actions", render: (r) => (
+      <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(r)}><Pencil className="h-3.5 w-3.5" /></Button>
+        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => { if(confirm('Supprimer ce client ?')) deleteMutation.mutate(r.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+      </div>
+    )},
   ];
 
   return (
