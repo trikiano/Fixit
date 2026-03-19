@@ -533,57 +533,79 @@ export default function POS() {
         </div>
       </div>
 
-      {/* CUSTOM ITEM DIALOG */}
-      <Dialog open={showCustomItemDialog} onOpenChange={setShowCustomItemDialog}>
-        <DialogContent className="max-w-sm">
+      {/* HISTORY DIALOG */}
+      <Dialog open={showHistoryDialog} onOpenChange={setShowHistoryDialog}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {customItemType === 'maintenance' && <><Wrench className="h-4 w-4 text-orange-500" /> Opération de maintenance</>}
-              {customItemType === 'avance' && <><Wallet className="h-4 w-4 text-emerald-500" /> Avance</>}
-              {customItemType === 'service' && <><ShoppingBag className="h-4 w-4 text-blue-500" /> Service vendu</>}
+              {historyTab === 'repairs' ? <><Wrench className="h-4 w-4 text-orange-500" /> Réparations existantes</> : <><Clock className="h-4 w-4 text-blue-500" /> Services existants</>}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 mt-1">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                {customItemType === 'maintenance' ? 'Désignation de la maintenance' :
-                 customItemType === 'avance' ? 'Motif / désignation' :
-                 'Nom du service'}
-              </label>
-              <Input
-                value={customItemLabel}
-                onChange={e => setCustomItemLabel(e.target.value)}
-                placeholder={
-                  customItemType === 'maintenance' ? 'Ex: Remplacement écran iPhone 13' :
-                  customItemType === 'avance' ? 'Ex: Avance réparation' :
-                  'Ex: Forfait internet 10GB'
-                }
-                autoFocus
-                onKeyDown={e => e.key === 'Enter' && document.getElementById('custom-price-input').focus()}
-              />
+          <div className="space-y-3">
+            {/* Tabs */}
+            <div className="flex gap-1 bg-muted/40 p-1 rounded-lg">
+              <button onClick={() => setHistoryTab('repairs')} className={cn("flex-1 py-1.5 text-xs font-medium rounded transition-colors", historyTab === 'repairs' ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>🔧 Réparations</button>
+              <button onClick={() => setHistoryTab('services')} className={cn("flex-1 py-1.5 text-xs font-medium rounded transition-colors", historyTab === 'services' ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>📦 Services</button>
             </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Montant</label>
-              <Input
-                id="custom-price-input"
-                type="number"
-                value={customItemPrice}
-                onChange={e => setCustomItemPrice(e.target.value)}
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-                onKeyDown={e => e.key === 'Enter' && addCustomItem()}
-              />
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input value={historySearch} onChange={e => setHistorySearch(e.target.value)} placeholder="Rechercher par client, désignation..." className="pl-9" autoFocus />
             </div>
-            <div className="flex gap-2 pt-1">
-              <Button variant="outline" className="flex-1" onClick={() => setShowCustomItemDialog(false)}>Annuler</Button>
-              <Button
-                className="flex-1"
-                onClick={addCustomItem}
-                disabled={!customItemLabel.trim() || !customItemPrice || parseFloat(customItemPrice) <= 0}
-              >
-                <Plus className="h-4 w-4 mr-1" /> Ajouter
-              </Button>
+            {/* List */}
+            <div className="max-h-80 overflow-y-auto rounded-lg border border-border divide-y divide-border/50">
+              {historyTab === 'repairs' && (() => {
+                const filtered = repairs.filter(r =>
+                  !historySearch ||
+                  r.client_name?.toLowerCase().includes(historySearch.toLowerCase()) ||
+                  r.device_brand?.toLowerCase().includes(historySearch.toLowerCase()) ||
+                  r.device_model?.toLowerCase().includes(historySearch.toLowerCase()) ||
+                  r.ticket_number?.toLowerCase().includes(historySearch.toLowerCase())
+                ).slice(0, 30);
+                if (filtered.length === 0) return <div className="py-8 text-center text-sm text-muted-foreground">Aucune réparation trouvée</div>;
+                return filtered.map(r => {
+                  const price = r.final_cost || r.estimated_cost || 0;
+                  const totalPaid = (r.payments || []).reduce((s, p) => s + (p.amount || 0), 0);
+                  const remaining = Math.max(0, price - totalPaid);
+                  return (
+                    <button key={r.id} onClick={() => addHistoryItem({ id: r.id, name: `🔧 ${r.client_name} — ${r.device_brand || ''} ${r.device_model || ''}`.trim(), price: remaining || price, clientName: r.client_name, clientPhone: r.client_phone, type: 'repair' })}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors text-left">
+                      <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                        <Wrench className="h-4 w-4 text-orange-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{r.client_name} — {r.device_brand} {r.device_model}</p>
+                        <p className="text-xs text-muted-foreground">{r.ticket_number} · {r.status}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-sm font-bold text-foreground">{formatCurrency(remaining || price)}</p>
+                        {remaining > 0 && totalPaid > 0 && <p className="text-[10px] text-orange-500">Reste à payer</p>}
+                      </div>
+                    </button>
+                  );
+                });
+              })()}
+              {historyTab === 'services' && (() => {
+                const filtered = serviceSales.filter(s =>
+                  !historySearch ||
+                  s.client_name?.toLowerCase().includes(historySearch.toLowerCase()) ||
+                  s.service_name?.toLowerCase().includes(historySearch.toLowerCase())
+                ).slice(0, 30);
+                if (filtered.length === 0) return <div className="py-8 text-center text-sm text-muted-foreground">Aucun service trouvé</div>;
+                return filtered.map(s => (
+                  <button key={s.id} onClick={() => addHistoryItem({ id: s.id, name: `📦 ${s.service_name}`, price: s.sell_price || 0, clientName: s.client_name, clientPhone: s.client_phone, type: 'service' })}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors text-left">
+                    <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                      <Clock className="h-4 w-4 text-blue-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{s.service_name}</p>
+                      <p className="text-xs text-muted-foreground">{s.client_name} · {s.client_phone}</p>
+                    </div>
+                    <p className="text-sm font-bold flex-shrink-0">{formatCurrency(s.sell_price || 0)}</p>
+                  </button>
+                ));
+              })()}
             </div>
           </div>
         </DialogContent>
