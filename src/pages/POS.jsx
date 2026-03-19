@@ -148,7 +148,7 @@ export default function POS() {
       setLastSaleNum(saleNum);
       setSuccessOpen(true);
       setShowPaymentDialog(false);
-      // Reset current ticket
+      setSmsResult(null);
       updateTicket({ cart: [], clientName: '', clientPhone: '', selectedCartIdx: null, numpadBuffer: '', numpadMode: 'Qté' });
       setPaymentMethod('especes');
     },
