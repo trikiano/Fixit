@@ -29,6 +29,10 @@ export default function Suppliers() {
     mutationFn: (data) => editing ? base44.entities.Supplier.update(editing.id, data) : base44.entities.Supplier.create(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['suppliers'] }); closeDialog(); },
   });
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Supplier.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['suppliers'] }),
+  });
 
   const closeDialog = () => { setDialogOpen(false); setEditing(null); setForm(emptyForm); };
   const openEdit = (s) => { setEditing(s); setForm({ name: s.name, contact_name: s.contact_name || '', phone: s.phone, email: s.email || '', address: s.address || '', payment_terms: s.payment_terms || 'comptant', notes: s.notes || '' }); setDialogOpen(true); };
