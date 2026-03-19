@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
-  Search, Package, ArrowLeft, Delete, CheckCircle, Home, ChevronRight, Plus, X, User, Phone, Wrench, Wallet, ShoppingBag
+  Search, Package, ArrowLeft, Delete, CheckCircle, Home, ChevronRight, Plus, X, User, Phone, Wrench, Clock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
