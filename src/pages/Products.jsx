@@ -183,8 +183,8 @@ export default function Products() {
                   <SelectContent>{conditions.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div><Label>Prix achat ({sym})</Label><Input type="number" value={form.buy_price} onChange={e => setForm({...form, buy_price: parseFloat(e.target.value) || 0})} /></div>
-              <div><Label>Prix vente ({sym}) *</Label><Input type="number" value={form.sell_price} onChange={e => setForm({...form, sell_price: parseFloat(e.target.value) || 0})} /></div>
+              <div><Label>Prix achat ({settings.currency_symbol || 'DT'})</Label><Input type="number" value={form.buy_price} onChange={e => setForm({...form, buy_price: parseFloat(e.target.value) || 0})} /></div>
+              <div><Label>Prix vente ({settings.currency_symbol || 'DT'}) *</Label><Input type="number" value={form.sell_price} onChange={e => setForm({...form, sell_price: parseFloat(e.target.value) || 0})} /></div>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div><Label>Quantité</Label><Input type="number" value={form.quantity} onChange={e => setForm({...form, quantity: parseInt(e.target.value) || 0})} /></div>

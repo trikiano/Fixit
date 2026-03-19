@@ -59,7 +59,7 @@ export default function Clients() {
     )},
     { header: "Téléphone", render: (r) => <span className="text-sm">{r.phone}</span> },
     { header: "Segment", render: (r) => <StatusBadge status={r.segment} /> },
-    { header: "Crédit", render: (r) => <span className="text-sm font-medium">{(r.credit_balance || 0).toFixed(2)} €</span> },
+    { header: "Crédit", render: (r) => <span className="text-sm font-medium">{(r.credit_balance || 0).toFixed(2)}</span> },
     { header: "Points", render: (r) => <span className="text-sm">{r.loyalty_points || 0}</span> },
     { header: "Date", render: (r) => <span className="text-xs text-muted-foreground">{r.created_date ? format(new Date(r.created_date), 'dd/MM/yyyy') : '-'}</span> },
   ];
@@ -110,7 +110,7 @@ export default function Clients() {
               </div>
             </div>
             <div><Label>Adresse</Label><Input value={form.address} onChange={e => setForm({...form, address: e.target.value})} /></div>
-            <div><Label>Crédit client (€)</Label><Input type="number" value={form.credit_balance} onChange={e => setForm({...form, credit_balance: parseFloat(e.target.value) || 0})} /></div>
+            <div><Label>Crédit client</Label><Input type="number" value={form.credit_balance} onChange={e => setForm({...form, credit_balance: parseFloat(e.target.value) || 0})} /></div>
             <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} /></div>
             {editingClient && (
               <div className="flex items-center gap-3">

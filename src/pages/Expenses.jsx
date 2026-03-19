@@ -80,7 +80,7 @@ export default function Expenses() {
           <div className="space-y-4">
             <div><Label>Description *</Label><Input value={form.description} onChange={e => setForm({...form, description: e.target.value})} /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Montant ({sym}) *</Label><Input type="number" value={form.amount} onChange={e => setForm({...form, amount: parseFloat(e.target.value) || 0})} /></div>
+              <div><Label>Montant ({settings.currency_symbol || 'DT'}) *</Label><Input type="number" value={form.amount} onChange={e => setForm({...form, amount: parseFloat(e.target.value) || 0})} /></div>
               <div><Label>Date</Label><Input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
