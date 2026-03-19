@@ -12,7 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import StatusBadge from "@/components/ui/StatusBadge";
-import { Wrench, ShoppingBag, Ban, Euro, Phone, Mail } from 'lucide-react';
+import { Wrench, ShoppingBag, Ban, Phone, Mail } from 'lucide-react';
+import { useAppSettings } from "@/components/settings/SettingsContext";
 import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
 
