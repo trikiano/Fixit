@@ -389,7 +389,12 @@ export default function ServicesPage() {
                             <td className="p-3 text-right text-muted-foreground">{(s.cost_price || 0).toFixed(2)} {sym}</td>
                             <td className="p-3 text-right font-bold text-green-600">{(s.sell_price || 0).toFixed(2)} {sym}</td>
                             <td className="p-3 text-right font-semibold text-blue-600">{profit.toFixed(2)} {sym}</td>
-                            <td className="p-3">
+                            <td className="p-3 flex items-center gap-1">
+                              <Link to={`${createPageUrl('POS')}?preload=service:${s.id}:${encodeURIComponent(s.service_name)}:${s.sell_price}:${encodeURIComponent(s.client_name || '')}:${encodeURIComponent(s.client_phone || '')}`}>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:text-primary" title="Encaisser en caisse">
+                                  <ShoppingCart className="h-3.5 w-3.5" />
+                                </Button>
+                              </Link>
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
                                 onClick={() => { if (window.confirm('Supprimer cette vente ? Le solde de la carte sera rétabli.')) deleteSaleMutation.mutate(s); }}>
                                 <Trash2 className="h-3.5 w-3.5" />
