@@ -10,7 +10,6 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 import { useAppSettings } from "@/components/settings/SettingsContext";
-import { useState as useLocalState } from 'react';
 import { Button } from "@/components/ui/button";
 
 const CATEGORY_LABELS = {
