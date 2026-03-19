@@ -482,6 +482,28 @@ export default function POS() {
             ))}
           </div>
 
+          {/* Quick add buttons */}
+          <div className="flex gap-2 px-3 py-2 border-b border-border bg-card/50 flex-shrink-0">
+            <button
+              onClick={() => openCustomItemDialog('maintenance')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-orange-500/30 bg-orange-500/5 text-orange-600 hover:bg-orange-500/15 transition-colors text-xs font-medium flex-shrink-0"
+            >
+              <Wrench className="h-3.5 w-3.5" /> Maintenance
+            </button>
+            <button
+              onClick={() => openCustomItemDialog('avance')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/5 text-emerald-600 hover:bg-emerald-500/15 transition-colors text-xs font-medium flex-shrink-0"
+            >
+              <Wallet className="h-3.5 w-3.5" /> Avance
+            </button>
+            <button
+              onClick={() => openCustomItemDialog('service')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-500/30 bg-blue-500/5 text-blue-600 hover:bg-blue-500/15 transition-colors text-xs font-medium flex-shrink-0"
+            >
+              <ShoppingBag className="h-3.5 w-3.5" /> Service vendu
+            </button>
+          </div>
+
           {/* Products grid */}
           <div className="flex-1 overflow-y-auto p-3">
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
