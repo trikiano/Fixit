@@ -3,9 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, ShoppingCart } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAppSettings } from "@/components/settings/SettingsContext";
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 
 export default function RepairPayments({ payments = [], finalCost = 0, onChange }) {
   const { formatCurrency } = useAppSettings();
