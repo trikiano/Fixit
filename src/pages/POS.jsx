@@ -501,6 +501,74 @@ export default function POS() {
         </div>
       </div>
 
+      {/* CLIENT DIALOG */}
+      <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Sélectionner un client</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={clientSearch}
+                onChange={e => setClientSearch(e.target.value)}
+                placeholder="Nom ou téléphone..."
+                className="pl-9"
+                autoFocus
+              />
+            </div>
+            <div className="max-h-72 overflow-y-auto rounded-lg border border-border divide-y divide-border/50">
+              {/* Client passager */}
+              <button
+                onClick={() => { updateTicket({ clientName: 'Client passager', clientPhone: '' }); setShowClientDialog(false); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors text-left"
+              >
+                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Client passager</p>
+                  <p className="text-xs text-muted-foreground">Client anonyme</p>
+                </div>
+                {(!clientName || clientName === 'Client passager') && (
+                  <span className="ml-auto text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">Actif</span>
+                )}
+              </button>
+              {/* Clients filtrés */}
+              {clients
+                .filter(c =>
+                  !clientSearch ||
+                  c.full_name?.toLowerCase().includes(clientSearch.toLowerCase()) ||
+                  c.phone?.includes(clientSearch)
+                )
+                .slice(0, 20)
+                .map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => { updateTicket({ clientName: c.full_name, clientPhone: c.phone || '' }); setShowClientDialog(false); }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors text-left",
+                      clientName === c.full_name && "bg-primary/5"
+                    )}
+                  >
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-sm font-bold text-primary">
+                      {c.full_name?.charAt(0)?.toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{c.full_name}</p>
+                      {c.phone && <p className="text-xs text-muted-foreground flex items-center gap-1"><Phone className="h-2.5 w-2.5" />{c.phone}</p>}
+                    </div>
+                    {clientName === c.full_name && (
+                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">Actif</span>
+                    )}
+                  </button>
+                ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* PAYMENT DIALOG */}
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent className="max-w-sm">
