@@ -179,27 +179,14 @@ export default function POS() {
     }));
   }, [activeTicketId]);
 
-  const addCustomItem = () => {
-    const price = parseFloat(customItemPrice);
-    if (!customItemLabel.trim() || isNaN(price) || price <= 0) return;
-    const PREFIXES = { maintenance: '🔧 ', avance: '💰 ', service: '📦 ' };
-    const customId = `custom_${customItemType}_${Date.now()}`;
-    const name = PREFIXES[customItemType] + customItemLabel.trim();
+  const addHistoryItem = (item) => {
+    const customId = `hist_${item.id}_${Date.now()}`;
     setTickets(prev => prev.map(t => {
       if (t.id !== activeTicketId) return t;
-      const newCart = [...t.cart, { id: customId, name, qty: 1, unit_price: price, discount: 0, isCustom: true }];
-      return { ...t, cart: newCart, selectedCartIdx: newCart.length - 1, numpadBuffer: '' };
+      const newCart = [...t.cart, { id: customId, name: item.name, qty: 1, unit_price: item.price, discount: 0, isCustom: true, refId: item.id, refType: item.type }];
+      return { ...t, cart: newCart, selectedCartIdx: newCart.length - 1, numpadBuffer: '', clientName: t.clientName || item.clientName || '', clientPhone: t.clientPhone || item.clientPhone || '' };
     }));
-    setCustomItemLabel('');
-    setCustomItemPrice('');
-    setShowCustomItemDialog(false);
-  };
-
-  const openCustomItemDialog = (type) => {
-    setCustomItemType(type);
-    setCustomItemLabel('');
-    setCustomItemPrice('');
-    setShowCustomItemDialog(true);
+    setShowHistoryDialog(false);
   };
 
   const removeSelected = () => {
