@@ -35,7 +35,24 @@ let ticketCounter = 1;
 export default function POS() {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
-  const [tickets, setTickets] = useState([createEmptyTicket(1)]);
+  // Pré-charger un article depuis URL params (ex: ?preload=repair:id:label:price:client)
+  const [tickets, setTickets] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const preload = params.get('preload');
+    const t = createEmptyTicket(1);
+    if (preload) {
+      const parts = preload.split(':');
+      const [type, id, label, price, clientName, clientPhone] = parts;
+      if (label && price) {
+        const itemName = type === 'repair' ? `🔧 ${decodeURIComponent(label)}` : `📦 ${decodeURIComponent(label)}`;
+        t.cart = [{ id: `preload_${id}`, name: itemName, qty: 1, unit_price: parseFloat(price) || 0, discount: 0, isCustom: true, refId: id, refType: type }];
+        t.clientName = clientName ? decodeURIComponent(clientName) : '';
+        t.clientPhone = clientPhone ? decodeURIComponent(clientPhone) : '';
+        t.selectedCartIdx = 0;
+      }
+    }
+    return [t];
+  });
   const [activeTicketId, setActiveTicketId] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState('especes');
   const [successOpen, setSuccessOpen] = useState(false);
