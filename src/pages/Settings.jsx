@@ -395,7 +395,7 @@ export default function SettingsPage() {
 
         {/* SMS */}
         <TabsContent value="sms">
-          <SmsSettingsTab local={local} update={update} />
+          <SmsSettingsTab local={local} update={update} onSave={save} saved={saved} />
         </TabsContent>
 
         {/* Sécurité */}
