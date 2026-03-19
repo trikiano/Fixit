@@ -52,6 +52,8 @@ export default function POS() {
   const { formatCurrency, generateTicketNumber } = useAppSettings();
   const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: () => base44.entities.Product.list() });
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list('-created_date', 500) });
+  const { data: repairs = [] } = useQuery({ queryKey: ['repairs'], queryFn: () => base44.entities.Repair.list('-created_date', 200) });
+  const { data: serviceSales = [] } = useQuery({ queryKey: ['serviceSales'], queryFn: () => base44.entities.ServiceSale.list('-created_date', 200) });
 
   useEffect(() => { base44.auth.me().then(setUser).catch(() => {}); }, []);
 
