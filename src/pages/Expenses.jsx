@@ -43,6 +43,10 @@ export default function Expenses() {
     mutationFn: (data) => editing ? base44.entities.Expense.update(editing.id, data) : base44.entities.Expense.create(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['expenses'] }); closeDialog(); },
   });
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Expense.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['expenses'] }),
+  });
 
   const closeDialog = () => { setDialogOpen(false); setEditing(null); setForm(emptyForm); };
   const openEdit = (e) => { setEditing(e); setForm({ description: e.description, amount: e.amount, category: e.category || 'autre', payment_method: e.payment_method || 'especes', date: e.date || '', notes: e.notes || '' }); setDialogOpen(true); };

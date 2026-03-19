@@ -60,6 +60,10 @@ export default function Products() {
     mutationFn: (data) => editing ? base44.entities.Product.update(editing.id, data) : base44.entities.Product.create(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['products'] }); closeDialog(); },
   });
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Product.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+  });
 
   const closeDialog = () => { setDialogOpen(false); setEditing(null); setForm(emptyForm); };
   const openEdit = (p) => {
