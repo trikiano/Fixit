@@ -110,27 +110,6 @@ export default function POS() {
   };
 
   // --- Sale mutation ---
-  const sendAutoSms = async (cartItems, cName, cPhone, tot, saleNum) => {
-    if (!settings.sms_api_key || !settings.sms_provider || !cPhone) return;
-    const articlesLines = cartItems.map(item => `• ${item.name} x${item.qty} = ${formatCurrency(item.qty * item.unit_price * (1 - (item.discount || 0) / 100))}`).join('\n');
-    const template = settings.sms_ticket_template ||
-      `🧾 Ticket {numero}\nBoutique: {boutique}\nClient: {client}\n\nArticles:\n{articles}\n\nTOTAL: {total}\n\nMerci !`;
-    const message = template
-      .replace('{numero}', saleNum)
-      .replace('{boutique}', settings.shop_name || 'TechRepair Pro')
-      .replace('{client}', cName || 'Client')
-      .replace('{articles}', articlesLines)
-      .replace('{total}', formatCurrency(tot));
-    try {
-      await base44.functions.invoke('sendSms', {
-        to: cPhone, message,
-        provider: settings.sms_provider,
-        apiKey: settings.sms_api_key,
-        apiSecret: settings.sms_api_secret || '',
-        from: settings.sms_from || '',
-      });
-    } catch {}
-  };
 
   const saleMutation = useMutation({
     mutationFn: async () => {
