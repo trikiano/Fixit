@@ -301,14 +301,37 @@ export default function POS() {
             </div>
           </div>
 
-          {/* Customer row */}
+          {/* Customer row — bouton */}
           <div className="border-t border-border px-2 py-1.5">
-            <ClientSelector
-              clientName={clientName}
-              clientPhone={clientPhone}
-              onSelect={(name, phone) => updateTicket({ clientName: name || '', clientPhone: phone || '' })}
-              defaultPassager={true}
-            />
+            <button
+              onClick={() => { setClientSearch(''); setShowClientDialog(true); }}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-muted/40 transition-colors text-left"
+            >
+              <div className={cn(
+                "h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold",
+                clientName && clientName !== 'Client passager'
+                  ? "bg-primary/20 text-primary"
+                  : "bg-muted text-muted-foreground"
+              )}>
+                {clientName && clientName !== 'Client passager'
+                  ? clientName.charAt(0).toUpperCase()
+                  : <User className="h-3.5 w-3.5" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate text-foreground">
+                  {clientName && clientName !== 'Client passager' ? clientName : 'Client passager'}
+                </p>
+                {clientPhone && <p className="text-xs text-muted-foreground">{clientPhone}</p>}
+              </div>
+              {clientName && clientName !== 'Client passager' && (
+                <button
+                  onClick={e => { e.stopPropagation(); updateTicket({ clientName: '', clientPhone: '' }); }}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </button>
           </div>
 
           {/* ---- NUMPAD ZONE ---- */}
