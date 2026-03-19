@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import PageHeader from "@/components/ui/PageHeader";
 import DataTable from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
-import { Truck, Plus, Search, Eye } from 'lucide-react';
+import { Truck, Plus, Search, Eye, Pencil, Trash2 } from 'lucide-react';
 import SupplierDetailPanel from '@/components/suppliers/SupplierDetailPanel';
 
 const emptyForm = { name: '', contact_name: '', phone: '', email: '', address: '', payment_terms: 'comptant', notes: '' };
