@@ -113,6 +113,8 @@ export default function POS() {
   const saleMutation = useMutation({
     mutationFn: async () => {
       const saleNum = generateTicketNumber('sale');
+      // Snapshot avant de vider le panier
+      setLastCartSnapshot({ cart: [...cart], clientName, clientPhone, total, saleNum });
       const saleItems = cart.map(item => ({
         product_id: item.id, product_name: item.name,
         quantity: item.qty, unit_price: item.unit_price,
