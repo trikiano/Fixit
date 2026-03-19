@@ -470,25 +470,19 @@ export default function POS() {
             ))}
           </div>
 
-          {/* Quick add buttons */}
+          {/* Quick add from history */}
           <div className="flex gap-2 px-3 py-2 border-b border-border bg-card/50 flex-shrink-0">
             <button
-              onClick={() => openCustomItemDialog('maintenance')}
+              onClick={() => { setHistoryTab('repairs'); setHistorySearch(''); setShowHistoryDialog(true); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-orange-500/30 bg-orange-500/5 text-orange-600 hover:bg-orange-500/15 transition-colors text-xs font-medium flex-shrink-0"
             >
-              <Wrench className="h-3.5 w-3.5" /> Maintenance
+              <Wrench className="h-3.5 w-3.5" /> Réparation existante
             </button>
             <button
-              onClick={() => openCustomItemDialog('avance')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/5 text-emerald-600 hover:bg-emerald-500/15 transition-colors text-xs font-medium flex-shrink-0"
-            >
-              <Wallet className="h-3.5 w-3.5" /> Avance
-            </button>
-            <button
-              onClick={() => openCustomItemDialog('service')}
+              onClick={() => { setHistoryTab('services'); setHistorySearch(''); setShowHistoryDialog(true); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-500/30 bg-blue-500/5 text-blue-600 hover:bg-blue-500/15 transition-colors text-xs font-medium flex-shrink-0"
             >
-              <ShoppingBag className="h-3.5 w-3.5" /> Service vendu
+              <Clock className="h-3.5 w-3.5" /> Service existant
             </button>
           </div>
 
