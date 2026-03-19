@@ -104,6 +104,12 @@ export default function Products() {
       </div>
     )},
     { header: "Emplacement", render: r => <span className="text-xs text-muted-foreground">{r.location || '-'}</span> },
+    { header: "Actions", render: r => (
+      <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(r)}><Pencil className="h-3.5 w-3.5" /></Button>
+        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => { if(confirm('Supprimer ce produit ?')) deleteMutation.mutate(r.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+      </div>
+    )},
   ];
 
   return (
