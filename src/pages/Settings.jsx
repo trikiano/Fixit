@@ -70,6 +70,7 @@ export default function SettingsPage() {
           <TabsTrigger value="reparation" className="gap-2 text-xs"><Receipt className="h-3.5 w-3.5" />Réparation</TabsTrigger>
           <TabsTrigger value="notifications" className="gap-2 text-xs"><Bell className="h-3.5 w-3.5" />Notifications</TabsTrigger>
           <TabsTrigger value="caisse" className="gap-2 text-xs"><Store className="h-3.5 w-3.5" />Caisse</TabsTrigger>
+          <TabsTrigger value="sms" className="gap-2 text-xs"><MessageSquare className="h-3.5 w-3.5" />SMS</TabsTrigger>
           <TabsTrigger value="securite" className="gap-2 text-xs"><Shield className="h-3.5 w-3.5" />Sécurité</TabsTrigger>
         </TabsList>
 
@@ -389,6 +390,11 @@ export default function SettingsPage() {
               ))}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* SMS */}
+        <TabsContent value="sms">
+          <SmsSettingsTab local={local} update={update} />
         </TabsContent>
 
         {/* Sécurité */}
