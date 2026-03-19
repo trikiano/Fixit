@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { format } from 'date-fns';
 import { ShoppingCart, Package, CreditCard, Banknote, Receipt } from 'lucide-react';
+import { useAppSettings } from "@/components/settings/SettingsContext";
 
 function fmtDate(d) {
   if (!d) return '-';
@@ -13,6 +14,7 @@ function fmtDate(d) {
 }
 
 export default function CashRegisterDetail({ register, onClose }) {
+  const { formatCurrency } = useAppSettings();
   const { data: allSales = [], isLoading } = useQuery({
     queryKey: ['sales-all'],
     queryFn: () => base44.entities.Sale.filter({ status: 'completee' }, '-created_date', 500),
