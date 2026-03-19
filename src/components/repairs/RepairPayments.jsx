@@ -9,7 +9,7 @@ import { useAppSettings } from "@/components/settings/SettingsContext";
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
-export default function RepairPayments({ payments = [], finalCost = 0, onChange }) {
+export default function RepairPayments({ payments = [], finalCost = 0, onChange, repairId = '', repairLabel = '', clientName = '', clientPhone = '' }) {
   const { formatCurrency } = useAppSettings();
   const [showForm, setShowForm] = useState(false);
   const [newPayment, setNewPayment] = useState({
