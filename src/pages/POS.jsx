@@ -164,7 +164,11 @@ export default function POS() {
         payments: [{ method: paymentMethod, amount: subtotal }],
         status: 'completee'
       });
-      await sendAutoSms([...cart], clientName, clientPhone, subtotal, saleNum);
+      try {
+        await sendAutoSms([...cart], clientName, clientPhone, subtotal, saleNum);
+      } catch (e) {
+        console.error('SMS auto error:', e);
+      }
       return saleNum;
     },
     onSuccess: (saleNum) => {

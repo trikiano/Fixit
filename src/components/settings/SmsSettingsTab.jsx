@@ -50,7 +50,7 @@ TOTAL: {total}
 
 Merci pour votre confiance !`;
 
-export default function SmsSettingsTab({ local, update }) {
+export default function SmsSettingsTab({ local, update, onSave, saved }) {
   const [showSecret, setShowSecret] = useState(false);
   const [testPhone, setTestPhone] = useState('');
   const [testStatus, setTestStatus] = useState(null); // null | 'loading' | 'ok' | 'error'
