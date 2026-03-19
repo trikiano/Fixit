@@ -179,6 +179,17 @@ export default function SmsSettingsTab({ local, update, onSave, saved }) {
 
           <Separator />
 
+          {/* Sauvegarder */}
+          {onSave && (
+            <div className="flex justify-end pt-2">
+              <Button onClick={onSave} className="gap-2">
+                {saved ? <><CheckCircle className="h-4 w-4 text-green-400" /> Sauvegardé !</> : 'Sauvegarder les paramètres SMS'}
+              </Button>
+            </div>
+          )}
+
+          <Separator />
+
           {/* Test */}
           <div className="space-y-2">
             <Label>Tester l'envoi SMS</Label>
