@@ -72,10 +72,17 @@ export default function RepairPayments({ payments = [], finalCost = 0, onChange 
         </div>
       )}
 
-      {/* Formulaire ajout */}
+      {/* Bouton Payer en caisse */}
+      <Link to={createPageUrl('POS')} className="block w-full">
+        <Button variant="default" size="sm" className="w-full gap-2 bg-primary/90 hover:bg-primary">
+          <ShoppingCart className="h-3.5 w-3.5" /> Payer en caisse (POS)
+        </Button>
+      </Link>
+
+      {/* Formulaire ajout manuel */}
       {!showForm ? (
         <Button variant="outline" size="sm" onClick={() => setShowForm(true)} className="w-full gap-2">
-          <Plus className="h-3.5 w-3.5" />Ajouter un paiement / acompte
+          <Plus className="h-3.5 w-3.5" />Ajouter un paiement / acompte manuellement
         </Button>
       ) : (
         <div className="border border-border/50 rounded-lg p-3 space-y-3 bg-muted/10">
