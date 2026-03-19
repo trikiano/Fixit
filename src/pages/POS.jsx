@@ -211,7 +211,7 @@ export default function POS() {
                     )}
                     <p className="text-sm font-semibold leading-tight line-clamp-2">{product.name}</p>
                     {product.brand && <p className="text-xs text-muted-foreground mt-0.5">{product.brand}</p>}
-                    <p className="text-sm font-bold text-primary mt-1">{(product.sell_price || 0).toFixed(2)} €</p>
+                    <p className="text-sm font-bold text-primary mt-1">{formatCurrency(product.sell_price || 0)}</p>
                     <p className="text-xs text-muted-foreground">Stock: {product.quantity}</p>
                     {inCart && (
                       <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
@@ -267,7 +267,7 @@ export default function POS() {
                         <Plus className="h-3 w-3" />
                       </button>
                     </div>
-                    <p className="text-xs font-bold w-14 text-right">{(item.qty * item.sell_price).toFixed(2)} €</p>
+                    <p className="text-xs font-bold w-14 text-right">{formatCurrency(item.qty * item.sell_price)}</p>
                     <button onClick={() => removeFromCart(item.id)} className="text-muted-foreground hover:text-destructive">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -280,16 +280,16 @@ export default function POS() {
             <div className="p-3 border-t border-border/50 space-y-3">
               <div className="flex items-center gap-2">
                 <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-                <Input type="number" placeholder="Remise (€)" value={discount || ''} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} className="h-7 text-xs" />
+                <Input type="number" placeholder={`Remise (${settings.currency_symbol || 'DT'})`} value={discount || ''} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} className="h-7 text-xs" />
               </div>
 
               <div className="space-y-1">
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Sous-total</span><span>{subtotal.toFixed(2)} €</span>
+                  <span>Sous-total</span><span>{formatCurrency(subtotal)}</span>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-xs text-destructive">
-                    <span>Remise</span><span>-{discount.toFixed(2)} €</span>
+                    <span>Remise</span><span>-{formatCurrency(discount)}</span>
                   </div>
                 )}
                 <Separator />
