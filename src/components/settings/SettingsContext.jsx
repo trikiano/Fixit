@@ -127,7 +127,7 @@ export function useAppSettings() {
     return {
       settings: DEFAULT_SETTINGS,
       saveSettings: () => {},
-      formatCurrency: (a) => `${(a || 0).toFixed(2)} DA`,
+      formatCurrency: (a) => `${(a || 0).toFixed(2)} DT`,
       getTaxRate: () => 20,
       generateTicketNumber: (type) => `${type === 'repair' ? 'REP' : 'VNT'}-${Date.now().toString(36).toUpperCase()}`,
     };
