@@ -6,12 +6,14 @@ export const DEFAULT_SETTINGS = {
   shop_phone: '',
   shop_email: '',
   shop_website: '',
-  currency: 'EUR',
-  currency_symbol: '€',
+  currency: 'DZD',
+  currency_symbol: 'DA',
+  currency_decimals: '2',
+  currency_symbol_position: 'right',
   tax_rate: '20',
   custom_tax: '',
   price_include_tax: true,
-  theme: 'dark',
+  theme: 'light',
   language: 'fr',
   date_format: 'DD/MM/YYYY',
   default_warranty_repair: '90',
@@ -32,7 +34,7 @@ export const DEFAULT_SETTINGS = {
   min_password_length: '8',
 };
 
-const CURRENCY_SYMBOLS = {
+export const CURRENCY_SYMBOLS = {
   EUR: '€', USD: '$', GBP: '£', MAD: 'DH', DZD: 'DA',
   TND: 'DT', XOF: 'CFA', CAD: 'CA$', CHF: 'CHF',
 };
@@ -92,9 +94,11 @@ export function SettingsProvider({ children }) {
   };
 
   const formatCurrency = (amount) => {
-    const sym = settings.currency_symbol || '€';
-    const num = (typeof amount === 'number' ? amount : 0).toFixed(2);
-    return `${num} ${sym}`;
+    const sym = settings.currency_symbol || 'DA';
+    const decimals = parseInt(settings.currency_decimals ?? '2');
+    const position = settings.currency_symbol_position || 'right';
+    const num = (typeof amount === 'number' ? amount : 0).toFixed(decimals);
+    return position === 'left' ? `${sym} ${num}` : `${num} ${sym}`;
   };
 
   const getTaxRate = () => {
@@ -117,11 +121,10 @@ export function SettingsProvider({ children }) {
 export function useAppSettings() {
   const ctx = useContext(SettingsContext);
   if (!ctx) {
-    // Fallback if used outside provider
     return {
       settings: DEFAULT_SETTINGS,
       saveSettings: () => {},
-      formatCurrency: (a) => `${(a || 0).toFixed(2)} €`,
+      formatCurrency: (a) => `${(a || 0).toFixed(2)} DA`,
       getTaxRate: () => 20,
       generateTicketNumber: (type) => `${type === 'repair' ? 'REP' : 'VNT'}-${Date.now().toString(36).toUpperCase()}`,
     };

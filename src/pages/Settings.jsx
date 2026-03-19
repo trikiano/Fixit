@@ -138,6 +138,40 @@ export default function SettingsPage() {
                 <p className="text-xs text-emerald-400 mt-1">✓ Appliqué sur toutes les pages et le POS</p>
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Nombre de décimales</Label>
+                  <Select value={local.currency_decimals ?? '2'} onValueChange={v => update('currency_decimals', v)}>
+                    <SelectTrigger className="w-full max-w-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">0 — Entier (ex: 1500 DA)</SelectItem>
+                      <SelectItem value="2">2 — Centimes (ex: 1500.00 DA)</SelectItem>
+                      <SelectItem value="3">3 — Millimes (ex: 1500.000 DA)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Position du symbole</Label>
+                  <Select value={local.currency_symbol_position ?? 'right'} onValueChange={v => update('currency_symbol_position', v)}>
+                    <SelectTrigger className="w-full max-w-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="left">Gauche — DA 1500</SelectItem>
+                      <SelectItem value="right">Droite — 1500 DA</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-muted/40 text-sm">
+                <p className="text-muted-foreground text-xs mb-1">Aperçu du format</p>
+                <p className="font-bold text-lg text-foreground">
+                  {(local.currency_symbol_position ?? 'right') === 'left'
+                    ? `${CURRENCIES.find(c => c.code === local.currency)?.symbol || local.currency} ${(12500).toFixed(parseInt(local.currency_decimals ?? '2'))}`
+                    : `${(12500).toFixed(parseInt(local.currency_decimals ?? '2'))} ${CURRENCIES.find(c => c.code === local.currency)?.symbol || local.currency}`
+                  }
+                </p>
+              </div>
+
               <Separator />
 
               <div className="space-y-4">
