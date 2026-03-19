@@ -73,9 +73,9 @@ export default function RepairPayments({ payments = [], finalCost = 0, onChange,
       )}
 
       {/* Bouton Payer en caisse */}
-      <Link to={createPageUrl('POS')} className="block w-full">
+      <Link to={`${createPageUrl('POS')}?preload=repair:${repairId}:${encodeURIComponent(repairLabel)}:${remaining || finalCost}:${encodeURIComponent(clientName)}:${encodeURIComponent(clientPhone)}`} className="block w-full">
         <Button variant="default" size="sm" className="w-full gap-2 bg-primary/90 hover:bg-primary">
-          <ShoppingCart className="h-3.5 w-3.5" /> Payer en caisse (POS)
+          <ShoppingCart className="h-3.5 w-3.5" /> Payer en caisse (POS) — {formatCurrency(remaining || finalCost)}
         </Button>
       </Link>
 
