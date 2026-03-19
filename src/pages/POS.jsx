@@ -68,7 +68,7 @@ export default function POS() {
   const [smsResult, setSmsResult] = useState(null); // null | 'ok' | 'error'
   const qc = useQueryClient();
 
-  const { formatCurrency, generateTicketNumber } = useAppSettings();
+  const { formatCurrency, generateTicketNumber, settings } = useAppSettings();
   const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: () => base44.entities.Product.list() });
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list('-created_date', 500) });
   const { data: repairs = [] } = useQuery({ queryKey: ['repairs'], queryFn: () => base44.entities.Repair.list('-created_date', 200) });
