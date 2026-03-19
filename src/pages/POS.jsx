@@ -551,6 +551,62 @@ export default function POS() {
         </div>
       </div>
 
+      {/* CUSTOM ITEM DIALOG */}
+      <Dialog open={showCustomItemDialog} onOpenChange={setShowCustomItemDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {customItemType === 'maintenance' && <><Wrench className="h-4 w-4 text-orange-500" /> Opération de maintenance</>}
+              {customItemType === 'avance' && <><Wallet className="h-4 w-4 text-emerald-500" /> Avance</>}
+              {customItemType === 'service' && <><ShoppingBag className="h-4 w-4 text-blue-500" /> Service vendu</>}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-1">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                {customItemType === 'maintenance' ? 'Désignation de la maintenance' :
+                 customItemType === 'avance' ? 'Motif / désignation' :
+                 'Nom du service'}
+              </label>
+              <Input
+                value={customItemLabel}
+                onChange={e => setCustomItemLabel(e.target.value)}
+                placeholder={
+                  customItemType === 'maintenance' ? 'Ex: Remplacement écran iPhone 13' :
+                  customItemType === 'avance' ? 'Ex: Avance réparation' :
+                  'Ex: Forfait internet 10GB'
+                }
+                autoFocus
+                onKeyDown={e => e.key === 'Enter' && document.getElementById('custom-price-input').focus()}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Montant</label>
+              <Input
+                id="custom-price-input"
+                type="number"
+                value={customItemPrice}
+                onChange={e => setCustomItemPrice(e.target.value)}
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+                onKeyDown={e => e.key === 'Enter' && addCustomItem()}
+              />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1" onClick={() => setShowCustomItemDialog(false)}>Annuler</Button>
+              <Button
+                className="flex-1"
+                onClick={addCustomItem}
+                disabled={!customItemLabel.trim() || !customItemPrice || parseFloat(customItemPrice) <= 0}
+              >
+                <Plus className="h-4 w-4 mr-1" /> Ajouter
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* CLIENT DIALOG */}
       <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
         <DialogContent className="max-w-sm">
