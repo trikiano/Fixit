@@ -2,21 +2,15 @@ import React, { useState, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import {
-  Search, Package, ArrowLeft, Wrench, Wifi, User,
-  Delete, CheckCircle, Home, ChevronRight
+  Search, Package, ArrowLeft, Delete, CheckCircle, Home, ChevronRight, Plus, X
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 import { useAppSettings } from "@/components/settings/SettingsContext";
 import ClientSelector from "@/components/ui/ClientSelector";
-import QuickRepairModal from "@/components/pos/QuickRepairModal";
-import NewSaleModal from "@/components/internet/NewSaleModal";
 import { Button } from "@/components/ui/button";
-
-const ACCOUNTS = ['Compte Principal', 'Compte 2', 'Application A', 'Application B'];
 
 const CATEGORY_LABELS = {
   telephone: '📱 Téléphones',
@@ -30,43 +24,62 @@ const CATEGORY_LABELS = {
   autre: '📦 Autre',
 };
 
-// Numpad modes
 const MODES = ['Qté', 'Remise', 'Prix'];
+
+function createEmptyTicket(id) {
+  return { id, cart: [], clientName: '', clientPhone: '', selectedCartIdx: null, numpadBuffer: '', numpadMode: 'Qté' };
+}
+
+let ticketCounter = 1;
 
 export default function POS() {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
-  const [cart, setCart] = useState([]);
-  const [selectedCartIdx, setSelectedCartIdx] = useState(null);
-  const [clientName, setClientName] = useState('');
-  const [clientPhone, setClientPhone] = useState('');
+  const [tickets, setTickets] = useState([createEmptyTicket(1)]);
+  const [activeTicketId, setActiveTicketId] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState('especes');
-  const [numpadMode, setNumpadMode] = useState('Qté');
-  const [numpadBuffer, setNumpadBuffer] = useState('');
   const [successOpen, setSuccessOpen] = useState(false);
   const [lastSaleNum, setLastSaleNum] = useState('');
-  const [showRepairModal, setShowRepairModal] = useState(false);
-  const [showForfaitModal, setShowForfaitModal] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const qc = useQueryClient();
 
-  const { formatCurrency, settings, generateTicketNumber } = useAppSettings();
+  const { formatCurrency, generateTicketNumber } = useAppSettings();
   const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: () => base44.entities.Product.list() });
-  const { data: packages = [] } = useQuery({ queryKey: ['internet-packages'], queryFn: () => base44.entities.InternetPackage.list() });
 
-  const repairMutation = useMutation({
-    mutationFn: async (data) => {
-      const ticketNum = generateTicketNumber('repair');
-      return base44.entities.Repair.create({ ...data, ticket_number: ticketNum });
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['repairs'] }),
-  });
+  // Active ticket helpers
+  const ticket = tickets.find(t => t.id === activeTicketId) || tickets[0];
+  const { cart, clientName, clientPhone, selectedCartIdx, numpadBuffer, numpadMode } = ticket;
 
-  const internetSaleMutation = useMutation({
-    mutationFn: (data) => base44.entities.InternetSale.create(data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['internet-sales'] }),
-  });
+  const updateTicket = (updates) => {
+    setTickets(prev => prev.map(t => t.id === activeTicketId ? { ...t, ...updates } : t));
+  };
 
+  // --- Tickets management ---
+  const addTicket = () => {
+    ticketCounter += 1;
+    const newT = createEmptyTicket(ticketCounter);
+    setTickets(prev => [...prev, newT]);
+    setActiveTicketId(ticketCounter);
+  };
+
+  const closeTicket = (id, e) => {
+    e.stopPropagation();
+    setTickets(prev => {
+      const remaining = prev.filter(t => t.id !== id);
+      if (remaining.length === 0) {
+        ticketCounter += 1;
+        const fresh = createEmptyTicket(ticketCounter);
+        setActiveTicketId(fresh.id);
+        return [fresh];
+      }
+      if (activeTicketId === id) {
+        setActiveTicketId(remaining[remaining.length - 1].id);
+      }
+      return remaining;
+    });
+  };
+
+  // --- Sale mutation ---
   const saleMutation = useMutation({
     mutationFn: async () => {
       const saleNum = generateTicketNumber('sale');
@@ -104,77 +117,60 @@ export default function POS() {
       setLastSaleNum(saleNum);
       setSuccessOpen(true);
       setShowPaymentDialog(false);
-      setCart([]);
-      setClientName('');
-      setClientPhone('');
-      setSelectedCartIdx(null);
-      setNumpadBuffer('');
+      // Reset current ticket
+      updateTicket({ cart: [], clientName: '', clientPhone: '', selectedCartIdx: null, numpadBuffer: '', numpadMode: 'Qté' });
       setPaymentMethod('especes');
     },
   });
 
   // --- Cart helpers ---
   const addToCart = (product) => {
-    setCart(prev => {
-      const idx = prev.findIndex(i => i.id === product.id);
+    setTickets(prev => prev.map(t => {
+      if (t.id !== activeTicketId) return t;
+      const idx = t.cart.findIndex(i => i.id === product.id);
       if (idx >= 0) {
-        if (prev[idx].qty >= product.quantity) return prev;
-        const updated = [...prev];
+        if (t.cart[idx].qty >= product.quantity) return t;
+        const updated = [...t.cart];
         updated[idx] = { ...updated[idx], qty: updated[idx].qty + 1 };
-        setSelectedCartIdx(idx);
-        return updated;
+        return { ...t, cart: updated, selectedCartIdx: idx, numpadBuffer: '' };
       }
-      const newIdx = prev.length;
-      setSelectedCartIdx(newIdx);
-      setNumpadBuffer('');
-      return [...prev, { ...product, qty: 1, unit_price: product.sell_price || 0, discount: 0 }];
-    });
+      const newCart = [...t.cart, { ...product, qty: 1, unit_price: product.sell_price || 0, discount: 0 }];
+      return { ...t, cart: newCart, selectedCartIdx: newCart.length - 1, numpadBuffer: '' };
+    }));
   };
 
   // --- Numpad logic ---
   const handleNumpad = useCallback((key) => {
-    if (selectedCartIdx === null || !cart[selectedCartIdx]) return;
+    setTickets(prev => prev.map(t => {
+      if (t.id !== activeTicketId) return t;
+      if (t.selectedCartIdx === null || !t.cart[t.selectedCartIdx]) return t;
 
-    let buf = numpadBuffer;
+      let buf = t.numpadBuffer;
+      if (key === '⌫') buf = buf.slice(0, -1);
+      else if (key === '+/-') buf = buf.startsWith('-') ? buf.slice(1) : '-' + buf;
+      else if (key === '.') { if (!buf.includes('.')) buf = buf + '.'; }
+      else buf = buf + key;
 
-    if (key === '⌫') {
-      buf = buf.slice(0, -1);
-    } else if (key === '+/-') {
-      buf = buf.startsWith('-') ? buf.slice(1) : '-' + buf;
-    } else if (key === '.') {
-      if (!buf.includes('.')) buf = buf + '.';
-    } else {
-      buf = buf + key;
-    }
-
-    setNumpadBuffer(buf);
-
-    const val = parseFloat(buf);
-    if (isNaN(val) && buf !== '' && buf !== '-' && buf !== '.') return;
-
-    setCart(prev => {
-      const updated = [...prev];
-      const item = { ...updated[selectedCartIdx] };
+      const val = parseFloat(buf);
       const numVal = isNaN(val) ? 0 : val;
+      const updatedCart = [...t.cart];
+      const item = { ...updatedCart[t.selectedCartIdx] };
 
-      if (numpadMode === 'Qté') {
-        const qty = Math.max(1, Math.round(numVal));
-        item.qty = qty;
-      } else if (numpadMode === 'Remise') {
-        item.discount = Math.min(100, Math.max(0, numVal));
-      } else if (numpadMode === 'Prix') {
-        item.unit_price = Math.max(0, numVal);
+      if (!isNaN(val) || buf === '' || buf === '-' || buf === '.') {
+        if (t.numpadMode === 'Qté') item.qty = Math.max(1, Math.round(numVal));
+        else if (t.numpadMode === 'Remise') item.discount = Math.min(100, Math.max(0, numVal));
+        else if (t.numpadMode === 'Prix') item.unit_price = Math.max(0, numVal);
+        updatedCart[t.selectedCartIdx] = item;
       }
-      updated[selectedCartIdx] = item;
-      return updated;
-    });
-  }, [selectedCartIdx, numpadBuffer, numpadMode, cart]);
+
+      return { ...t, numpadBuffer: buf, cart: updatedCart };
+    }));
+  }, [activeTicketId]);
 
   const removeSelected = () => {
     if (selectedCartIdx === null) return;
-    setCart(prev => prev.filter((_, i) => i !== selectedCartIdx));
-    setSelectedCartIdx(null);
-    setNumpadBuffer('');
+    const newCart = cart.filter((_, i) => i !== selectedCartIdx);
+    updateTicket({ cart: newCart, selectedCartIdx: null, numpadBuffer: '' });
   };
 
   const filtered = products.filter(p => {
@@ -187,37 +183,59 @@ export default function POS() {
   });
 
   const categories = ['all', ...Object.keys(CATEGORY_LABELS).filter(c => products.some(p => p.category === c && p.quantity > 0))];
-
   const total = cart.reduce((s, i) => s + i.qty * i.unit_price * (1 - (i.discount || 0) / 100), 0);
   const selectedItem = selectedCartIdx !== null ? cart[selectedCartIdx] : null;
-
-  const NUMPAD_KEYS = ['1','2','3','4','5','6','7','8','9','+/-','0','.','⌫'];
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* TOP BAR */}
-      <div className="h-12 bg-card border-b border-border flex items-center px-3 gap-3 flex-shrink-0">
+      <div className="h-12 bg-card border-b border-border flex items-center px-3 gap-0 flex-shrink-0">
         <Link to={createPageUrl("Dashboard")}>
-          <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="h-4 w-4" /> Retour
+          <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mr-3">
+            <ArrowLeft className="h-4 w-4" />
           </button>
         </Link>
-        <div className="h-5 w-px bg-border mx-1" />
-        <span className="text-sm font-bold text-foreground">Caisse POS</span>
-        <div className="ml-auto flex items-center gap-2">
+
+        {/* Ticket tabs like Odoo */}
+        <div className="flex items-center gap-0 flex-1 overflow-x-auto h-full">
+          {tickets.map((t, idx) => (
+            <div
+              key={t.id}
+              onClick={() => setActiveTicketId(t.id)}
+              className={cn(
+                "flex items-center gap-2 px-4 h-full border-r border-border cursor-pointer text-sm font-medium select-none transition-colors flex-shrink-0",
+                activeTicketId === t.id
+                  ? "bg-background border-b-2 border-b-primary text-foreground"
+                  : "bg-card text-muted-foreground hover:bg-muted/50"
+              )}
+            >
+              <span>Ticket {idx + 1}</span>
+              {t.cart.length > 0 && (
+                <span className={cn(
+                  "text-[10px] font-bold px-1.5 py-0.5 rounded-full",
+                  activeTicketId === t.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                )}>
+                  {t.cart.reduce((s, i) => s + i.qty, 0)}
+                </span>
+              )}
+              <button
+                onClick={(e) => closeTicket(t.id, e)}
+                className="hover:text-destructive transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
           <button
-            onClick={() => setShowRepairModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-xs font-medium text-muted-foreground hover:bg-muted/50 transition-colors"
+            onClick={addTicket}
+            className="flex items-center justify-center px-3 h-full text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors flex-shrink-0"
+            title="Nouveau ticket"
           >
-            <Wrench className="h-3.5 w-3.5 text-orange-400" /> Maintenance
-          </button>
-          <button
-            onClick={() => setShowForfaitModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-xs font-medium text-muted-foreground hover:bg-muted/50 transition-colors"
-          >
-            <Wifi className="h-3.5 w-3.5 text-blue-400" /> Forfait
+            <Plus className="h-4 w-4" />
           </button>
         </div>
+
+        <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">Caisse POS</span>
       </div>
 
       {/* MAIN */}
@@ -239,7 +257,7 @@ export default function POS() {
                 return (
                   <div
                     key={item.id + idx}
-                    onClick={() => { setSelectedCartIdx(idx); setNumpadBuffer(''); }}
+                    onClick={() => updateTicket({ selectedCartIdx: idx, numpadBuffer: '' })}
                     className={cn(
                       "px-3 py-2.5 border-b border-border/50 cursor-pointer transition-colors",
                       isSelected ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-muted/30"
@@ -274,79 +292,86 @@ export default function POS() {
             <ClientSelector
               clientName={clientName}
               clientPhone={clientPhone}
-              onSelect={(name, phone) => { setClientName(name || ''); setClientPhone(phone || ''); }}
+              onSelect={(name, phone) => updateTicket({ clientName: name || '', clientPhone: phone || '' })}
               defaultPassager={true}
             />
           </div>
 
-          {/* Numpad mode buttons */}
-          <div className="border-t border-border grid grid-cols-3">
-            {MODES.map(mode => (
-              <button
-                key={mode}
-                onClick={() => { setNumpadMode(mode); setNumpadBuffer(''); }}
-                className={cn(
-                  "py-2 text-sm font-semibold transition-colors border-r last:border-r-0 border-border",
-                  numpadMode === mode
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted/50"
-                )}
-              >
-                {mode}
-              </button>
-            ))}
-          </div>
+          {/* ---- NUMPAD ZONE ---- */}
 
           {/* Numpad buffer display */}
-          <div className="border-t border-border px-3 py-1.5 bg-muted/10 text-right">
+          <div className="border-t border-border px-3 py-1.5 bg-muted/10 flex justify-between items-center">
+            <span className="text-xs text-muted-foreground">{numpadMode}</span>
             <span className="text-lg font-mono font-bold text-foreground">
               {numpadBuffer || (selectedItem ? (
                 numpadMode === 'Qté' ? selectedItem.qty :
                 numpadMode === 'Remise' ? `${selectedItem.discount}%` :
-                selectedItem.unit_price
+                selectedItem.unit_price.toFixed(2)
               ) : '0')}
             </span>
           </div>
 
-          {/* Numpad grid */}
-          <div className="grid grid-cols-4 border-t border-border">
-            {/* Digits 1-9 + special */}
-            {['1','2','3','4','5','6','7','8','9','+/-','0','.'].map(k => (
-              <button
-                key={k}
-                onClick={() => handleNumpad(k)}
-                className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground"
-              >
-                {k}
-              </button>
-            ))}
-            {/* Backspace — spans last col, rows 1-3 aligned */}
+          {/* Numpad grid — 4 columns, digits + mode buttons on right */}
+          <div className="border-t border-border grid grid-cols-4 flex-shrink-0">
+
+            {/* Row 1: 1 2 3 | Qté */}
+            <button onClick={() => handleNumpad('1')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">1</button>
+            <button onClick={() => handleNumpad('2')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">2</button>
+            <button onClick={() => handleNumpad('3')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">3</button>
+            <button
+              onClick={() => updateTicket({ numpadMode: 'Qté', numpadBuffer: '' })}
+              className={cn("h-12 flex items-center justify-center text-sm font-bold border-b border-border/50 transition-colors",
+                numpadMode === 'Qté' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/50")}
+            >Qté</button>
+
+            {/* Row 2: 4 5 6 | Remise */}
+            <button onClick={() => handleNumpad('4')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">4</button>
+            <button onClick={() => handleNumpad('5')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">5</button>
+            <button onClick={() => handleNumpad('6')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">6</button>
+            <button
+              onClick={() => updateTicket({ numpadMode: 'Remise', numpadBuffer: '' })}
+              className={cn("h-12 flex items-center justify-center text-sm font-bold border-b border-border/50 transition-colors",
+                numpadMode === 'Remise' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/50")}
+            >Remise</button>
+
+            {/* Row 3: 7 8 9 | Prix */}
+            <button onClick={() => handleNumpad('7')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">7</button>
+            <button onClick={() => handleNumpad('8')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">8</button>
+            <button onClick={() => handleNumpad('9')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">9</button>
+            <button
+              onClick={() => updateTicket({ numpadMode: 'Prix', numpadBuffer: '' })}
+              className={cn("h-12 flex items-center justify-center text-sm font-bold border-b border-border/50 transition-colors",
+                numpadMode === 'Prix' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/50")}
+            >Prix</button>
+
+            {/* Row 4: +/- 0 . | ⌫ */}
+            <button onClick={() => handleNumpad('+/-')} className="h-12 flex items-center justify-center text-sm font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">+/-</button>
+            <button onClick={() => handleNumpad('0')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">0</button>
+            <button onClick={() => handleNumpad('.')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">.</button>
             <button
               onClick={() => handleNumpad('⌫')}
               className="h-12 flex items-center justify-center border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-muted-foreground"
-            >
-              <Delete className="h-4 w-4" />
-            </button>
+            ><Delete className="h-4 w-4" /></button>
 
-            {/* Bottom row: Payment button full width */}
+            {/* Row 5: Paiement (span 3) | Suppr (span 1) */}
             <button
               onClick={() => setShowPaymentDialog(true)}
               disabled={cart.length === 0}
               className={cn(
-                "col-span-3 h-12 flex items-center justify-center gap-2 text-sm font-bold border-r border-border/50 transition-colors",
+                "col-span-3 h-14 flex items-center justify-center gap-2 text-base font-bold border-r border-border/50 transition-colors",
                 cart.length === 0
                   ? "text-muted-foreground bg-muted/20 cursor-not-allowed"
                   : "bg-primary text-primary-foreground hover:bg-primary/90"
               )}
             >
-              Paiement
+              <CheckCircle className="h-5 w-5" /> Paiement
             </button>
             <button
               onClick={removeSelected}
               disabled={selectedCartIdx === null}
-              className="h-12 flex items-center justify-center hover:bg-destructive/10 active:bg-destructive/20 text-muted-foreground hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed transition-colors border-border/50"
+              className="h-14 flex items-center justify-center hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
-              <Delete className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </button>
           </div>
         </div>
@@ -354,12 +379,9 @@ export default function POS() {
         {/* ===== RIGHT PANEL: Products ===== */}
         <div className="flex-1 flex flex-col overflow-hidden bg-background">
 
-          {/* Category breadcrumb + search */}
+          {/* Breadcrumb + search */}
           <div className="h-10 border-b border-border flex items-center px-3 gap-2 bg-card flex-shrink-0">
-            <button
-              onClick={() => setActiveCategory('all')}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
+            <button onClick={() => setActiveCategory('all')} className="text-muted-foreground hover:text-foreground transition-colors">
               <Home className="h-4 w-4" />
             </button>
             {activeCategory !== 'all' && (
@@ -387,9 +409,7 @@ export default function POS() {
                 onClick={() => { setActiveCategory(cat); setSearch(''); }}
                 className={cn(
                   "px-3 py-1 rounded text-xs font-medium whitespace-nowrap transition-all flex-shrink-0",
-                  activeCategory === cat
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  activeCategory === cat ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
                 )}
               >
                 {cat === 'all' ? '🏠 Tous' : CATEGORY_LABELS[cat]}
@@ -411,32 +431,21 @@ export default function POS() {
                       inCart ? "border-primary ring-1 ring-primary/30" : "border-border/50 hover:border-primary/40"
                     )}
                   >
-                    {/* Price badge top-left */}
                     <div className="absolute top-1.5 left-1.5 z-10 bg-primary/90 text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded">
                       {formatCurrency(product.sell_price || 0)}
                     </div>
-
-                    {/* Qty badge top-right if in cart */}
                     {inCart && (
                       <div className="absolute top-1.5 right-1.5 z-10 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
                         <span className="text-[10px] font-bold text-primary-foreground">{inCart.qty}</span>
                       </div>
                     )}
-
-                    {/* Image */}
                     {product.image_url ? (
-                      <img
-                        src={product.image_url}
-                        alt={product.name}
-                        className="w-full aspect-square object-cover"
-                      />
+                      <img src={product.image_url} alt={product.name} className="w-full aspect-square object-cover" />
                     ) : (
                       <div className="w-full aspect-square bg-muted/40 flex items-center justify-center">
                         <Package className="h-8 w-8 text-muted-foreground/30" />
                       </div>
                     )}
-
-                    {/* Name */}
                     <div className="px-2 py-1.5">
                       <p className="text-xs font-medium leading-tight line-clamp-2 text-foreground">{product.name}</p>
                       {product.brand && <p className="text-[10px] text-muted-foreground">{product.brand}</p>}
@@ -455,15 +464,14 @@ export default function POS() {
         </div>
       </div>
 
-      {/* ===== PAYMENT DIALOG ===== */}
+      {/* PAYMENT DIALOG */}
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Paiement — {formatCurrency(total)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Summary */}
-            <div className="rounded-lg bg-muted/30 p-3 space-y-1.5 text-sm">
+            <div className="rounded-lg bg-muted/30 p-3 space-y-1.5">
               {cart.map((item, i) => (
                 <div key={i} className="flex justify-between text-xs">
                   <span className="text-muted-foreground">{item.name} × {item.qty}</span>
@@ -475,8 +483,6 @@ export default function POS() {
                 <span className="text-primary">{formatCurrency(total)}</span>
               </div>
             </div>
-
-            {/* Payment method selection */}
             <div className="grid grid-cols-2 gap-2">
               {[
                 { value: 'especes', label: '💵 Espèces' },
@@ -489,22 +495,12 @@ export default function POS() {
                   onClick={() => setPaymentMethod(pm.value)}
                   className={cn(
                     "py-2.5 rounded-lg border text-sm font-medium transition-all",
-                    paymentMethod === pm.value
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:border-primary/40"
+                    paymentMethod === pm.value ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40"
                   )}
-                >
-                  {pm.label}
-                </button>
+                >{pm.label}</button>
               ))}
             </div>
-
-            <Button
-              className="w-full"
-              size="lg"
-              onClick={() => saleMutation.mutate()}
-              disabled={saleMutation.isPending}
-            >
+            <Button className="w-full" size="lg" onClick={() => saleMutation.mutate()} disabled={saleMutation.isPending}>
               <CheckCircle className="h-4 w-4 mr-2" />
               {saleMutation.isPending ? 'Traitement...' : `Valider — ${formatCurrency(total)}`}
             </Button>
@@ -525,10 +521,6 @@ export default function POS() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Modals */}
-      <QuickRepairModal open={showRepairModal} onClose={() => setShowRepairModal(false)} onSave={repairMutation.mutateAsync} />
-      <NewSaleModal open={showForfaitModal} onClose={() => setShowForfaitModal(false)} packages={packages} accounts={ACCOUNTS} onSave={internetSaleMutation.mutateAsync} />
     </div>
   );
 }
