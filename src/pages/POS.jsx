@@ -790,8 +790,52 @@ export default function POS() {
               <CheckCircle className="h-8 w-8 text-emerald-500" />
             </div>
             <h2 className="text-xl font-bold">Vente validée !</h2>
-            <p className="text-sm text-muted-foreground">N° <span className="font-mono font-bold text-foreground">{lastSaleNum}</span></p>
-            <Button className="w-full mt-2" onClick={() => setSuccessOpen(false)}>Nouvelle vente</Button>
+            <p className="text-sm text-muted-foreground">N° <span className="font-mono font-bold text-foreground">{lastCartSnapshot.saleNum}</span></p>
+
+            {/* Récap du ticket */}
+            <div className="w-full bg-muted/30 rounded-lg p-3 text-left space-y-1 max-h-40 overflow-y-auto">
+              {lastCartSnapshot.cart.map((item, i) => {
+                const lineTotal = item.qty * item.unit_price * (1 - (item.discount || 0) / 100);
+                return (
+                  <div key={i} className="flex justify-between text-xs">
+                    <span className="text-muted-foreground truncate max-w-[180px]">{item.name} × {item.qty}</span>
+                    <span className="font-medium ml-2">{formatCurrency(lineTotal)}</span>
+                  </div>
+                );
+              })}
+              <div className="border-t border-border/50 pt-1 flex justify-between text-sm font-bold">
+                <span>Total</span>
+                <span className="text-emerald-500">{formatCurrency(lastCartSnapshot.total)}</span>
+              </div>
+            </div>
+
+            {/* SMS */}
+            {settings.sms_api_key && settings.sms_provider && lastCartSnapshot.clientPhone && (
+              <div className="w-full space-y-1.5">
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={sendTicketSms}
+                  disabled={smsSending || smsResult === 'ok'}
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  {smsSending ? 'Envoi en cours...' : smsResult === 'ok' ? '✅ SMS envoyé !' : `Envoyer ticket SMS à ${lastCartSnapshot.clientPhone}`}
+                </Button>
+                {smsResult === 'error' && (
+                  <p className="flex items-center gap-1.5 text-xs text-destructive justify-center">
+                    <AlertCircle className="h-3 w-3" /> Échec de l'envoi. Vérifiez la config SMS.
+                  </p>
+                )}
+              </div>
+            )}
+            {settings.sms_api_key && settings.sms_provider && !lastCartSnapshot.clientPhone && (
+              <p className="text-xs text-muted-foreground">Aucun numéro client — SMS non disponible</p>
+            )}
+            {!settings.sms_api_key && (
+              <p className="text-xs text-muted-foreground">Configurez un fournisseur SMS dans Paramètres → SMS</p>
+            )}
+
+            <Button className="w-full" onClick={() => setSuccessOpen(false)}>Nouvelle vente</Button>
           </div>
         </DialogContent>
       </Dialog>
