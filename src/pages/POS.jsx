@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
-  Search, Package, ArrowLeft, Delete, CheckCircle, Home, ChevronRight, Plus, X, User, Phone, Wrench, Clock, MessageSquare, AlertCircle
+  Search, Package, ArrowLeft, Delete, CheckCircle, Home, Plus, X, User, Phone, MessageSquare, AlertCircle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -60,9 +60,6 @@ export default function POS() {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showClientDialog, setShowClientDialog] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
-  const [showHistoryDialog, setShowHistoryDialog] = useState(false);
-  const [historySearch, setHistorySearch] = useState('');
-  const [historyTab, setHistoryTab] = useState('repairs'); // 'repairs' | 'services'
   const [user, setUser] = useState(null);
   const [smsSending, setSmsSending] = useState(false);
   const [smsResult, setSmsResult] = useState(null); // null | 'ok' | 'error'
@@ -71,8 +68,7 @@ export default function POS() {
   const { formatCurrency, generateTicketNumber, settings } = useAppSettings();
   const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: () => base44.entities.Product.list() });
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list('-created_date', 500) });
-  const { data: repairs = [] } = useQuery({ queryKey: ['repairs'], queryFn: () => base44.entities.Repair.list('-created_date', 200) });
-  const { data: serviceSales = [] } = useQuery({ queryKey: ['serviceSales'], queryFn: () => base44.entities.ServiceSale.list('-created_date', 200) });
+
 
   useEffect(() => { base44.auth.me().then(setUser).catch(() => {}); }, []);
 
@@ -239,15 +235,7 @@ export default function POS() {
     }));
   }, [activeTicketId]);
 
-  const addHistoryItem = (item) => {
-    const customId = `hist_${item.id}_${Date.now()}`;
-    setTickets(prev => prev.map(t => {
-      if (t.id !== activeTicketId) return t;
-      const newCart = [...t.cart, { id: customId, name: item.name, qty: 1, unit_price: item.price, discount: 0, isCustom: true, refId: item.id, refType: item.type }];
-      return { ...t, cart: newCart, selectedCartIdx: newCart.length - 1, numpadBuffer: '', clientName: t.clientName || item.clientName || '', clientPhone: t.clientPhone || item.clientPhone || '' };
-    }));
-    setShowHistoryDialog(false);
-  };
+
 
   const removeSelected = () => {
     if (selectedCartIdx === null) return;
@@ -277,6 +265,8 @@ export default function POS() {
             <ArrowLeft className="h-4 w-4" />
           </button>
         </Link>
+
+        {/* Home + Search — à droite des tickets */}
 
         {/* Ticket tabs like Odoo */}
         <div className="flex items-center gap-0 flex-1 overflow-x-auto h-full">
@@ -315,6 +305,22 @@ export default function POS() {
           >
             <Plus className="h-4 w-4" />
           </button>
+        </div>
+
+        {/* Home + Search */}
+        <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+          <button onClick={() => setActiveCategory('all')} className="h-8 w-8 flex items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" title="Toutes catégories">
+            <Home className="h-4 w-4" />
+          </button>
+          <div className="relative w-44">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Rechercher..."
+              className="w-full h-8 pl-8 pr-3 text-xs rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-ring text-foreground placeholder:text-muted-foreground"
+            />
+          </div>
         </div>
 
         {/* Caissier connecté */}
@@ -492,28 +498,6 @@ export default function POS() {
         {/* ===== RIGHT PANEL: Products ===== */}
         <div className="flex-1 flex flex-col overflow-hidden bg-background">
 
-          {/* Breadcrumb + search */}
-          <div className="h-10 border-b border-border flex items-center px-3 gap-2 bg-card flex-shrink-0">
-            <button onClick={() => setActiveCategory('all')} className="text-muted-foreground hover:text-foreground transition-colors">
-              <Home className="h-4 w-4" />
-            </button>
-            {activeCategory !== 'all' && (
-              <>
-                <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                <span className="text-sm font-medium text-foreground">{CATEGORY_LABELS[activeCategory]}</span>
-              </>
-            )}
-            <div className="ml-auto relative w-48">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Rechercher..."
-                className="w-full h-7 pl-8 pr-3 text-xs rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-ring text-foreground placeholder:text-muted-foreground"
-              />
-            </div>
-          </div>
-
           {/* Category tabs */}
           <div className="flex gap-1 px-3 py-2 border-b border-border bg-card flex-shrink-0 overflow-x-auto">
             {categories.map(cat => (
@@ -530,21 +514,6 @@ export default function POS() {
             ))}
           </div>
 
-          {/* Quick add from history */}
-          <div className="flex gap-2 px-3 py-2 border-b border-border bg-card/50 flex-shrink-0">
-            <button
-              onClick={() => { setHistoryTab('repairs'); setHistorySearch(''); setShowHistoryDialog(true); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-orange-500/30 bg-orange-500/5 text-orange-600 hover:bg-orange-500/15 transition-colors text-xs font-medium flex-shrink-0"
-            >
-              <Wrench className="h-3.5 w-3.5" /> Réparation existante
-            </button>
-            <button
-              onClick={() => { setHistoryTab('services'); setHistorySearch(''); setShowHistoryDialog(true); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-500/30 bg-blue-500/5 text-blue-600 hover:bg-blue-500/15 transition-colors text-xs font-medium flex-shrink-0"
-            >
-              <Clock className="h-3.5 w-3.5" /> Service existant
-            </button>
-          </div>
 
           {/* Products grid */}
           <div className="flex-1 overflow-y-auto p-3">
@@ -592,84 +561,6 @@ export default function POS() {
           </div>
         </div>
       </div>
-
-      {/* HISTORY DIALOG */}
-      <Dialog open={showHistoryDialog} onOpenChange={setShowHistoryDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {historyTab === 'repairs' ? <><Wrench className="h-4 w-4 text-orange-500" /> Réparations existantes</> : <><Clock className="h-4 w-4 text-blue-500" /> Services existants</>}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            {/* Tabs */}
-            <div className="flex gap-1 bg-muted/40 p-1 rounded-lg">
-              <button onClick={() => setHistoryTab('repairs')} className={cn("flex-1 py-1.5 text-xs font-medium rounded transition-colors", historyTab === 'repairs' ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>🔧 Réparations</button>
-              <button onClick={() => setHistoryTab('services')} className={cn("flex-1 py-1.5 text-xs font-medium rounded transition-colors", historyTab === 'services' ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>📦 Services</button>
-            </div>
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input value={historySearch} onChange={e => setHistorySearch(e.target.value)} placeholder="Rechercher par client, désignation..." className="pl-9" autoFocus />
-            </div>
-            {/* List */}
-            <div className="max-h-80 overflow-y-auto rounded-lg border border-border divide-y divide-border/50">
-              {historyTab === 'repairs' && (() => {
-                const filtered = repairs.filter(r =>
-                  !historySearch ||
-                  r.client_name?.toLowerCase().includes(historySearch.toLowerCase()) ||
-                  r.device_brand?.toLowerCase().includes(historySearch.toLowerCase()) ||
-                  r.device_model?.toLowerCase().includes(historySearch.toLowerCase()) ||
-                  r.ticket_number?.toLowerCase().includes(historySearch.toLowerCase())
-                ).slice(0, 30);
-                if (filtered.length === 0) return <div className="py-8 text-center text-sm text-muted-foreground">Aucune réparation trouvée</div>;
-                return filtered.map(r => {
-                  const price = r.final_cost || r.estimated_cost || 0;
-                  const totalPaid = (r.payments || []).reduce((s, p) => s + (p.amount || 0), 0);
-                  const remaining = Math.max(0, price - totalPaid);
-                  return (
-                    <button key={r.id} onClick={() => addHistoryItem({ id: r.id, name: `🔧 ${r.client_name} — ${r.device_brand || ''} ${r.device_model || ''}`.trim(), price: remaining || price, clientName: r.client_name, clientPhone: r.client_phone, type: 'repair' })}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors text-left">
-                      <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
-                        <Wrench className="h-4 w-4 text-orange-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{r.client_name} — {r.device_brand} {r.device_model}</p>
-                        <p className="text-xs text-muted-foreground">{r.ticket_number} · {r.status}</p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-sm font-bold text-foreground">{formatCurrency(remaining || price)}</p>
-                        {remaining > 0 && totalPaid > 0 && <p className="text-[10px] text-orange-500">Reste à payer</p>}
-                      </div>
-                    </button>
-                  );
-                });
-              })()}
-              {historyTab === 'services' && (() => {
-                const filtered = serviceSales.filter(s =>
-                  !historySearch ||
-                  s.client_name?.toLowerCase().includes(historySearch.toLowerCase()) ||
-                  s.service_name?.toLowerCase().includes(historySearch.toLowerCase())
-                ).slice(0, 30);
-                if (filtered.length === 0) return <div className="py-8 text-center text-sm text-muted-foreground">Aucun service trouvé</div>;
-                return filtered.map(s => (
-                  <button key={s.id} onClick={() => addHistoryItem({ id: s.id, name: `📦 ${s.service_name}`, price: s.sell_price || 0, clientName: s.client_name, clientPhone: s.client_phone, type: 'service' })}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors text-left">
-                    <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                      <Clock className="h-4 w-4 text-blue-500" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{s.service_name}</p>
-                      <p className="text-xs text-muted-foreground">{s.client_name} · {s.client_phone}</p>
-                    </div>
-                    <p className="text-sm font-bold flex-shrink-0">{formatCurrency(s.sell_price || 0)}</p>
-                  </button>
-                ));
-              })()}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* CLIENT DIALOG */}
       <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
@@ -758,12 +649,14 @@ export default function POS() {
                 <span className="text-primary">{formatCurrency(total)}</span>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {[
                 { value: 'especes', label: '💵 Espèces' },
                 { value: 'carte', label: '💳 Carte' },
                 { value: 'virement', label: '🏦 Virement' },
                 { value: 'mixte', label: '🔀 Mixte' },
+                { value: 'reparation', label: '🔧 Réparation' },
+                { value: 'service', label: '📦 Service' },
               ].map(pm => (
                 <button
                   key={pm.value}
