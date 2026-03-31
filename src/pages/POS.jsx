@@ -546,7 +546,7 @@ export default function POS() {
 
           {/* Products grid */}
           <div className="flex-1 overflow-y-auto p-3">
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-0 border-l border-t border-border">
               {filtered.map(product => {
                 const inCart = cart.find(i => i.id === product.id);
                 return (
@@ -554,15 +554,15 @@ export default function POS() {
                     key={product.id}
                     onClick={() => addToCart(product)}
                     className={cn(
-                      "relative flex flex-col rounded-lg border text-left transition-all hover:shadow-md active:scale-95 overflow-hidden bg-card",
-                      inCart ? "border-primary ring-1 ring-primary/30" : "border-border/50 hover:border-primary/40"
+                      "relative flex flex-col text-left transition-all active:scale-95 overflow-hidden bg-card border-r border-b border-border",
+                      inCart ? "ring-2 ring-inset ring-primary" : "hover:bg-muted/30"
                     )}
                   >
-                    <div className="absolute top-1.5 left-1.5 z-10 bg-primary/90 text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded">
+                    <div className="absolute top-1 left-1 z-10 bg-primary/90 text-primary-foreground text-[10px] font-bold px-1.5 py-0.5">
                       {formatCurrency(product.sell_price || 0)}
                     </div>
                     {inCart && (
-                      <div className="absolute top-1.5 right-1.5 z-10 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                      <div className="absolute top-1 right-1 z-10 h-5 w-5 bg-primary flex items-center justify-center">
                         <span className="text-[10px] font-bold text-primary-foreground">{inCart.qty}</span>
                       </div>
                     )}
@@ -581,7 +581,7 @@ export default function POS() {
                 );
               })}
               {filtered.length === 0 && (
-                <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground/40">
+                <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground/40 border-r border-b border-border">
                   <Package className="h-12 w-12 mb-3" />
                   <p className="text-sm">Aucun produit disponible</p>
                 </div>
