@@ -517,19 +517,6 @@ export default function POS() {
             )}
           </div>
 
-          {/* ---- NUMPAD ZONE ---- */}
-          {/* Buffer display */}
-          <div className="px-4 py-2 bg-background border-t border-border flex justify-between items-center">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{numpadMode}</span>
-            <span className="text-xl font-mono font-bold text-foreground">
-              {numpadBuffer || (selectedItem ? (
-                numpadMode === 'Qté' ? selectedItem.qty :
-                numpadMode === 'Remise' ? `${selectedItem.discount}%` :
-                selectedItem.unit_price.toFixed(2)
-              ) : '—')}
-            </span>
-          </div>
-
           {/* Numpad grid */}
           <div className="grid grid-cols-4 border-t border-border flex-shrink-0">
             {[['1','2','3','Qté'],['4','5','6','% Disc'],['7','8','9','Prix'],['+/-','0','.','⌫']].map((row, ri) =>
