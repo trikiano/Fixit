@@ -414,61 +414,60 @@ export default function POS() {
             </div>
           </div>
 
-          {/* Customer + Réparation + Service — même ligne */}
+          {/* Customer + Réparation + Service — 3 lignes séparées */}
           <div className="border-t border-border relative">
-            <div className="flex items-stretch">
-              {/* Client search input */}
-              <div className="flex-1 flex items-center gap-2 px-3 py-2 border-r border-border">
-                <div className={cn(
-                  "h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold",
-                  clientName && clientName !== 'Client passager'
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted-foreground/20 text-muted-foreground"
-                )}>
-                  {clientName && clientName !== 'Client passager'
-                    ? clientName.charAt(0).toUpperCase()
-                    : <User className="h-3.5 w-3.5" />}
-                </div>
-                <input
-                  ref={clientInputRef}
-                  type="text"
-                  placeholder="Nom ou téléphone..."
-                  value={clientInputValue}
-                  onChange={e => {
-                    setClientInputValue(e.target.value);
-                    setShowClientDropdown(true);
-                    if (!e.target.value) updateTicket({ clientName: '', clientPhone: '' });
-                  }}
-                  onFocus={() => setShowClientDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowClientDropdown(false), 150)}
-                  className="flex-1 min-w-0 text-xs bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
-                />
-                {clientName && clientName !== 'Client passager' && (
-                  <button onClick={() => { updateTicket({ clientName: '', clientPhone: '' }); setClientInputValue(''); }} className="text-muted-foreground hover:text-destructive">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
+            {/* Ligne 1 : Client */}
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+              <div className={cn(
+                "h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold",
+                clientName && clientName !== 'Client passager'
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted-foreground/20 text-muted-foreground"
+              )}>
+                {clientName && clientName !== 'Client passager'
+                  ? clientName.charAt(0).toUpperCase()
+                  : <User className="h-3.5 w-3.5" />}
               </div>
-              {/* Réparation */}
-              <button
-                onClick={() => { setHistoryTab('repairs'); setHistorySearch(''); setShowHistoryDialog(true); }}
-                className="flex items-center justify-center gap-1.5 px-3 py-2 text-orange-600 bg-orange-500/5 hover:bg-orange-500/15 transition-colors border-r border-border text-xs font-semibold whitespace-nowrap"
-              >
-                <Wrench className="h-4 w-4 flex-shrink-0" /> Répar.
-              </button>
-              {/* Service */}
-              <button
-                onClick={() => { setHistoryTab('services'); setHistorySearch(''); setShowHistoryDialog(true); }}
-                className="flex items-center justify-center gap-1.5 px-3 py-2 text-blue-600 bg-blue-500/5 hover:bg-blue-500/15 transition-colors text-xs font-semibold whitespace-nowrap"
-              >
-                <Clock className="h-4 w-4 flex-shrink-0" /> Service
-              </button>
+              <input
+                ref={clientInputRef}
+                type="text"
+                placeholder="Nom ou téléphone..."
+                value={clientInputValue}
+                onChange={e => {
+                  setClientInputValue(e.target.value);
+                  setShowClientDropdown(true);
+                  if (!e.target.value) updateTicket({ clientName: '', clientPhone: '' });
+                }}
+                onFocus={() => setShowClientDropdown(true)}
+                onBlur={() => setTimeout(() => setShowClientDropdown(false), 150)}
+                className="flex-1 min-w-0 text-xs bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
+              />
+              {clientName && clientName !== 'Client passager' && (
+                <button onClick={() => { updateTicket({ clientName: '', clientPhone: '' }); setClientInputValue(''); }} className="text-muted-foreground hover:text-destructive">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
+
+            {/* Ligne 2 : Réparation */}
+            <button
+              onClick={() => { setHistoryTab('repairs'); setHistorySearch(''); setShowHistoryDialog(true); }}
+              className="w-full flex items-center gap-2 px-3 py-2 border-b border-border text-orange-600 bg-orange-500/5 hover:bg-orange-500/15 transition-colors text-xs font-semibold"
+            >
+              <Wrench className="h-4 w-4 flex-shrink-0" /> Réparation
+            </button>
+
+            {/* Ligne 3 : Service */}
+            <button
+              onClick={() => { setHistoryTab('services'); setHistorySearch(''); setShowHistoryDialog(true); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-blue-600 bg-blue-500/5 hover:bg-blue-500/15 transition-colors text-xs font-semibold"
+            >
+              <Clock className="h-4 w-4 flex-shrink-0" /> Service
+            </button>
 
             {/* Client dropdown */}
             {showClientDropdown && (
               <div className="absolute left-0 right-0 top-full z-50 bg-card border border-border shadow-lg max-h-56 overflow-y-auto">
-                {/* Filtered clients */}
                 {clients
                   .filter(c =>
                     !clientInputValue ||
@@ -502,7 +501,6 @@ export default function POS() {
                 ).length === 0 && clientInputValue && (
                   <p className="text-xs text-muted-foreground px-3 py-2">Aucun client trouvé</p>
                 )}
-                {/* Add new client */}
                 <button
                   onMouseDown={() => {
                     setNewClientForm({ full_name: clientInputValue, phone: '' });
