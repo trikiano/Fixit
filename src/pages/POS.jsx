@@ -418,7 +418,7 @@ export default function POS() {
           <div className="border-t border-border relative">
             <div className="flex items-stretch">
               {/* Col 1 : Client */}
-              <div className="flex-1 flex items-center gap-1.5 px-2 py-2 border-r border-border min-w-0">
+              <div className="flex-1 flex items-center gap-1.5 px-2 py-2 border-r border-border min-w-0" style={{width:'33.33%'}}>
                 <div className={cn(
                   "h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold",
                   clientName && clientName !== 'Client passager'
@@ -453,7 +453,8 @@ export default function POS() {
               {/* Col 2 : Réparation */}
               <button
                 onClick={() => { setHistoryTab('repairs'); setHistorySearch(''); setShowHistoryDialog(true); }}
-                className="flex items-center justify-center gap-1 px-2 py-2 text-orange-600 bg-orange-500/5 hover:bg-orange-500/15 transition-colors border-r border-border text-xs font-semibold whitespace-nowrap flex-shrink-0"
+                className="flex items-center justify-center gap-1 px-2 py-2 text-orange-600 bg-orange-500/5 hover:bg-orange-500/15 transition-colors border-r border-border text-xs font-semibold whitespace-nowrap"
+                style={{width:'33.33%'}}
               >
                 <Wrench className="h-3.5 w-3.5" /> Répar.
               </button>
@@ -461,7 +462,8 @@ export default function POS() {
               {/* Col 3 : Service */}
               <button
                 onClick={() => { setHistoryTab('services'); setHistorySearch(''); setShowHistoryDialog(true); }}
-                className="flex items-center justify-center gap-1 px-2 py-2 text-blue-600 bg-blue-500/5 hover:bg-blue-500/15 transition-colors text-xs font-semibold whitespace-nowrap flex-shrink-0"
+                className="flex items-center justify-center gap-1 px-2 py-2 text-blue-600 bg-blue-500/5 hover:bg-blue-500/15 transition-colors text-xs font-semibold whitespace-nowrap"
+                style={{width:'33.33%'}}
               >
                 <Clock className="h-3.5 w-3.5" /> Service
               </button>
