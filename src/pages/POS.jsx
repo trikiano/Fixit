@@ -546,7 +546,7 @@ export default function POS() {
 
           {/* Products grid */}
           <div className="flex-1 overflow-y-auto p-3">
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-0 border-l border-t border-border">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
               {filtered.map(product => {
                 const inCart = cart.find(i => i.id === product.id);
                 return (
@@ -554,34 +554,31 @@ export default function POS() {
                     key={product.id}
                     onClick={() => addToCart(product)}
                     className={cn(
-                      "relative flex flex-col text-left transition-all active:scale-95 overflow-hidden bg-card border-r border-b border-border",
-                      inCart ? "ring-2 ring-inset ring-primary" : "hover:bg-muted/30"
+                      "relative flex flex-col text-left overflow-hidden bg-card border border-border transition-all active:scale-95",
+                      inCart ? "ring-2 ring-inset ring-primary bg-primary/5" : "hover:bg-muted/30"
                     )}
                   >
-                    <div className="absolute top-1 left-1 z-10 bg-primary/90 text-primary-foreground text-[10px] font-bold px-1.5 py-0.5">
-                      {formatCurrency(product.sell_price || 0)}
-                    </div>
                     {inCart && (
-                      <div className="absolute top-1 right-1 z-10 h-5 w-5 bg-primary flex items-center justify-center">
-                        <span className="text-[10px] font-bold text-primary-foreground">{inCart.qty}</span>
+                      <div className="absolute top-1.5 right-1.5 z-10 h-6 w-6 rounded-full bg-primary flex items-center justify-center shadow">
+                        <span className="text-[11px] font-bold text-primary-foreground">{inCart.qty}</span>
                       </div>
                     )}
                     {product.image_url ? (
-                      <img src={product.image_url} alt={product.name} className="w-full aspect-square object-cover" />
+                      <img src={product.image_url} alt={product.name} className="w-full aspect-[4/3] object-cover" />
                     ) : (
-                      <div className="w-full aspect-square bg-muted/40 flex items-center justify-center">
-                        <Package className="h-8 w-8 text-muted-foreground/30" />
+                      <div className="w-full aspect-[4/3] bg-muted/50 flex items-center justify-center">
+                        <Package className="h-10 w-10 text-muted-foreground/30" />
                       </div>
                     )}
-                    <div className="px-2 py-1.5">
-                      <p className="text-xs font-medium leading-tight line-clamp-2 text-foreground">{product.name}</p>
-                      {product.brand && <p className="text-[10px] text-muted-foreground">{product.brand}</p>}
+                    <div className="px-2 pt-1.5 pb-2">
+                      <p className="text-xs font-semibold leading-tight line-clamp-2 text-foreground mb-1">{product.name}</p>
+                      <p className="text-sm font-bold text-primary">{formatCurrency(product.sell_price || 0)}</p>
                     </div>
                   </button>
                 );
               })}
               {filtered.length === 0 && (
-                <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground/40 border-r border-b border-border">
+                <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground/40">
                   <Package className="h-12 w-12 mb-3" />
                   <p className="text-sm">Aucun produit disponible</p>
                 </div>
