@@ -9,6 +9,7 @@ import {
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
+import { useOfflineQueue } from '@/hooks/useOfflineQueue';
 import { useAppSettings } from "@/components/settings/SettingsContext";
 import { Button } from "@/components/ui/button";
 import PhoneInput from '@/components/ui/PhoneInput';
@@ -75,6 +76,7 @@ export default function POS() {
   const qc = useQueryClient();
 
   const { formatCurrency, generateTicketNumber, settings } = useAppSettings();
+  const { isOnline, queue: offlineQueue, enqueue, syncQueue, syncing, lastSyncResult } = useOfflineQueue();
   const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: () => base44.entities.Product.list() });
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list('-created_date', 500) });
   const { data: repairs = [] } = useQuery({ queryKey: ['repairs'], queryFn: () => base44.entities.Repair.list('-created_date', 200) });
@@ -132,7 +134,6 @@ export default function POS() {
   const saleMutation = useMutation({
     mutationFn: async () => {
       const saleNum = generateTicketNumber('sale');
-      // Snapshot avant de vider le panier
       setLastCartSnapshot({ cart: [...cart], clientName, clientPhone, total, saleNum });
       const saleItems = cart.map(item => ({
         product_id: item.id, product_name: item.name,
@@ -141,31 +142,52 @@ export default function POS() {
         total: item.qty * item.unit_price * (1 - (item.discount || 0) / 100)
       }));
       const subtotal = saleItems.reduce((s, i) => s + i.total, 0);
-      for (const item of cart) {
-        if (item.isCustom) continue;
-        const prod = products.find(p => p.id === item.id);
-        if (prod) {
-          await base44.entities.Product.update(prod.id, { quantity: Math.max(0, (prod.quantity || 0) - item.qty) });
-          await base44.entities.StockMovement.create({
-            product_id: prod.id, product_name: prod.name, type: 'sortie',
-            quantity: item.qty, previous_stock: prod.quantity,
-            new_stock: Math.max(0, (prod.quantity || 0) - item.qty),
-            reason: `POS ${saleNum}`, reference_type: 'vente'
-          });
-        }
-      }
-      await base44.entities.Sale.create({
+
+      const saleData = {
         sale_number: saleNum, client_name: clientName || 'Client comptoir', type: 'vente',
         items: saleItems, subtotal, discount_total: 0, total: subtotal,
         payment_method: paymentMethod,
         payments: [{ method: paymentMethod, amount: subtotal }],
         status: 'completee'
-      });
+      };
+
+      const stockUpdates = [];
+      for (const item of cart) {
+        if (item.isCustom) continue;
+        const prod = products.find(p => p.id === item.id);
+        if (prod) {
+          const newQty = Math.max(0, (prod.quantity || 0) - item.qty);
+          stockUpdates.push({
+            id: prod.id,
+            newQty,
+            movement: {
+              product_id: prod.id, product_name: prod.name, type: 'sortie',
+              quantity: item.qty, previous_stock: prod.quantity,
+              new_stock: newQty, reason: `POS ${saleNum}`, reference_type: 'vente'
+            }
+          });
+        }
+      }
+
+      if (!isOnline) {
+        // Save to offline queue
+        enqueue({ ...saleData, _stock_updates: stockUpdates });
+        return saleNum;
+      }
+
+      // Online: apply immediately
+      for (const upd of stockUpdates) {
+        await base44.entities.Product.update(upd.id, { quantity: upd.newQty });
+        await base44.entities.StockMovement.create(upd.movement);
+      }
+      await base44.entities.Sale.create(saleData);
       return saleNum;
     },
     onSuccess: (saleNum) => {
-      qc.invalidateQueries({ queryKey: ['products'] });
-      qc.invalidateQueries({ queryKey: ['sales'] });
+      if (isOnline) {
+        qc.invalidateQueries({ queryKey: ['products'] });
+        qc.invalidateQueries({ queryKey: ['sales'] });
+      }
       setLastSaleNum(saleNum);
       setSuccessOpen(true);
       setShowPaymentDialog(false);
@@ -290,6 +312,27 @@ export default function POS() {
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
+      {/* OFFLINE / SYNC banner */}
+      {!isOnline && (
+        <div className="bg-amber-500 text-white text-xs font-semibold text-center py-1 flex items-center justify-center gap-2 flex-shrink-0">
+          <span>⚠️ Mode hors ligne — les ventes seront synchronisées à la reconnexion</span>
+          {offlineQueue.length > 0 && <span className="bg-white/20 px-2 py-0.5 rounded-full">{offlineQueue.length} en attente</span>}
+        </div>
+      )}
+      {isOnline && offlineQueue.length > 0 && !syncing && (
+        <div className="bg-blue-600 text-white text-xs font-semibold text-center py-1 flex items-center justify-center gap-2 flex-shrink-0">
+          <span>🔄 Reconnecté — {offlineQueue.length} vente(s) en attente de sync</span>
+          <button onClick={syncQueue} className="bg-white/20 hover:bg-white/30 px-3 py-0.5 rounded-full transition-colors">Synchroniser</button>
+        </div>
+      )}
+      {syncing && (
+        <div className="bg-blue-500 text-white text-xs font-semibold text-center py-1 flex-shrink-0">⏳ Synchronisation en cours...</div>
+      )}
+      {lastSyncResult && (
+        <div className={cn("text-white text-xs font-semibold text-center py-1 flex-shrink-0", lastSyncResult.failed > 0 ? 'bg-orange-500' : 'bg-emerald-600')}>
+          ✅ {lastSyncResult.synced} vente(s) synchronisée(s){lastSyncResult.failed > 0 ? ` · ⚠️ ${lastSyncResult.failed} échec(s)` : ''}
+        </div>
+      )}
       {/* TOP BAR */}
       <div className="h-12 bg-card border-b border-border flex items-center px-3 gap-0 flex-shrink-0">
         <Link to={createPageUrl("Dashboard")}>
