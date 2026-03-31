@@ -371,7 +371,7 @@ export default function POS() {
                     onClick={() => updateTicket({ selectedCartIdx: idx, numpadBuffer: '' })}
                     className={cn(
                       "px-3 py-2.5 border-b border-border/50 cursor-pointer transition-colors",
-                      isSelected ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-muted/30"
+                      isSelected ? "bg-primary/10 border-l-4 border-l-primary" : "hover:bg-muted/30"
                     )}
                   >
                     <div className="flex justify-between items-start">
@@ -391,39 +391,39 @@ export default function POS() {
           </div>
 
           {/* Total */}
-          <div className="border-t border-border px-3 py-2 bg-muted/20">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Total</span>
-              <span className="text-xl font-bold text-foreground">{formatCurrency(total)}</span>
+          <div className="border-t border-border px-4 py-3 bg-background">
+            <div className="flex justify-between items-baseline">
+              <span className="text-base font-semibold text-muted-foreground">Total :</span>
+              <span className="text-2xl font-bold text-foreground">{formatCurrency(total)}</span>
             </div>
           </div>
 
-          {/* Customer row — bouton */}
-          <div className="border-t border-border px-2 py-1.5">
+          {/* Customer button — Odoo style full width */}
+          <div className="border-t border-border">
             <button
               onClick={() => { setClientSearch(''); setShowClientDialog(true); }}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-muted/40 transition-colors text-left"
+              className="w-full flex items-center gap-3 px-4 py-3 bg-muted/30 hover:bg-muted/60 transition-colors text-left border-b border-border"
             >
               <div className={cn(
-                "h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold",
+                "h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold",
                 clientName && clientName !== 'Client passager'
-                  ? "bg-primary/20 text-primary"
-                  : "bg-muted text-muted-foreground"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted-foreground/20 text-muted-foreground"
               )}>
                 {clientName && clientName !== 'Client passager'
                   ? clientName.charAt(0).toUpperCase()
-                  : <User className="h-3.5 w-3.5" />}
+                  : <User className="h-4 w-4" />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate text-foreground">
-                  {clientName && clientName !== 'Client passager' ? clientName : 'Client passager'}
+                <p className="text-sm font-semibold truncate text-foreground">
+                  {clientName && clientName !== 'Client passager' ? clientName : 'Client'}
                 </p>
                 {clientPhone && <p className="text-xs text-muted-foreground">{clientPhone}</p>}
               </div>
               {clientName && clientName !== 'Client passager' && (
                 <button
                   onClick={e => { e.stopPropagation(); updateTicket({ clientName: '', clientPhone: '' }); }}
-                  className="text-muted-foreground hover:text-destructive"
+                  className="text-muted-foreground hover:text-destructive p-1"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -432,94 +432,82 @@ export default function POS() {
           </div>
 
           {/* ---- NUMPAD ZONE ---- */}
-
-          {/* Numpad buffer display */}
-          <div className="border-t border-border px-3 py-1.5 bg-muted/10 flex justify-between items-center">
-            <span className="text-xs text-muted-foreground">{numpadMode}</span>
-            <span className="text-lg font-mono font-bold text-foreground">
+          {/* Buffer display */}
+          <div className="px-4 py-2 bg-background border-t border-border flex justify-between items-center">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{numpadMode}</span>
+            <span className="text-xl font-mono font-bold text-foreground">
               {numpadBuffer || (selectedItem ? (
                 numpadMode === 'Qté' ? selectedItem.qty :
                 numpadMode === 'Remise' ? `${selectedItem.discount}%` :
                 selectedItem.unit_price.toFixed(2)
-              ) : '0')}
+              ) : '—')}
             </span>
           </div>
 
-          {/* Numpad grid — 4 columns, digits + mode buttons on right */}
-          <div className="border-t border-border grid grid-cols-4 flex-shrink-0">
+          {/* Numpad grid */}
+          <div className="grid grid-cols-4 border-t border-border flex-shrink-0">
+            {[['1','2','3','Qté'],['4','5','6','% Disc'],['7','8','9','Prix'],['+/-','0','.','⌫']].map((row, ri) =>
+              row.map((key, ci) => {
+                const isMode = ['Qté','% Disc','Prix'].includes(key);
+                const modeMap = {'Qté':'Qté','% Disc':'Remise','Prix':'Prix'};
+                const isActive = isMode && numpadMode === modeMap[key];
+                const isBackspace = key === '⌫';
+                return (
+                  <button
+                    key={`${ri}-${ci}`}
+                    onClick={() => {
+                      if (isMode) updateTicket({ numpadMode: modeMap[key], numpadBuffer: '' });
+                      else if (isBackspace) handleNumpad('⌫');
+                      else handleNumpad(key);
+                    }}
+                    className={cn(
+                      "h-14 flex items-center justify-center text-sm font-semibold border-r border-b border-border/60 transition-colors active:scale-95",
+                      isActive ? "bg-primary text-primary-foreground" :
+                      isMode ? "bg-muted/40 text-foreground hover:bg-primary/10 hover:text-primary" :
+                      isBackspace ? "bg-muted/20 text-muted-foreground hover:bg-muted" :
+                      "bg-background text-foreground hover:bg-muted/40"
+                    )}
+                  >
+                    {isBackspace ? <Delete className="h-4 w-4" /> : key}
+                  </button>
+                );
+              })
+            )}
 
-            {/* Row 1: 1 2 3 | Qté */}
-            <button onClick={() => handleNumpad('1')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">1</button>
-            <button onClick={() => handleNumpad('2')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">2</button>
-            <button onClick={() => handleNumpad('3')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">3</button>
-            <button
-              onClick={() => updateTicket({ numpadMode: 'Qté', numpadBuffer: '' })}
-              className={cn("h-12 flex items-center justify-center text-sm font-bold border-b border-border/50 transition-colors",
-                numpadMode === 'Qté' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/50")}
-            >Qté</button>
-
-            {/* Row 2: 4 5 6 | Remise */}
-            <button onClick={() => handleNumpad('4')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">4</button>
-            <button onClick={() => handleNumpad('5')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">5</button>
-            <button onClick={() => handleNumpad('6')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">6</button>
-            <button
-              onClick={() => updateTicket({ numpadMode: 'Remise', numpadBuffer: '' })}
-              className={cn("h-12 flex items-center justify-center text-sm font-bold border-b border-border/50 transition-colors",
-                numpadMode === 'Remise' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/50")}
-            >Remise</button>
-
-            {/* Row 3: 7 8 9 | Prix */}
-            <button onClick={() => handleNumpad('7')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">7</button>
-            <button onClick={() => handleNumpad('8')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">8</button>
-            <button onClick={() => handleNumpad('9')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">9</button>
-            <button
-              onClick={() => updateTicket({ numpadMode: 'Prix', numpadBuffer: '' })}
-              className={cn("h-12 flex items-center justify-center text-sm font-bold border-b border-border/50 transition-colors",
-                numpadMode === 'Prix' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/50")}
-            >Prix</button>
-
-            {/* Row 4: +/- 0 . | ⌫ */}
-            <button onClick={() => handleNumpad('+/-')} className="h-12 flex items-center justify-center text-sm font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">+/-</button>
-            <button onClick={() => handleNumpad('0')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">0</button>
-            <button onClick={() => handleNumpad('.')} className="h-12 flex items-center justify-center text-base font-semibold border-r border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-foreground">.</button>
-            <button
-              onClick={() => handleNumpad('⌫')}
-              className="h-12 flex items-center justify-center border-b border-border/50 hover:bg-muted/50 active:bg-muted transition-colors text-muted-foreground"
-            ><Delete className="h-4 w-4" /></button>
-
-            {/* Row 5: Paiement (span 3) | Suppr (span 1) */}
-            <button
-              onClick={() => setShowPaymentDialog(true)}
-              disabled={cart.length === 0}
-              className={cn(
-                "col-span-3 h-14 flex items-center justify-center gap-2 text-base font-bold border-r border-border/50 transition-colors",
-                cart.length === 0
-                  ? "text-muted-foreground bg-muted/20 cursor-not-allowed"
-                  : "bg-primary text-primary-foreground hover:bg-primary/90"
-              )}
-            >
-              <CheckCircle className="h-5 w-5" /> Paiement
-            </button>
-            <button
-              onClick={removeSelected}
-              disabled={selectedCartIdx === null}
-              className="h-14 flex items-center justify-center hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            {/* Row 6: Réparation (span 2) | Service (span 2) */}
+            {/* Réparation + Service — row */}
             <button
               onClick={() => { setHistoryTab('repairs'); setHistorySearch(''); setShowHistoryDialog(true); }}
-              className="col-span-2 h-12 flex items-center justify-center gap-1.5 text-sm font-semibold border-r border-t border-border/50 text-orange-600 bg-orange-500/5 hover:bg-orange-500/15 transition-colors"
+              className="col-span-2 h-12 flex items-center justify-center gap-1.5 text-sm font-semibold border-r border-b border-border/60 text-orange-600 bg-orange-500/5 hover:bg-orange-500/15 transition-colors"
             >
               <Wrench className="h-4 w-4" /> Réparation
             </button>
             <button
               onClick={() => { setHistoryTab('services'); setHistorySearch(''); setShowHistoryDialog(true); }}
-              className="col-span-2 h-12 flex items-center justify-center gap-1.5 text-sm font-semibold border-t border-border/50 text-blue-600 bg-blue-500/5 hover:bg-blue-500/15 transition-colors"
+              className="col-span-2 h-12 flex items-center justify-center gap-1.5 text-sm font-semibold border-b border-border/60 text-blue-600 bg-blue-500/5 hover:bg-blue-500/15 transition-colors"
             >
               <Clock className="h-4 w-4" /> Service
+            </button>
+
+            {/* Payment button full width */}
+            <button
+              onClick={() => setShowPaymentDialog(true)}
+              disabled={cart.length === 0}
+              className={cn(
+                "col-span-3 h-16 flex items-center justify-center gap-2 text-base font-bold border-r border-border/60 transition-colors",
+                cart.length === 0
+                  ? "text-muted-foreground bg-muted/20 cursor-not-allowed"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80"
+              )}
+            >
+              <CheckCircle className="h-5 w-5" />
+              <span>Paiement{cart.length > 0 ? ` — ${formatCurrency(total)}` : ''}</span>
+            </button>
+            <button
+              onClick={removeSelected}
+              disabled={selectedCartIdx === null}
+              className="h-16 flex items-center justify-center bg-destructive/5 hover:bg-destructive/15 text-muted-foreground hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <X className="h-5 w-5" />
             </button>
           </div>
         </div>
