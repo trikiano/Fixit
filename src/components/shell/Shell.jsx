@@ -182,12 +182,12 @@ function ShellInner() {
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
       {/* Tab bar */}
-      <div className="flex items-center bg-card border-b border-border h-11 overflow-x-auto flex-shrink-0">
+      <div className="flex items-center bg-card border-b border-border h-11 overflow-x-auto flex-shrink-0" style={{WebkitOverflowScrolling:'touch'}}>
         {/* Home tab */}
-        <button
-          onClick={() => setActiveTab('home')}
+        <div
+          onPointerDown={() => setActiveTab('home')}
           className={cn(
-            "flex items-center gap-1.5 px-4 h-full border-r border-border text-sm font-medium flex-shrink-0 transition-colors",
+            "flex items-center gap-1.5 px-4 h-full border-r border-border text-sm font-medium flex-shrink-0 transition-colors cursor-pointer select-none",
             activeTab === 'home'
               ? "bg-background border-b-2 border-b-primary text-primary"
               : "text-muted-foreground hover:bg-muted/40"
@@ -195,26 +195,32 @@ function ShellInner() {
         >
           <Home className="h-3.5 w-3.5" />
           <span>Accueil</span>
-        </button>
+        </div>
 
         {tabs.map(tab => (
           <div
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "flex items-center gap-1 px-3 h-full border-r border-border text-sm font-medium flex-shrink-0 transition-colors cursor-pointer select-none",
+              "flex items-center h-full border-r border-border text-sm font-medium flex-shrink-0 transition-colors select-none",
               activeTab === tab.id
                 ? "bg-background border-b-2 border-b-primary text-foreground"
                 : "text-muted-foreground hover:bg-muted/40"
             )}
           >
-            <span className="max-w-[120px] truncate">{tab.label}</span>
-            <button
-              onClick={(e) => closeTab(tab.id, e)}
-              className="ml-1 h-5 w-5 flex items-center justify-center rounded hover:bg-destructive/15 hover:text-destructive text-muted-foreground transition-colors flex-shrink-0"
+            <div
+              onPointerDown={() => setActiveTab(tab.id)}
+              className="flex-1 px-3 h-full flex items-center cursor-pointer min-w-0"
             >
-              <X className="h-3 w-3" />
-            </button>
+              <span className="max-w-[100px] truncate">{tab.label}</span>
+            </div>
+            <div
+              onPointerDown={(e) => { e.stopPropagation(); closeTab(tab.id, e); }}
+              className="pr-2 h-full flex items-center cursor-pointer text-muted-foreground hover:text-destructive"
+            >
+              <div className="h-6 w-6 flex items-center justify-center rounded-full hover:bg-destructive/10">
+                <X className="h-3.5 w-3.5" />
+              </div>
+            </div>
           </div>
         ))}
 
