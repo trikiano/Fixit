@@ -311,7 +311,7 @@ export default function POS() {
   const selectedItem = selectedCartIdx !== null ? cart[selectedCartIdx] : null;
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="fixed inset-0 flex flex-col bg-background z-40">
       {/* OFFLINE / SYNC banner */}
       {!isOnline && (
         <div className="bg-amber-500 text-white text-xs font-semibold text-center py-1 flex items-center justify-center gap-2 flex-shrink-0">
