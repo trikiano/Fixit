@@ -198,24 +198,24 @@ function ShellInner() {
         </button>
 
         {tabs.map(tab => (
-          <button
+          <div
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "flex items-center gap-2 px-4 h-full border-r border-border text-sm font-medium flex-shrink-0 transition-colors group",
+              "flex items-center gap-1 px-3 h-full border-r border-border text-sm font-medium flex-shrink-0 transition-colors cursor-pointer select-none",
               activeTab === tab.id
                 ? "bg-background border-b-2 border-b-primary text-foreground"
                 : "text-muted-foreground hover:bg-muted/40"
             )}
           >
             <span className="max-w-[120px] truncate">{tab.label}</span>
-            <span
+            <button
               onClick={(e) => closeTab(tab.id, e)}
-              className="opacity-0 group-hover:opacity-100 hover:text-destructive transition-all ml-1 cursor-pointer"
+              className="ml-1 h-5 w-5 flex items-center justify-center rounded hover:bg-destructive/15 hover:text-destructive text-muted-foreground transition-colors flex-shrink-0"
             >
               <X className="h-3 w-3" />
-            </span>
-          </button>
+            </button>
+          </div>
         ))}
 
         {/* Spacer + lock button */}
