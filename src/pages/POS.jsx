@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
-  Search, Package, ArrowLeft, Delete, CheckCircle, Home, Plus, X, User, Phone, Wrench, Clock, MessageSquare, AlertCircle, UserPlus
+  Search, Package, ArrowLeft, Delete, CheckCircle, Home, Plus, X, User, Phone, Wrench, Clock, MessageSquare, AlertCircle, UserPlus,
+  Smartphone, Monitor, Tablet, Zap, Cable, Headphones, Settings, Gamepad2, Box
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -15,15 +16,27 @@ import { Button } from "@/components/ui/button";
 import PhoneInput from '@/components/ui/PhoneInput';
 
 const CATEGORY_LABELS = {
-  telephone: '📱 Téléphones',
-  ordinateur: '💻 PC / Ordis',
-  tablette: '🖥️ Tablettes',
-  chargeur: '🔌 Chargeurs',
-  cable: '🔗 Câbles',
-  accessoire: '🎧 Accessoires',
-  piece_detachee: '🔧 Pièces',
-  console: '🎮 Consoles',
-  autre: '📦 Autre',
+  telephone: 'Téléphones',
+  ordinateur: 'PC / Ordis',
+  tablette: 'Tablettes',
+  chargeur: 'Chargeurs',
+  cable: 'Câbles',
+  accessoire: 'Accessoires',
+  piece_detachee: 'Pièces',
+  console: 'Consoles',
+  autre: 'Autre',
+};
+
+const CATEGORY_ICONS = {
+  telephone: Smartphone,
+  ordinateur: Monitor,
+  tablette: Tablet,
+  chargeur: Zap,
+  cable: Cable,
+  accessoire: Headphones,
+  piece_detachee: Settings,
+  console: Gamepad2,
+  autre: Box,
 };
 
 const MODES = ['Qté', 'Remise', 'Prix'];
@@ -622,19 +635,25 @@ export default function POS() {
         <div className="flex-1 flex flex-col overflow-hidden bg-background">
 
           {/* Category tabs */}
-          <div className="flex gap-1 px-3 py-2 border-b border-border bg-card flex-shrink-0 overflow-x-auto">
-            {categories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => { setActiveCategory(cat); setSearch(''); }}
-                className={cn(
-                  "px-3 py-1 rounded text-xs font-medium whitespace-nowrap transition-all flex-shrink-0",
-                  activeCategory === cat ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
-                )}
-              >
-                {cat === 'all' ? '🏠 Tous' : CATEGORY_LABELS[cat]}
-              </button>
-            ))}
+          <div className="flex gap-0 border-b border-border bg-card flex-shrink-0 overflow-x-auto">
+            {categories.map(cat => {
+              const Icon = cat === 'all' ? Home : CATEGORY_ICONS[cat];
+              return (
+                <button
+                  key={cat}
+                  onClick={() => { setActiveCategory(cat); setSearch(''); }}
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-1 px-3 py-2 text-[10px] font-medium whitespace-nowrap transition-all flex-shrink-0 border-r border-border/50 min-w-[60px]",
+                    activeCategory === cat
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  )}
+                >
+                  {Icon && <Icon className="h-4 w-4" strokeWidth={1.5} />}
+                  {cat === 'all' ? 'Tous' : CATEGORY_LABELS[cat]}
+                </button>
+              );
+            })}
           </div>
 
 
