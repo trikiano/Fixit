@@ -17,6 +17,7 @@ import { Wrench, Plus, Search, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import ClientSelector from "@/components/ui/ClientSelector";
+import PhoneInput from '@/components/ui/PhoneInput';
 import PartsManager from "@/components/repairs/PartsManager";
 import RepairPayments from "@/components/repairs/RepairPayments";
 import { format } from 'date-fns';

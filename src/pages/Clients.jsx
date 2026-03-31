@@ -15,6 +15,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import ClientDetailPanel from "@/components/clients/ClientDetailPanel";
 import { Users, Plus, Search, Phone, Mail, Ban, Star, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import PhoneInput from '@/components/ui/PhoneInput';
 
 export default function Clients() {
   const [search, setSearch] = useState('');
@@ -103,7 +104,7 @@ export default function Clients() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div><Label>Nom complet *</Label><Input value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} /></div>
-              <div><Label>Téléphone *</Label><Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} /></div>
+              <div><Label>Téléphone *</Label><PhoneInput value={form.phone} onChange={v => setForm({...form, phone: v})} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div><Label>Email</Label><Input value={form.email} onChange={e => setForm({...form, email: e.target.value})} /></div>

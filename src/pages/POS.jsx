@@ -11,6 +11,7 @@ import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 import { useAppSettings } from "@/components/settings/SettingsContext";
 import { Button } from "@/components/ui/button";
+import PhoneInput from '@/components/ui/PhoneInput';
 
 const CATEGORY_LABELS = {
   telephone: '📱 Téléphones',
@@ -843,11 +844,9 @@ export default function POS() {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Téléphone</label>
-              <Input
+              <PhoneInput
                 value={newClientForm.phone}
-                onChange={e => setNewClientForm(p => ({ ...p, phone: e.target.value }))}
-                placeholder="06 00 00 00 00"
-                type="tel"
+                onChange={v => setNewClientForm(p => ({ ...p, phone: v }))}
               />
             </div>
             <Button
