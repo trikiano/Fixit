@@ -1,9 +1,10 @@
 import React from 'react';
 import { useAppSettings } from '@/components/settings/SettingsContext';
+import { useAuth } from '@/lib/AuthContext';
 import {
   LayoutDashboard, Users, ShoppingCart, ShoppingBag, DollarSign,
   Tag, Wrench, Shield, Package, Warehouse, Truck, Receipt,
-  FileText, ClipboardList, ScrollText, Bell, Settings, Monitor
+  FileText, ClipboardList, ScrollText, Bell, Settings, Monitor, UsersRound
 } from 'lucide-react';
 
 const APP_PAGES = [
@@ -24,11 +25,28 @@ const APP_PAGES = [
   { page: 'Expenses', label: 'Dépenses', icon: ClipboardList, color: 'bg-fuchsia-500', desc: 'Charges & dépenses' },
   { page: 'AuditLogs', label: 'Audit', icon: ScrollText, color: 'bg-gray-600', desc: 'Journal d\'audit' },
   { page: 'Notifications', label: 'Notifications', icon: Bell, color: 'bg-sky-500', desc: 'Alertes & notifs' },
-  { page: 'Settings', label: 'Paramètres', icon: Settings, color: 'bg-zinc-600', desc: 'Configuration' },
+  { page: 'Users', label: 'Utilisateurs', icon: UsersRound, color: 'bg-stone-500', desc: 'Accès & Permissions', adminOnly: true },
+  { page: 'Settings', label: 'Paramètres', icon: Settings, color: 'bg-zinc-600', desc: 'Configuration', adminOnly: true },
 ];
 
 export default function HomeScreen({ openTab }) {
   const { settings } = useAppSettings();
+  const { user } = useAuth();
+
+  const allowedPages = APP_PAGES.filter(p => {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    if (p.adminOnly && user.role !== 'admin') return false;
+    
+    // Parse permissions if it's a string
+    let perms = [];
+    try {
+      perms = typeof user.permissions === 'string' ? JSON.parse(user.permissions || '[]') : (user.permissions || []);
+    } catch(e) { perms = []; }
+    
+    return perms.includes(p.page);
+  });
+
 
   return (
     <div className="flex flex-col items-center justify-center min-h-full py-10 px-6">
@@ -41,7 +59,7 @@ export default function HomeScreen({ openTab }) {
       </div>
 
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 max-w-4xl w-full">
-        {APP_PAGES.map(({ page, label, icon: Icon, color, desc }) => (
+        {allowedPages.map(({ page, label, icon: Icon, color, desc }) => (
           <button
             key={page}
             onClick={() => openTab(page)}
@@ -55,6 +73,7 @@ export default function HomeScreen({ openTab }) {
           </button>
         ))}
       </div>
+
     </div>
   );
 }

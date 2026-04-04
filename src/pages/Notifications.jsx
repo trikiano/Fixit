@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { fixit } from '@/api/fixitClient';
 import { useQuery } from '@tanstack/react-query';
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,7 +21,8 @@ export default function Notifications() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
 
-  const { data: notifs = [], isLoading } = useQuery({ queryKey: ['notifications'], queryFn: () => base44.entities.NotificationLog.list('-created_date', 200) });
+  const { data: notifs = [], isLoading } = useQuery({ queryKey: ['notifications'], queryFn: () => fixit.entities.Notification.list('-created_date', 200) });
+
 
   const filtered = notifs.filter(n => {
     const ms = n.recipient_name?.toLowerCase().includes(search.toLowerCase()) || n.subject?.toLowerCase().includes(search.toLowerCase()) || n.recipient?.includes(search);

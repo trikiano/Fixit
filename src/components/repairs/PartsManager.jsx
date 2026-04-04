@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { fixit } from '@/api/fixitClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,13 +16,15 @@ export default function PartsManager({ parts = [], onChange, repairId }) {
 
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
-    queryFn: () => base44.entities.Product.list('-created_date', 500),
+    queryFn: () => fixit.entities.Product.list('-created_date', 500),
   });
 
-  const filtered = products.filter(p =>
-    p.name?.toLowerCase().includes(search.toLowerCase()) ||
-    p.brand?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = products.filter(p => {
+    if (!p.is_spare_part) return false;
+    const s = search.toLowerCase();
+    return p.name?.toLowerCase().includes(s) || p.brand?.toLowerCase().includes(s);
+  });
+
 
   const addPart = (product) => {
     const existing = parts.find(p => p.product_id === product.id);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { fixit } from '@/api/fixitClient';
 
 const SMS_PROVIDERS = [
   {
@@ -63,7 +63,7 @@ export default function SmsSettingsTab({ local, update, onSave, saved }) {
     setTestStatus('loading');
     setTestMsg('');
     try {
-      const res = await base44.functions.invoke('sendSms', {
+      const res = await fixit.functions.invoke('sendSms', {
         to: testPhone,
         message: `✅ Test SMS depuis ${local.shop_name || 'TechRepair Pro'} — Configuration SMS OK !`,
         provider: local.sms_provider || 'twilio',

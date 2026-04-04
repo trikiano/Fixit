@@ -10,7 +10,9 @@ import { HandCoins, Wifi, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function SupplierPaymentModal({ open, onClose, accounts, salesByAccount, onSave }) {
+  const { formatCurrency, settings } = useAppSettings();
   const [account, setAccount] = useState('');
+
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
@@ -68,7 +70,8 @@ export default function SupplierPaymentModal({ open, onClose, accounts, salesByA
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <p className="text-muted-foreground text-xs">Total vendu (non payé)</p>
-                  <p className="font-bold text-green-400 text-lg">{accountSales.unpaid.toFixed(2)} €</p>
+                  <p className="font-bold text-green-400 text-lg">{formatCurrency(accountSales.unpaid)}</p>
+
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Nombre de ventes</p>
@@ -78,14 +81,16 @@ export default function SupplierPaymentModal({ open, onClose, accounts, salesByA
               {accountSales.unpaid > 0 && (
                 <div className="flex items-center gap-2 text-xs text-orange-400 bg-orange-500/10 rounded-lg px-3 py-2">
                   <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
-                  Montant dû au fournisseur : <span className="font-bold ml-1">{accountSales.unpaid.toFixed(2)} €</span>
+                  Montant dû au fournisseur : <span className="font-bold ml-1">{formatCurrency(accountSales.unpaid)}</span>
+
                 </div>
               )}
             </div>
           )}
 
           <div className="space-y-1.5">
-            <Label>Montant donné (€) *</Label>
+            <Label>Montant donné ({settings.currency_symbol || 'DT'}) *</Label>
+
             <Input
               type="number"
               value={amount}
@@ -95,7 +100,8 @@ export default function SupplierPaymentModal({ open, onClose, accounts, salesByA
             />
             {accountSales && amount && (
               <p className="text-xs text-muted-foreground">
-                Il vous restera : <span className="font-bold text-primary">{(accountSales.unpaid - Number(amount)).toFixed(2)} €</span> à payer
+                Il vous restera : <span className="font-bold text-primary">{formatCurrency(accountSales.unpaid - Number(amount))}</span> à payer
+
               </p>
             )}
           </div>

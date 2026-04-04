@@ -1,6 +1,6 @@
-import React from 'react';
+﻿import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { fixit } from '@/api/fixitClient';
 import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Lock } from 'lucide-react';
@@ -14,7 +14,7 @@ export function useCashRegister() {
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const { data: registers = [], isLoading } = useQuery({
     queryKey: ['cashRegisters'],
-    queryFn: () => base44.entities.CashRegister.list('-created_date', 10),
+    queryFn: () => fixit.entities.CashRegister.list('-created_date', 10),
   });
   const todayRegister = registers.find(r => r.date === todayStr && r.status === 'ouverte');
   return { isOpen: !!todayRegister, register: todayRegister, isLoading };

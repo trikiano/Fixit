@@ -1,19 +1,25 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { fixit, OfflineManager } from '@/api/fixitClient';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Search, Package, ArrowLeft, Delete, CheckCircle, Home, Plus, X, User, Phone, Wrench, Clock, MessageSquare, AlertCircle, UserPlus,
-  Smartphone, Monitor, Tablet, Zap, Cable, Headphones, Settings, Gamepad2, Box
+  Smartphone, Monitor, Tablet, Zap, Cable, Headphones, Settings, Gamepad2, Box, Barcode, Wifi, WifiOff, LogOut, Lock
 } from 'lucide-react';
+
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
-import { useOfflineQueue } from '@/hooks/useOfflineQueue';
 import { useAppSettings } from "@/components/settings/SettingsContext";
+
 import { Button } from "@/components/ui/button";
 import PhoneInput from '@/components/ui/PhoneInput';
+import { format } from 'date-fns';
+import { toast } from 'sonner';
+
+
 
 const CATEGORY_LABELS = {
   telephone: 'Téléphones',
@@ -25,7 +31,9 @@ const CATEGORY_LABELS = {
   piece_detachee: 'Pièces',
   console: 'Consoles',
   autre: 'Autre',
+  spareparts: 'Pièces Détachées',
 };
+
 
 const CATEGORY_ICONS = {
   telephone: Smartphone,
@@ -37,9 +45,21 @@ const CATEGORY_ICONS = {
   piece_detachee: Settings,
   console: Gamepad2,
   autre: Box,
+  spareparts: Settings,
 };
 
+
 const MODES = ['Qté', 'Remise', 'Prix'];
+
+// Helper to safely treat JSON fields as arrays
+const safeArray = (val) => {
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    try { return JSON.parse(val || '[]'); } catch (e) { return []; }
+  }
+  return [];
+};
+
 
 function createEmptyTicket(id) {
   return { id, cart: [], clientName: '', clientPhone: '', selectedCartIdx: null, numpadBuffer: '', numpadMode: 'Qté' };
@@ -50,6 +70,8 @@ let ticketCounter = 1;
 export default function POS() {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
+  const [activeBrand, setActiveBrand] = useState('all');
+
   // Pré-charger un article depuis URL params (ex: ?preload=repair:id:label:price:client)
   const [tickets, setTickets] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -85,18 +107,58 @@ export default function POS() {
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [showAddClientDialog, setShowAddClientDialog] = useState(false);
   const [newClientForm, setNewClientForm] = useState({ full_name: '', phone: '' });
+  const [openingBalanceInput, setOpeningBalanceInput] = useState(0);
+  const [showLogout, setShowLogout] = useState(false);
   const clientInputRef = useRef(null);
+
+
   const qc = useQueryClient();
+  const [isOnline, setIsOnline] = useState(OfflineManager.isOnline);
+  useEffect(() => {
+    return OfflineManager.subscribe((online) => setIsOnline(online));
+  }, []);
+
+
+
 
   const { formatCurrency, generateTicketNumber, settings } = useAppSettings();
-  const { isOnline, queue: offlineQueue, enqueue, syncQueue, syncing, lastSyncResult } = useOfflineQueue();
-  const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: () => base44.entities.Product.list() });
-  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list('-created_date', 500) });
-  const { data: repairs = [] } = useQuery({ queryKey: ['repairs'], queryFn: () => base44.entities.Repair.list('-created_date', 200) });
-  const { data: serviceSales = [] } = useQuery({ queryKey: ['serviceSales'], queryFn: () => base44.entities.ServiceSale.list('-created_date', 200) });
+
+  const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: () => fixit.entities.Product.list() });
+  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => fixit.entities.Client.list('-created_date', 300), staleTime: 10000 });
+  const { data: repairs = [] } = useQuery({ queryKey: ['repairs'], queryFn: () => fixit.entities.Repair.list('-created_date', 100), staleTime: 10000 });
+  const { data: serviceSales = [] } = useQuery({ queryKey: ['serviceSales'], queryFn: () => fixit.entities.ServiceSale.list('-created_date', 100), staleTime: 10000 });
+  const { data: dbCategories = [] } = useQuery({ queryKey: ['productCategories'], queryFn: () => fixit.entities.ProductCategory.list(), staleTime: 60000 });
+  const { data: registers = [], isLoading: isLoadingRegisters, isError: isErrorRegisters, error: registerError, refetch: refetchRegisters } = useQuery({ 
+    queryKey: ['cashRegisters'], 
+    queryFn: () => fixit.entities.CashRegister.list('-created_date', 5) 
+  });
 
 
-  useEffect(() => { base44.auth.me().then(setUser).catch(() => {}); }, []);
+
+
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const todayRegister = registers.find(r => r.date === todayStr);
+  const isCashOpen = todayRegister && todayRegister.status === 'ouverte';
+
+
+
+
+  const openSessionMutation = useMutation({
+    mutationFn: () => fixit.entities.CashRegister.create({ 
+      date: todayStr, 
+      opening_balance: openingBalanceInput, 
+      status: 'ouverte',
+      opened_by: user?.full_name || 'Directeur'
+    }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['cashRegisters'] }); },
+  });
+
+
+
+
+
+
+  useEffect(() => { fixit.auth.me().then(setUser).catch(() => {}); }, []);
 
   // Active ticket helpers
   const ticket = tickets.find(t => t.id === activeTicketId) || tickets[0];
@@ -133,7 +195,7 @@ export default function POS() {
 
   // --- Add new client mutation ---
   const addClientMutation = useMutation({
-    mutationFn: (data) => base44.entities.Client.create(data),
+    mutationFn: (data) => fixit.entities.Client.create(data),
     onSuccess: (created) => {
       qc.invalidateQueries({ queryKey: ['clients'] });
       updateTicket({ clientName: created.full_name, clientPhone: created.phone || '' });
@@ -182,33 +244,44 @@ export default function POS() {
         }
       }
 
-      if (!isOnline) {
-        // Save to offline queue
-        enqueue({ ...saleData, _stock_updates: stockUpdates });
-        return saleNum;
-      }
-
-      // Online: apply immediately
+      // Apply immediately — fixit entities handle offline automatically
       for (const upd of stockUpdates) {
-        await base44.entities.Product.update(upd.id, { quantity: upd.newQty });
-        await base44.entities.StockMovement.create(upd.movement);
+        await fixit.entities.Product.update(upd.id, { quantity: upd.newQty });
+        await fixit.entities.StockMovement.create(upd.movement);
       }
-      await base44.entities.Sale.create(saleData);
+      await fixit.entities.Sale.create(saleData);
       return saleNum;
     },
+
     onSuccess: (saleNum) => {
-      if (isOnline) {
-        qc.invalidateQueries({ queryKey: ['products'] });
-        qc.invalidateQueries({ queryKey: ['sales'] });
-      }
       setLastSaleNum(saleNum);
       setSuccessOpen(true);
       setShowPaymentDialog(false);
       setSmsResult(null);
-      updateTicket({ cart: [], clientName: '', clientPhone: '', selectedCartIdx: null, numpadBuffer: '', numpadMode: 'Qté' });
+      updateTicket({ 
+        cart: [], 
+        clientName: '', 
+        clientPhone: '', 
+        selectedCartIdx: null, 
+        numpadBuffer: '', 
+        numpadMode: 'Qté' 
+      });
       setPaymentMethod('especes');
+      if (isOnline) {
+        qc.invalidateQueries({ queryKey: ['products'] });
+        qc.invalidateQueries({ queryKey: ['sales'] });
+      }
     },
+
+    onError: (err) => {
+      console.error("Sale Mutation Error:", err);
+      toast.error("Erreur d'encaissement", {
+        description: "L'opération a échoué. Vérifiez votre connexion ou réessayez."
+      });
+    }
   });
+
+
 
   // --- SMS ticket ---
   const [lastCartSnapshot, setLastCartSnapshot] = useState({ cart: [], clientName: '', clientPhone: '', total: 0, saleNum: '' });
@@ -233,7 +306,7 @@ export default function POS() {
         .replace('{articles}', articlesLines)
         .replace('{total}', formatCurrency(lastCartSnapshot.total));
 
-      const res = await base44.functions.invoke('sendSms', {
+      const res = await fixit.functions.invoke('sendSms', {
         to: phone,
         message,
         provider: settings.sms_provider,
@@ -241,7 +314,23 @@ export default function POS() {
         apiSecret: settings.sms_api_secret || '',
         from: settings.sms_from || '',
       });
-      setSmsResult(res.data?.success ? 'ok' : 'error');
+      const isOk = res.data?.success;
+      setSmsResult(isOk ? 'ok' : 'error');
+
+      // Create log entry
+      try {
+        await fixit.entities.NotificationLog.create({
+          type: 'sms',
+          recipient: phone,
+          recipient_name: lastCartSnapshot.clientName || 'Client',
+          subject: `Ticket POS ${lastCartSnapshot.saleNum}`,
+          message: message,
+          status: isOk ? 'envoye' : 'echoue',
+          entity_type: 'sale',
+          entity_id: lastCartSnapshot.saleNum // or real ID if available
+        });
+        qc.invalidateQueries({ queryKey: ['notifications'] });
+      } catch (err) { console.error("Failed to log notification", err); }
     } catch {
       setSmsResult('error');
     }
@@ -311,48 +400,157 @@ export default function POS() {
   };
 
   const filtered = products.filter(p => {
-    if (p.is_active === false || p.quantity <= 0) return false;
-    const ms = p.name?.toLowerCase().includes(search.toLowerCase()) ||
-      p.brand?.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku?.toLowerCase().includes(search.toLowerCase());
-    const mc = activeCategory === 'all' || p.category === activeCategory;
-    return ms && mc;
+    if (p.is_active === false) return false;
+    const searchLow = search.toLowerCase().trim();
+    const ms = p.name?.toLowerCase().includes(searchLow) ||
+      p.brand?.toLowerCase().includes(searchLow) ||
+      p.sku?.toLowerCase().includes(searchLow);
+    
+    if (activeCategory === 'spareparts') {
+      if (!p.is_spare_part) return false;
+      const mb = activeBrand === 'all' || p.brand?.toLowerCase() === activeBrand.toLowerCase();
+      return ms && mb;
+    }
+
+    if (activeCategory === 'all') return ms;
+
+
+    const pCat = p.category?.toLowerCase().trim() || '';
+    const pBrand = p.brand?.toLowerCase().trim() || '';
+    const aCat = activeCategory.toLowerCase().trim();
+
+    // Check for exact match or plural/singular variation
+    const isCatMatch = pCat === aCat || (pCat + 's') === aCat || (aCat + 's') === pCat;
+    const isBrandMatch = pBrand === aCat || (pBrand + 's') === aCat || (aCat + 's') === pBrand;
+
+    return ms && (isCatMatch || isBrandMatch);
   });
 
-  const categories = ['all', ...Object.keys(CATEGORY_LABELS).filter(c => products.some(p => p.category === c && p.quantity > 0))];
+
+
+  const categories = useMemo(() => {
+    const dbCats = dbCategories.map(c => c.name);
+    const prodCats = [...new Set(products.map(p => p.category).filter(Boolean))];
+    const all = [...new Set([...dbCats, ...prodCats])];
+    
+    // Put SpareParts at the beginning
+    return ['all', 'spareparts', ...all.filter(c => c.toLowerCase() !== 'spareparts')];
+  }, [dbCategories, products]);
+
+  const sparePartsBrands = useMemo(() => {
+    const brands = [...new Set(products.filter(p => p.is_spare_part).map(p => p.brand).filter(Boolean))];
+    return ['all', ...brands];
+  }, [products]);
+
+
   const total = cart.reduce((s, i) => s + i.qty * i.unit_price * (1 - (i.discount || 0) / 100), 0);
   const selectedItem = selectedCartIdx !== null ? cart[selectedCartIdx] : null;
 
+  if (isLoadingRegisters) {
+    return (
+      <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-4 z-[100]">
+        <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm font-medium text-muted-foreground animate-pulse">Vérification de la caisse...</p>
+      </div>
+    );
+  }
+
+  if (isErrorRegisters) {
+    return (
+      <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-4 z-[100] p-6 text-center">
+        <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center mb-2">
+          <AlertCircle className="h-8 w-8 text-destructive" />
+        </div>
+        <h2 className="text-xl font-bold">Erreur de connexion</h2>
+        <p className="text-sm text-muted-foreground max-w-xs">
+          Impossible de vérifier le statut de la caisse. Vérifiez votre connexion serveur.
+          {registerError?.message && <span className="block mt-2 font-mono text-[10px] opacity-70">({registerError.message})</span>}
+        </p>
+        <div className="flex gap-3 mt-4">
+          <Button variant="outline" onClick={() => window.location.href = '/'}>Quitter</Button>
+          <Button onClick={() => refetchRegisters()}>Réessayer</Button>
+        </div>
+      </div>
+    );
+  }
+
+
+  if (!isCashOpen) {
+    return (
+      <div className="fixed inset-0 bg-background flex items-center justify-center p-4 z-[100]">
+        <div className="w-full max-w-md space-y-6">
+          <div className="flex flex-col items-center justify-center p-8 bg-card border border-border rounded-3xl shadow-2xl">
+            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+              <Plus className="h-8 w-8 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold text-center">Initialisation Caisse</h2>
+            <p className="text-sm text-balance text-muted-foreground text-center mt-2">
+              Une session de caisse ouverte est obligatoire pour accéder au point de vente.
+              Aujourd'hui : <span className="font-bold text-foreground">{format(new Date(), 'dd/MM/yyyy')}</span>
+            </p>
+
+            <div className="w-full space-y-5 mt-8">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest px-1">Fond de caisse initial</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-mono font-bold text-lg">{settings.currency_symbol || 'DT'}</span>
+                  <Input 
+                    type="number" 
+                    value={openingBalanceInput} 
+                    onChange={e => setOpeningBalanceInput(parseFloat(e.target.value) || 0)}
+                    className="pl-14 h-14 text-xl font-mono font-bold bg-muted/40 border-2 border-transparent focus:border-primary transition-all"
+                    placeholder="0.000"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <Button 
+                  variant="outline"
+                  className="h-12 text-base font-semibold order-2 sm:order-1" 
+                  onClick={() => window.location.href = '/'}
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" /> Retour
+                </Button>
+                <Button 
+                  className="h-12 text-base font-bold shadow-xl shadow-primary/20 order-1 sm:order-2" 
+                  onClick={() => openSessionMutation.mutate()} 
+                  disabled={openSessionMutation.isPending}
+                >
+                  {openSessionMutation.isPending ? 'Ouverture...' : 'Ouvrir la session'}
+                </Button>
+              </div>
+              
+              <div className="bg-primary/5 rounded-xl p-3 border border-primary/10 flex items-start gap-3 mt-4">
+                <div className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Plus className="h-3 w-3 text-primary" />
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  L'initialisation permet de suivre précisément vos espèces et d'assurer une clôture de caisse cohérente en fin de journée.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
+
     <div className="fixed inset-0 flex flex-col bg-background z-40">
-      {/* OFFLINE / SYNC banner */}
-      {!isOnline && (
-        <div className="bg-amber-500 text-white text-xs font-semibold text-center py-1 flex items-center justify-center gap-2 flex-shrink-0">
-          <span>⚠️ Mode hors ligne — les ventes seront synchronisées à la reconnexion</span>
-          {offlineQueue.length > 0 && <span className="bg-white/20 px-2 py-0.5 rounded-full">{offlineQueue.length} en attente</span>}
-        </div>
-      )}
-      {isOnline && offlineQueue.length > 0 && !syncing && (
-        <div className="bg-blue-600 text-white text-xs font-semibold text-center py-1 flex items-center justify-center gap-2 flex-shrink-0">
-          <span>🔄 Reconnecté — {offlineQueue.length} vente(s) en attente de sync</span>
-          <button onClick={syncQueue} className="bg-white/20 hover:bg-white/30 px-3 py-0.5 rounded-full transition-colors">Synchroniser</button>
-        </div>
-      )}
-      {syncing && (
-        <div className="bg-blue-500 text-white text-xs font-semibold text-center py-1 flex-shrink-0">⏳ Synchronisation en cours...</div>
-      )}
-      {lastSyncResult && (
-        <div className={cn("text-white text-xs font-semibold text-center py-1 flex-shrink-0", lastSyncResult.failed > 0 ? 'bg-orange-500' : 'bg-emerald-600')}>
-          ✅ {lastSyncResult.synced} vente(s) synchronisée(s){lastSyncResult.failed > 0 ? ` · ⚠️ ${lastSyncResult.failed} échec(s)` : ''}
-        </div>
-      )}
+      {/* TOP BAR handled by Shell or global OfflineSyncIndicator */}
+
       {/* TOP BAR */}
       <div className="h-12 bg-card border-b border-border flex items-center px-3 gap-0 flex-shrink-0">
-        <Link to={createPageUrl("Dashboard")}>
-          <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mr-3">
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-        </Link>
+        <button 
+          onClick={() => window.location.href = '/'}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mr-3"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+
 
         {/* Home + Search — à droite des tickets */}
 
@@ -397,30 +595,85 @@ export default function POS() {
 
         {/* Home + Search */}
         <div className="flex items-center gap-2 ml-2 flex-shrink-0">
-          <button onClick={() => setActiveCategory('all')} className="h-8 w-8 flex items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" title="Toutes catégories">
+          <button 
+            onClick={() => { setActiveCategory('all'); setSearch(''); }} 
+            className="h-8 w-8 flex items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" 
+            title="Tout réinitialiser"
+          >
             <Home className="h-4 w-4" />
           </button>
-          <div className="relative w-44">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+
+          <div className="relative w-48 xl:w-64">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Rechercher..."
-              className="w-full h-8 pl-8 pr-3 text-xs rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-ring text-foreground placeholder:text-muted-foreground"
+              placeholder="Rechercher ou scanner..."
+              className="w-full h-9 pl-9 pr-10 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground shadow-sm transition-all"
             />
+            <Barcode className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
           </div>
         </div>
 
-        {/* Caissier connecté */}
-        {user && (
-          <div className="flex items-center gap-2 ml-2 px-3 py-1 rounded-md bg-muted/40 flex-shrink-0">
-            <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
-              {user.full_name?.[0] || user.email?.[0]?.toUpperCase()}
-            </div>
-            <span className="text-xs font-medium text-foreground hidden sm:block">{user.full_name || user.email}</span>
+        <div className="flex-1" />
+
+        {/* Status + User + Lock */}
+        <div className="flex items-center h-full gap-1">
+          {/* Connectivity */}
+          <div className={cn(
+            "flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
+            isOnline ? "text-emerald-500 bg-emerald-500/10" : "text-amber-500 bg-amber-500/10"
+          )}>
+            {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+            <span className="hidden xl:inline">{isOnline ? "En ligne" : "Hors ligne"}</span>
           </div>
-        )}
+
+          {/* User info */}
+          {user && (
+            <div 
+              className="relative h-full flex items-center"
+              onMouseEnter={() => setShowLogout(true)}
+              onMouseLeave={() => setShowLogout(false)}
+            >
+              <div className="flex items-center gap-2 px-4 h-full text-xs font-semibold text-foreground hover:bg-muted/40 transition-colors cursor-default border-l border-border ml-1">
+                <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary flex-shrink-0">
+                  {user.full_name?.[0] || user.email?.[0]?.toUpperCase()}
+                </div>
+                <span className="hidden sm:inline max-w-[100px] truncate">{user.full_name || user.email}</span>
+              </div>
+
+              {showLogout && (
+                <div className="absolute top-[calc(100%-4px)] right-0 p-1 bg-popover border border-border rounded-xl shadow-2xl animate-in fade-in slide-in-from-top-1 z-[100] min-w-[160px]">
+                  <div className="px-2 py-1.5 border-b border-border/50 mb-1">
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Caisse active</p>
+                    <p className="text-xs font-semibold truncate">{user.full_name || user.email}</p>
+                  </div>
+                  <button
+                    onClick={() => { fixit.auth.logout(); window.location.href = '/login'; }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-destructive hover:bg-destructive/10 rounded-lg transition-colors group"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    Se déconnecter
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Lock */}
+          <button 
+            onClick={() => {
+              localStorage.setItem('fixit_locked', 'true');
+              window.location.href = '/';
+            }}
+            className="flex items-center gap-1.5 px-4 h-full text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors border-l border-border"
+          >
+            <Lock className="h-3.5 w-3.5" />
+            <span className="hidden xl:inline">Verrouiller</span>
+          </button>
+        </div>
       </div>
+
 
       {/* MAIN */}
       <div className="flex-1 flex overflow-hidden min-h-0">
@@ -447,16 +700,28 @@ export default function POS() {
                       isSelected ? "bg-primary/10 border-l-4 border-l-primary" : "hover:bg-muted/30"
                     )}
                   >
-                    <div className="flex justify-between items-start">
-                      <p className={cn("text-sm font-medium leading-tight", isSelected ? "text-primary" : "text-foreground")}>
-                        {item.name}
-                      </p>
-                      <p className="text-sm font-bold ml-2 flex-shrink-0">{formatCurrency(lineTotal)}</p>
+                    <div className="flex gap-3">
+                      {item.image_url ? (
+                        <img src={item.image_url} alt={item.name} className="h-10 w-10 rounded-md object-cover flex-shrink-0 border border-border/50" />
+                      ) : (
+                        <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                          <Package className="h-5 w-5 text-muted-foreground/40" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start w-full">
+                          <p className={cn("text-xs font-semibold leading-tight line-clamp-2", isSelected ? "text-primary" : "text-foreground")}>
+                            {item.name}
+                          </p>
+                          <p className="text-xs font-bold ml-2 flex-shrink-0">{formatCurrency(lineTotal)}</p>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          <span className="font-bold text-foreground/80">{item.qty}</span> × {formatCurrency(item.unit_price)}
+                          {item.discount > 0 && <span className="text-destructive ml-1 px-1 py-0.5 bg-destructive/10 rounded">-{item.discount}%</span>}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {item.qty} × {formatCurrency(item.unit_price)}
-                      {item.discount > 0 && <span className="text-destructive ml-1">({item.discount}% remise)</span>}
-                    </p>
+
                   </div>
                 );
               })
@@ -611,6 +876,8 @@ export default function POS() {
             <button
               onClick={() => setShowPaymentDialog(true)}
               disabled={cart.length === 0}
+
+
               className={cn(
                 "col-span-3 h-16 flex items-center justify-center gap-2 text-base font-bold border-r border-border/60 transition-colors",
                 cart.length === 0
@@ -637,24 +904,46 @@ export default function POS() {
           {/* Category tabs */}
           <div className="flex gap-0 border-b border-border bg-card flex-shrink-0 overflow-x-auto">
             {categories.map(cat => {
-              const Icon = cat === 'all' ? Home : CATEGORY_ICONS[cat];
+              const Icon = cat === 'all' ? Home : (CATEGORY_ICONS[cat.toLowerCase()] || Box);
+              const label = cat === 'all' ? 'Tous' : (CATEGORY_LABELS[cat.toLowerCase()] || cat);
               return (
                 <button
                   key={cat}
                   onClick={() => { setActiveCategory(cat); setSearch(''); }}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-1 px-3 py-2 text-[10px] font-medium whitespace-nowrap transition-all flex-shrink-0 border-r border-border/50 min-w-[60px]",
+                    "flex flex-col items-center justify-center gap-1 px-4 py-2 text-[10px] font-bold whitespace-nowrap transition-all flex-shrink-0 border-r border-border/50 min-w-[70px]",
                     activeCategory === cat
                       ? "bg-primary text-primary-foreground"
                       : "bg-card text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                   )}
                 >
-                  {Icon && <Icon className="h-4 w-4" strokeWidth={1.5} />}
-                  {cat === 'all' ? 'Tous' : CATEGORY_LABELS[cat]}
+                  {Icon && <Icon className="h-4 w-4" strokeWidth={2} />}
+                  {label}
                 </button>
               );
             })}
+
           </div>
+
+          {activeCategory === 'spareparts' && sparePartsBrands.length > 1 && (
+            <div className="flex gap-2 p-2 bg-muted/30 border-b border-border overflow-x-auto scrollbar-hide">
+              {sparePartsBrands.map(brand => (
+                <button
+                  key={brand}
+                  onClick={() => setActiveBrand(brand)}
+                  className={cn(
+                    "px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap transition-all border",
+                    activeBrand === brand
+                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                      : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground"
+                  )}
+                >
+                  {brand === 'all' ? 'Toutes marques' : brand}
+                </button>
+              ))}
+            </div>
+          )}
+
 
 
           {/* Products grid */}
@@ -668,7 +957,8 @@ export default function POS() {
                     onClick={() => addToCart(product)}
                     className={cn(
                       "relative flex flex-col text-left overflow-hidden bg-card border border-border transition-all active:scale-95",
-                      inCart ? "ring-2 ring-inset ring-primary bg-primary/5" : "hover:bg-muted/30"
+                      inCart ? "ring-2 ring-inset ring-primary bg-primary/5" : "hover:bg-muted/30",
+                      product.quantity <= 0 && "opacity-60"
                     )}
                   >
                     {inCart && (
@@ -676,15 +966,33 @@ export default function POS() {
                         <span className="text-[11px] font-bold text-primary-foreground">{inCart.qty}</span>
                       </div>
                     )}
-                    {product.image_url ? (
-                      <img src={product.image_url} alt={product.name} className="w-full aspect-[4/3] object-cover" />
-                    ) : (
-                      <div className="w-full aspect-[4/3] bg-muted/50 flex items-center justify-center">
-                        <Package className="h-10 w-10 text-muted-foreground/30" />
+                    {product.quantity <= 0 && (
+                      <div className="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 rounded-sm bg-destructive/90 text-white text-[9px] font-bold uppercase">
+                        Rupture
                       </div>
                     )}
+                    <div className="relative w-full aspect-[4/3] bg-muted/20 flex items-center justify-center overflow-hidden p-2 group-hover:bg-muted/30 transition-colors">
+                      {product.image_url ? (
+                        <img 
+                          src={product.image_url} 
+                          alt={product.name} 
+                          className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-110 drop-shadow-sm" 
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center gap-1 opacity-20 group-hover:opacity-30 transition-opacity">
+                          <Package className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+
+
                     <div className="px-2 pt-1.5 pb-2">
+                      <div className="flex justify-between items-start mb-0.5">
+                        <p className="text-[10px] font-bold text-primary uppercase tracking-tighter truncate max-w-[60%]">{product.brand}</p>
+                        {product.is_spare_part && <Settings className="h-2.5 w-2.5 text-orange-500" />}
+                      </div>
                       <p className="text-xs font-semibold leading-tight line-clamp-2 text-foreground mb-1">{product.name}</p>
+
                       <p className="text-sm font-bold text-primary">{formatCurrency(product.sell_price || 0)}</p>
                     </div>
                   </button>
@@ -730,8 +1038,10 @@ export default function POS() {
                 if (filtered.length === 0) return <div className="py-8 text-center text-sm text-muted-foreground">Aucune réparation trouvée</div>;
                 return filtered.map(r => {
                   const price = r.final_cost || r.estimated_cost || 0;
-                  const totalPaid = (r.payments || []).reduce((s, p) => s + (p.amount || 0), 0);
+                  const payments = safeArray(r.payments);
+                  const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0);
                   const remaining = Math.max(0, price - totalPaid);
+
                   return (
                     <button key={r.id} onClick={() => addHistoryItem({ id: r.id, name: `🔧 ${r.client_name} — ${r.device_brand || ''} ${r.device_model || ''}`.trim(), price: remaining || price, clientName: r.client_name, clientPhone: r.client_phone, type: 'repair' })}
                       className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors text-left">
@@ -880,10 +1190,26 @@ export default function POS() {
                 >{pm.label}</button>
               ))}
             </div>
-            <Button className="w-full" size="lg" onClick={() => saleMutation.mutate()} disabled={saleMutation.isPending}>
-              <CheckCircle className="h-4 w-4 mr-2" />
-              {saleMutation.isPending ? 'Traitement...' : `Valider — ${formatCurrency(total)}`}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                className="flex-1" 
+                size="lg" 
+                onClick={() => setShowPaymentDialog(false)}
+              >
+                Annuler
+              </Button>
+              <Button 
+                className="flex-[2]" 
+                size="lg" 
+                onClick={() => saleMutation.mutate()} 
+                disabled={saleMutation.isPending}
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                {saleMutation.isPending ? 'Traitement...' : `Valider — ${formatCurrency(total)}`}
+              </Button>
+            </div>
+
           </div>
         </DialogContent>
       </Dialog>

@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: fixit-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: fixit_db
+      MYSQL_USER: fixit_user
+      MYSQL_PASSWORD: fixit_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - fixit-db-data:/var/lib/mysql
+
+volumes:
+  fixit-db-data:

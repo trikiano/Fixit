@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { fixit } from '@/api/fixitClient';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import PhoneInput from "@/components/ui/PhoneInput";
 import { User, Plus, Search, Phone, X } from 'lucide-react';
 
 /**
@@ -27,11 +28,11 @@ export default function ClientSelector({ clientName, clientPhone, onSelect, requ
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list('-created_date', 500),
+    queryFn: () => fixit.entities.Client.list('-created_date', 500),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Client.create(data),
+    mutationFn: (data) => fixit.entities.Client.create(data),
     onSuccess: (created) => {
       qc.invalidateQueries({ queryKey: ['clients'] });
       onSelect(created.full_name, created.phone);
@@ -43,10 +44,11 @@ export default function ClientSelector({ clientName, clientPhone, onSelect, requ
   });
 
   // Filtre clients
-  const filtered = query.length >= 1
+  const safeQuery = (query || '').toString();
+  const filtered = safeQuery.length >= 1
     ? clients.filter(c =>
-        c.full_name?.toLowerCase().includes(query.toLowerCase()) ||
-        c.phone?.includes(query)
+        c.full_name?.toLowerCase().includes(safeQuery.toLowerCase()) ||
+        c.phone?.includes(safeQuery)
       ).slice(0, 8)
     : clients.slice(0, 8);
 
@@ -110,16 +112,6 @@ export default function ClientSelector({ clientName, clientPhone, onSelect, requ
               </button>
             )}
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => { setNewName(query); setShowCreate(true); setShowDropdown(false); }}
-            title="Créer un nouveau client"
-            className="flex-shrink-0"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
         </div>
 
         {/* Dropdown suggestions */}
@@ -141,11 +133,10 @@ export default function ClientSelector({ clientName, clientPhone, onSelect, requ
             </button>
 
             {/* Liste clients */}
-            {filtered.length > 0 ? (
-              <div className="max-h-52 overflow-y-auto">
-                {filtered.map(c => (
-                  <button
-                    key={c.id}
+            <div className="max-h-52 overflow-y-auto">
+              {filtered.map(c => (
+                <button
+                  key={c.id}
                     className="w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-muted/60 transition-colors"
                     onClick={() => selectClient(c)}
                   >
@@ -161,15 +152,19 @@ export default function ClientSelector({ clientName, clientPhone, onSelect, requ
                     {c.segment && <span className="text-xs text-muted-foreground capitalize">{c.segment}</span>}
                   </button>
                 ))}
+                
+                {/* Option Créer à la fin de la liste */}
+                <button
+                  type="button"
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-primary hover:bg-primary/10 transition-colors border-t border-border/50 font-medium text-left"
+                  onClick={() => { setNewName(query); setShowCreate(true); setShowDropdown(false); }}
+                >
+                  <div className="h-7 w-7 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Plus className="h-4 w-4 text-primary" />
+                  </div>
+                  {query.length > 0 ? `Créer le client "${query}"` : "Créer un nouveau client..."}
+                </button>
               </div>
-            ) : query.length > 0 ? (
-              <div className="px-3 py-3 text-center">
-                <p className="text-xs text-muted-foreground mb-2">Aucun client trouvé pour "{query}"</p>
-                <Button size="sm" variant="outline" className="text-xs" onClick={() => { setNewName(query); setShowCreate(true); setShowDropdown(false); }}>
-                  <Plus className="h-3 w-3 mr-1" />Créer "{query}"
-                </Button>
-              </div>
-            ) : null}
           </div>
         )}
       </div>
@@ -199,7 +194,7 @@ export default function ClientSelector({ clientName, clientPhone, onSelect, requ
             </div>
             <div>
               <Label>Téléphone *</Label>
-              <Input value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="06 xx xx xx xx" />
+              <PhoneInput value={newPhone} onChange={setNewPhone} />
             </div>
             <div className="flex justify-end gap-2 pt-1">
               <Button variant="outline" onClick={() => setShowCreate(false)}>Annuler</Button>

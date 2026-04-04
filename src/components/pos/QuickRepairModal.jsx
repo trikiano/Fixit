@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAppSettings } from "@/components/settings/SettingsContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,24 +8,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Wrench } from 'lucide-react';
 import ClientSelector from "@/components/ui/ClientSelector";
-
-const DEVICE_TYPES = [
-  { value: 'smartphone', label: '📱 Smartphone' },
-  { value: 'tablette', label: '🖥️ Tablette' },
-  { value: 'ordinateur_portable', label: '💻 PC Portable' },
-  { value: 'ordinateur_bureau', label: '🖥️ PC Bureau' },
-  { value: 'console', label: '🎮 Console' },
-  { value: 'autre', label: '📦 Autre' },
-];
+import EntityRefSelect from "@/components/ui/EntityRefSelect";
 
 const empty = {
   client_name: '', client_phone: '',
-  device_type: 'smartphone', device_brand: '', device_model: '',
+  device_type: '', device_brand: '', device_model: '',
   problem_description: '', estimated_cost: '', deposit_amount: '0',
   payment_method: 'especes', status: 'reception',
 };
 
 export default function QuickRepairModal({ open, onClose, onSave }) {
+  const { settings } = useAppSettings();
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
 
@@ -67,20 +61,20 @@ export default function QuickRepairModal({ open, onClose, onSave }) {
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label>Type d'appareil</Label>
-              <Select value={form.device_type} onValueChange={v => set('device_type', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {DEVICE_TYPES.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <EntityRefSelect 
+                entityType="device_type" 
+                value={form.device_type} 
+                onChange={v => setForm(p => ({ ...p, device_type: v, device_brand: '', device_model: '' }))} 
+                placeholder="Type..." 
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Marque</Label>
-              <Input value={form.device_brand} onChange={e => set('device_brand', e.target.value)} placeholder="Apple, Samsung..." />
+              <EntityRefSelect entityType="brand" parentFilters={{ device_type: form.device_type }} value={form.device_brand} onChange={v => setForm(p => ({ ...p, device_brand: v, device_model: '' }))} placeholder="Apple, Samsung..." />
             </div>
             <div className="space-y-1.5">
               <Label>Modèle</Label>
-              <Input value={form.device_model} onChange={e => set('device_model', e.target.value)} placeholder="iPhone 14..." />
+              <EntityRefSelect entityType="model" parentFilters={{ device_type: form.device_type, device_brand: form.device_brand }} value={form.device_model} onChange={v => set('device_model', v)} placeholder="iPhone 14..." />
             </div>
           </div>
 
@@ -91,14 +85,15 @@ export default function QuickRepairModal({ open, onClose, onSave }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Coût estimé (€)</Label>
+              <Label>Coût estimé ({settings.currency_symbol || 'DT'})</Label>
               <Input type="number" value={form.estimated_cost} onChange={e => set('estimated_cost', e.target.value)} placeholder="0.00" />
             </div>
             <div className="space-y-1.5">
-              <Label>Acompte versé (€)</Label>
+              <Label>Acompte versé ({settings.currency_symbol || 'DT'})</Label>
               <Input type="number" value={form.deposit_amount} onChange={e => set('deposit_amount', e.target.value)} placeholder="0.00" />
             </div>
           </div>
+
 
           <div className="space-y-1.5">
             <Label>Mode de paiement acompte</Label>

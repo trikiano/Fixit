@@ -6,11 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2, ShoppingCart } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAppSettings } from "@/components/settings/SettingsContext";
-import { Link } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { useShell } from '@/lib/ShellContext';
+
 
 export default function RepairPayments({ payments = [], finalCost = 0, onChange, repairId = '', repairLabel = '', clientName = '', clientPhone = '' }) {
   const { formatCurrency } = useAppSettings();
+  const { openTab } = useShell();
+
   const [showForm, setShowForm] = useState(false);
   const [newPayment, setNewPayment] = useState({
     amount: '', method: 'especes',
@@ -73,11 +75,16 @@ export default function RepairPayments({ payments = [], finalCost = 0, onChange,
       )}
 
       {/* Bouton Payer en caisse */}
-      <Link to={`${createPageUrl('POS')}?preload=repair:${repairId}:${encodeURIComponent(repairLabel)}:${remaining || finalCost}:${encodeURIComponent(clientName)}:${encodeURIComponent(clientPhone)}`} className="block w-full">
-        <Button variant="default" size="sm" className="w-full gap-2 bg-primary/90 hover:bg-primary">
+      {repairId && (
+        <Button
+          variant="default"
+          size="sm"
+          className="w-full gap-2 bg-primary/90 hover:bg-primary"
+          onClick={() => openTab('POS')}
+        >
           <ShoppingCart className="h-3.5 w-3.5" /> Payer en caisse (POS) — {formatCurrency(remaining || finalCost)}
         </Button>
-      </Link>
+      )}
 
       {/* Formulaire ajout manuel */}
       {!showForm ? (

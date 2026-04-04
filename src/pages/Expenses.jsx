@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { fixit } from '@/api/fixitClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import PageHeader from "@/components/ui/PageHeader";
 import DataTable from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
+import EntityRefSelect from "@/components/ui/EntityRefSelect";
 import { ClipboardList, Plus, Search, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -30,21 +31,22 @@ import { useAppSettings } from "@/components/settings/SettingsContext";
 
 export default function Expenses() {
   const { formatCurrency, settings } = useAppSettings();
-  const sym = settings.currency_symbol || '€';
+  const sym = settings.currency_symbol || 'DT';
+
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const qc = useQueryClient();
 
-  const { data: expenses = [], isLoading } = useQuery({ queryKey: ['expenses'], queryFn: () => base44.entities.Expense.list('-created_date') });
+  const { data: expenses = [], isLoading } = useQuery({ queryKey: ['expenses'], queryFn: () => fixit.entities.Expense.list('-created_date') });
 
   const saveMutation = useMutation({
-    mutationFn: (data) => editing ? base44.entities.Expense.update(editing.id, data) : base44.entities.Expense.create(data),
+    mutationFn: (data) => editing ? fixit.entities.Expense.update(editing.id, data) : fixit.entities.Expense.create(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['expenses'] }); closeDialog(); },
   });
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Expense.delete(id),
+    mutationFn: (id) => fixit.entities.Expense.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['expenses'] }),
   });
 
@@ -91,14 +93,20 @@ export default function Expenses() {
             <div><Label>Description *</Label><Input value={form.description} onChange={e => setForm({...form, description: e.target.value})} /></div>
             <div className="grid grid-cols-2 gap-4">
               <div><Label>Montant ({settings.currency_symbol || 'DT'}) *</Label><Input type="number" value={form.amount} onChange={e => setForm({...form, amount: parseFloat(e.target.value) || 0})} /></div>
+
               <div><Label>Date</Label><Input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div><Label>Catégorie</Label>
-                <Select value={form.category} onValueChange={v => setForm({...form, category: v})}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{categories.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
-                </Select>
+                <EntityRefSelect 
+                  entityType="custom" 
+                  customTable="expenses" 
+                  customColumn="category"
+                  defaultOptions={categories.map(c => ({ id: c.value, label: c.label }))}
+                  value={form.category} 
+                  onChange={v => setForm({...form, category: v})} 
+                  placeholder="Catégorie..." 
+                />
               </div>
               <div><Label>Paiement</Label>
                 <Select value={form.payment_method} onValueChange={v => setForm({...form, payment_method: v})}>

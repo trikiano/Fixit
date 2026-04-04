@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Settings, Plus, Trash2, Tag } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { fixit } from '@/api/fixitClient';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const emptyService = { name: '', category_id: '', category_name: '', cost_price: '', sell_price: '', description: '' };
@@ -21,22 +21,22 @@ export default function ManageServicesModal({ open, onClose, services, categorie
   const [catForm, setCatForm] = useState(emptyCategory);
 
   const createServiceMutation = useMutation({
-    mutationFn: (data) => base44.entities.ServiceItem.create(data),
+    mutationFn: (data) => fixit.entities.ServiceItem.create(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['service-items'] }); setShowServiceForm(false); setServiceForm(emptyService); },
   });
 
   const deleteServiceMutation = useMutation({
-    mutationFn: (id) => base44.entities.ServiceItem.delete(id),
+    mutationFn: (id) => fixit.entities.ServiceItem.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['service-items'] }),
   });
 
   const createCatMutation = useMutation({
-    mutationFn: (data) => base44.entities.ServiceCategory.create(data),
+    mutationFn: (data) => fixit.entities.ServiceCategory.create(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['service-categories'] }); setShowCatForm(false); setCatForm(emptyCategory); },
   });
 
   const deleteCatMutation = useMutation({
-    mutationFn: (id) => base44.entities.ServiceCategory.delete(id),
+    mutationFn: (id) => fixit.entities.ServiceCategory.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['service-categories'] }),
   });
 

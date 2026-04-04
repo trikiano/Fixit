@@ -8,21 +8,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import PageHeader from "@/components/ui/PageHeader";
-import { Settings, Store, Palette, Globe, Bell, Shield, Receipt, CheckCircle, MessageSquare, Eye, EyeOff } from 'lucide-react';
+import { 
+  Settings, Store, Palette, Globe, Bell, Shield, 
+  Receipt, CheckCircle, MessageSquare, Lock, 
+  Building2, Scan, Sparkles, ShieldCheck 
+} from 'lucide-react';
+
 import { useAppSettings, applyTheme } from "@/components/settings/SettingsContext";
 import SmsSettingsTab from "@/components/settings/SmsSettingsTab";
+import PhoneInput from "@/components/ui/PhoneInput";
 
 const CURRENCIES = [
+  { code: 'TND', symbol: 'DT', label: 'Dinar Tunisien (DT)' },
   { code: 'EUR', symbol: '€', label: 'Euro (€)' },
   { code: 'USD', symbol: '$', label: 'Dollar US ($)' },
   { code: 'GBP', symbol: '£', label: 'Livre Sterling (£)' },
   { code: 'MAD', symbol: 'DH', label: 'Dirham Marocain (DH)' },
   { code: 'DZD', symbol: 'DA', label: 'Dinar Algérien (DA)' },
-  { code: 'TND', symbol: 'DT', label: 'Dinar Tunisien (DT)' },
   { code: 'XOF', symbol: 'CFA', label: 'Franc CFA (CFA)' },
   { code: 'CAD', symbol: 'CA$', label: 'Dollar Canadien (CA$)' },
   { code: 'CHF', symbol: 'CHF', label: 'Franc Suisse (CHF)' },
 ];
+
 
 const THEMES = [
   { id: 'dark', label: 'Sombre', description: 'Fond foncé, sobre et professionnel' },
@@ -72,8 +79,10 @@ export default function SettingsPage() {
           <TabsTrigger value="notifications" className="gap-2 text-xs"><Bell className="h-3.5 w-3.5" />Notifications</TabsTrigger>
           <TabsTrigger value="caisse" className="gap-2 text-xs"><Store className="h-3.5 w-3.5" />Caisse</TabsTrigger>
           <TabsTrigger value="sms" className="gap-2 text-xs"><MessageSquare className="h-3.5 w-3.5" />SMS</TabsTrigger>
+          <TabsTrigger value="ocr" className="gap-2 text-xs"><Scan className="h-3.5 w-3.5" />OCR & IA</TabsTrigger>
           <TabsTrigger value="securite" className="gap-2 text-xs"><Shield className="h-3.5 w-3.5" />Sécurité</TabsTrigger>
         </TabsList>
+
 
         {/* Boutique */}
         <TabsContent value="boutique">
@@ -90,7 +99,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Téléphone</Label>
-                  <Input value={local.shop_phone} onChange={e => update('shop_phone', e.target.value)} placeholder="+33 1 23 45 67 89" />
+                  <PhoneInput value={local.shop_phone} onChange={v => update('shop_phone', v)} placeholder="+33 1 23 45 67 89" />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -146,10 +155,11 @@ export default function SettingsPage() {
                   <Select value={local.currency_decimals ?? '2'} onValueChange={v => update('currency_decimals', v)}>
                     <SelectTrigger className="w-full max-w-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="0">0 — Entier (ex: 1500 DA)</SelectItem>
-                      <SelectItem value="2">2 — Centimes (ex: 1500.00 DA)</SelectItem>
-                      <SelectItem value="3">3 — Millimes (ex: 1500.000 DA)</SelectItem>
+                      <SelectItem value="0">0 — Entier (ex: 1500 {selectedCurrency.symbol})</SelectItem>
+                      <SelectItem value="2">2 — Centimes (ex: 1500.00 {selectedCurrency.symbol})</SelectItem>
+                      <SelectItem value="3">3 — Millimes (ex: 1500.000 {selectedCurrency.symbol})</SelectItem>
                     </SelectContent>
+
                   </Select>
                 </div>
                 <div className="space-y-1.5">
@@ -157,8 +167,9 @@ export default function SettingsPage() {
                   <Select value={local.currency_symbol_position ?? 'right'} onValueChange={v => update('currency_symbol_position', v)}>
                     <SelectTrigger className="w-full max-w-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="left">Gauche — DA 1500</SelectItem>
-                      <SelectItem value="right">Droite — 1500 DA</SelectItem>
+                      <SelectItem value="left">Gauche — {selectedCurrency.symbol} 1500</SelectItem>
+                      <SelectItem value="right">Droite — 1500 {selectedCurrency.symbol}</SelectItem>
+
                     </SelectContent>
                   </Select>
                 </div>
@@ -226,6 +237,90 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+        {/* Intelligence / OCR */}
+        <TabsContent value="ocr">
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Scan className="h-4 w-4 text-primary" /> Intelligence Artificielle & OCR
+              </CardTitle>
+              <CardDescription>Configurez la reconnaissance automatique de vos factures et tickets</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4 p-4 rounded-xl border-2 border-emerald-500/20 bg-emerald-500/5">
+                  <div className="flex items-start gap-4">
+                    <div className="bg-emerald-500/20 p-2 rounded-lg mt-1"><ShieldCheck className="h-5 w-5 text-emerald-500" /></div>
+                    <div className="space-y-1">
+                      <p className="font-semibold text-emerald-900 dark:text-emerald-400">Google Cloud Vision</p>
+                      <p className="text-xs text-emerald-800/80 dark:text-emerald-400/80">Excellent pour l'écriture manuscrite et les tableaux.</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-4 p-4 rounded-xl border-2 border-purple-500/20 bg-purple-500/5">
+                  <div className="flex items-start gap-4">
+                    <div className="bg-purple-500/20 p-2 rounded-lg mt-1"><Sparkles className="h-5 w-5 text-purple-500" /></div>
+                    <div className="space-y-1">
+                      <p className="font-semibold text-purple-900 dark:text-purple-400">GPT-4o Vision (Ultime)</p>
+                      <p className="text-xs text-purple-800/80 dark:text-purple-400/80">Compréhension totale style "cerveau humain". Le plus précis.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+
+              <div className="space-y-4">
+                <div className="space-y-1.5 font-medium">Mode de reconnaissance</div>
+                <div className="grid grid-cols-3 gap-4">
+                  <button 
+                    onClick={() => update('ocr_provider', 'local')}
+                    className={`p-4 rounded-xl border-2 text-left transition-all ${local.ocr_provider === 'local' ? 'border-primary bg-primary/10 shadow-sm' : 'border-border hover:border-primary/50'}`}
+                  >
+                    <p className="text-sm font-bold">Local (Gratuit)</p>
+                    <p className="text-[10px] text-muted-foreground mt-1 tracking-tight italic">Basique</p>
+                  </button>
+                  <button 
+                    onClick={() => update('ocr_provider', 'google_vision')}
+                    className={`p-4 rounded-xl border-2 text-left transition-all ${local.ocr_provider === 'google_vision' ? 'border-primary bg-primary/10 shadow-sm' : 'border-border hover:border-primary/50'}`}
+                  >
+                    <p className="text-sm font-bold">Cloud Vision</p>
+                    <p className="text-[10px] text-muted-foreground mt-1 tracking-tight italic">Pro (Handwriting)</p>
+                  </button>
+                  <button 
+                    onClick={() => update('ocr_provider', 'openai')}
+                    className={`p-4 rounded-xl border-2 text-left transition-all ${local.ocr_provider === 'openai' ? 'border-primary bg-primary/10 shadow-sm' : 'border-border hover:border-primary/50'}`}
+                  >
+                    <p className="text-sm font-bold">GPT-4o Vision</p>
+                    <p className="text-[10px] text-muted-foreground mt-1 tracking-tight italic">Ultime (IA Cerveau)</p>
+                  </button>
+                </div>
+
+                
+                {local.ocr_provider === 'google_vision' && (
+                  <div className="space-y-3 p-4 rounded-lg bg-muted/40 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="space-y-1.5 text-xs">
+                      <Label>Clé API Google Vision</Label>
+                      <Input type="password" value={local.google_vision_api_key} onChange={e => update('google_vision_api_key', e.target.value)} placeholder="AIzaSy..." />
+                    </div>
+                  </div>
+                )}
+                {local.ocr_provider === 'openai' && (
+                  <div className="space-y-3 p-4 rounded-lg bg-purple-500/5 border border-purple-500/20 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="space-y-1.5">
+                      <Label className="text-purple-600 dark:text-purple-400 flex items-center gap-1"><Sparkles className="h-3 w-3" /> Clé API OpenAI (GPT-4o)</Label>
+                      <Input type="password" value={local.openai_api_key} onChange={e => update('openai_api_key', e.target.value)} placeholder="sk-..." />
+                      <p className="text-[10px] text-muted-foreground mt-2 px-1">
+                        Utilisé pour l'analyse visuelle de très haute précision. Facturé à l'utilisation par OpenAI.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
 
         {/* Apparence */}
         <TabsContent value="apparence">
@@ -439,6 +534,42 @@ export default function SettingsPage() {
                       <SelectItem value="12">12 caractères (fort)</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+              <Separator />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Code PIN de verrouillage (4 chiffres)</Label>
+                  <div className="relative max-w-xs">
+                    <Input 
+                      type="password" 
+                      maxLength={4} 
+                      value={local.workspace_pin || ''} 
+                      onChange={e => {
+                        const v = e.target.value.replace(/\D/g, '');
+                        update('workspace_pin', v);
+                      }} 
+                      placeholder="1234" 
+                      className="font-mono text-lg tracking-widest pl-10" 
+                    />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Sera demandé pour déverrouiller l'écran de caisse/atelier.</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Mise en veille automatique (verrouillage)</Label>
+                  <Select value={local.lock_timeout || '5'} onValueChange={v => update('lock_timeout', v)}>
+                    <SelectTrigger className="w-full max-w-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 minute</SelectItem>
+                      <SelectItem value="5">5 minutes</SelectItem>
+                      <SelectItem value="10">10 minutes</SelectItem>
+                      <SelectItem value="15">15 minutes</SelectItem>
+                      <SelectItem value="30">30 minutes</SelectItem>
+                      <SelectItem value="0">Jamais (Désactivé)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Temps d'inactivité avant l'écran de verrouillage.</p>
                 </div>
               </div>
             </CardContent>

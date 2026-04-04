@@ -5,9 +5,13 @@ import { Separator } from "@/components/ui/separator";
 import { FileText, Wifi, TrendingUp, Package } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useAppSettings } from "@/components/settings/SettingsContext";
+
 
 export default function AccountReportModal({ open, onClose, sales, accountName, dateFrom, dateTo }) {
+  const { formatCurrency } = useAppSettings();
   const filtered = useMemo(() => {
+
     if (!sales) return [];
     return sales.filter(s => {
       const matchAccount = !accountName || s.account_used === accountName;
@@ -56,11 +60,12 @@ export default function AccountReportModal({ open, onClose, sales, accountName, 
             <p className="text-xs text-muted-foreground">Ventes</p>
           </div>
           <div className="bg-green-500/10 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-green-400">{totalRevenue.toFixed(2)} €</p>
+            <p className="text-2xl font-bold text-green-400">{formatCurrency(totalRevenue)}</p>
             <p className="text-xs text-muted-foreground">Chiffre d'affaires</p>
           </div>
           <div className="bg-blue-500/10 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-blue-400">{totalProfit.toFixed(2)} €</p>
+            <p className="text-2xl font-bold text-blue-400">{formatCurrency(totalProfit)}</p>
+
             <p className="text-xs text-muted-foreground">Bénéfice net</p>
           </div>
         </div>
@@ -80,7 +85,8 @@ export default function AccountReportModal({ open, onClose, sales, accountName, 
                     </div>
                     <div className="flex items-center gap-3">
                       <Badge variant="outline">{data.count}x</Badge>
-                      <span className="text-sm font-semibold text-green-400">{data.revenue.toFixed(2)} €</span>
+                      <span className="text-sm font-semibold text-green-400">{formatCurrency(data.revenue)}</span>
+
                     </div>
                   </div>
                 ))}
@@ -105,7 +111,8 @@ export default function AccountReportModal({ open, onClose, sales, accountName, 
                       <p className="text-xs text-muted-foreground">{s.client_phone}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-green-400">{s.sell_price} €</p>
+                      <p className="text-sm font-bold text-green-400">{formatCurrency(s.sell_price)}</p>
+
                       <p className="text-xs text-muted-foreground">{paymentLabel[s.payment_method] || s.payment_method}</p>
                     </div>
                   </div>

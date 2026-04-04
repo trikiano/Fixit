@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppSettings } from "@/components/settings/SettingsContext";
-import { base44 } from '@/api/base44Client';
+import { fixit } from '@/api/fixitClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,8 @@ import { format } from 'date-fns';
 
 export default function Sales() {
   const { formatCurrency, generateTicketNumber, settings } = useAppSettings();
-  const sym = settings.currency_symbol || '€';
+  const sym = settings.currency_symbol || 'DT';
+
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -28,19 +29,19 @@ export default function Sales() {
   const [notes, setNotes] = useState('');
   const qc = useQueryClient();
 
-  const { data: sales = [], isLoading } = useQuery({ queryKey: ['sales'], queryFn: () => base44.entities.Sale.list('-created_date') });
-  const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: () => base44.entities.Product.list() });
+  const { data: sales = [], isLoading } = useQuery({ queryKey: ['sales'], queryFn: () => fixit.entities.Sale.list('-created_date') });
+  const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: () => fixit.entities.Product.list() });
 
   const saveMutation = useMutation({
     mutationFn: async (saleData) => {
-      if (editing) return base44.entities.Sale.update(editing.id, saleData);
+      if (editing) return fixit.entities.Sale.update(editing.id, saleData);
       // Decrease stock for each item
       for (const item of saleData.items) {
         if (item.product_id) {
           const prod = products.find(p => p.id === item.product_id);
           if (prod) {
-            await base44.entities.Product.update(prod.id, { quantity: Math.max(0, (prod.quantity || 0) - item.quantity) });
-            await base44.entities.StockMovement.create({
+            await fixit.entities.Product.update(prod.id, { quantity: Math.max(0, (prod.quantity || 0) - item.quantity) });
+            await fixit.entities.StockMovement.create({
               product_id: prod.id, product_name: prod.name, type: 'sortie',
               quantity: item.quantity, previous_stock: prod.quantity, new_stock: Math.max(0, (prod.quantity || 0) - item.quantity),
               reason: `Vente ${saleData.sale_number}`, reference_type: 'vente'
@@ -48,7 +49,7 @@ export default function Sales() {
           }
         }
       }
-      return base44.entities.Sale.create(saleData);
+      return fixit.entities.Sale.create(saleData);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['sales'] }); qc.invalidateQueries({ queryKey: ['products'] }); closeDialog(); },
   });

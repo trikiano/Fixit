@@ -7,5 +7,9 @@ export const queryClientInstance = new QueryClient({
 			refetchOnWindowFocus: false,
 			retry: 1,
 		},
+		mutations: {
+			retry: 1,
+		},
 	},
 });
+

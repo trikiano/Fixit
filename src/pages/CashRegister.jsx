@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
+
+import { fixit } from '@/api/fixitClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,13 +14,17 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import DataTable from "@/components/ui/DataTable";
 import StatCard from "@/components/ui/StatCard";
 import CashRegisterDetail from "@/components/cashregister/CashRegisterDetail";
-import { DollarSign, Lock, Unlock, AlertTriangle } from 'lucide-react';
+import { DollarSign, Lock, Unlock, AlertTriangle, Receipt, FileText } from 'lucide-react';
+
 import { format } from 'date-fns';
 import { useAppSettings } from "@/components/settings/SettingsContext";
 
 export default function CashRegister() {
   const { formatCurrency, settings } = useAppSettings();
-  const sym = settings.currency_symbol || '€';
+  const { user } = useAuth();
+
+  const sym = settings.currency_symbol || 'DT';
+
   const [openDialog, setOpenDialog] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [openingBalance, setOpeningBalance] = useState(0);
@@ -27,9 +33,9 @@ export default function CashRegister() {
   const [selectedRegister, setSelectedRegister] = useState(null);
   const qc = useQueryClient();
 
-  const { data: registers = [], isLoading } = useQuery({ queryKey: ['cashRegisters'], queryFn: () => base44.entities.CashRegister.list('-created_date') });
-  const { data: sales = [] } = useQuery({ queryKey: ['salesToday'], queryFn: () => base44.entities.Sale.filter({ status: 'completee' }, '-created_date', 200) });
-  const { data: expenses = [] } = useQuery({ queryKey: ['expensesToday'], queryFn: () => base44.entities.Expense.list('-created_date', 100) });
+  const { data: registers = [], isLoading } = useQuery({ queryKey: ['cashRegisters'], queryFn: () => fixit.entities.CashRegister.list('-created_date') });
+  const { data: sales = [] } = useQuery({ queryKey: ['salesToday'], queryFn: () => fixit.entities.Sale.filter({ status: 'completee' }, '-created_date', 200) });
+  const { data: expenses = [] } = useQuery({ queryKey: ['expensesToday'], queryFn: () => fixit.entities.Expense.list('-created_date', 100) });
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const todayRegister = registers.find(r => r.date === todayStr);
@@ -40,16 +46,28 @@ export default function CashRegister() {
   const expectedBalance = (todayRegister?.opening_balance || 0) + todayCash - todayExpenses;
 
   const openMutation = useMutation({
-    mutationFn: () => base44.entities.CashRegister.create({ date: todayStr, opening_balance: openingBalance, status: 'ouverte' }),
+    mutationFn: () => fixit.entities.CashRegister.create({ 
+      date: todayStr, 
+      opening_balance: openingBalance, 
+      status: 'ouverte',
+      opened_by: user?.full_name || 'Haj',
+      created_date: new Date().toISOString()
+    }),
+
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['cashRegisters'] }); setOpenDialog(false); },
   });
 
+
   const closeMutation = useMutation({
-    mutationFn: () => base44.entities.CashRegister.update(todayRegister.id, {
+    mutationFn: () => fixit.entities.CashRegister.update(todayRegister.id, {
       closing_balance: closingBalance, expected_balance: expectedBalance,
       difference: closingBalance - expectedBalance, difference_reason: differenceReason,
-      total_cash_sales: todayCash, total_card_sales: todayCard, total_expenses: todayExpenses, status: 'fermee'
+      total_cash_sales: todayCash, total_card_sales: todayCard, total_expenses: todayExpenses, status: 'fermee',
+      closed_by: user?.full_name || 'Haj',
+      closing_date: new Date().toISOString()
     }),
+
+
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['cashRegisters'] }); setCloseDialogOpen(false); },
   });
 
@@ -64,7 +82,19 @@ export default function CashRegister() {
       const diff = r.difference || 0;
       return <span className={`text-sm font-bold ${diff !== 0 ? 'text-destructive' : 'text-foreground'}`}>{formatCurrency(diff)}</span>;
     }},
+    { header: "Actions", render: r => (
+      <div className="flex gap-2">
+        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedRegister(r); }}>
+          <Receipt className="h-4 w-4 mr-2" /> Détails
+        </Button>
+        <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/10" onClick={(e) => { e.stopPropagation(); setSelectedRegister(r); }}>
+          <FileText className="h-4 w-4 mr-2" /> PDF
+        </Button>
+
+      </div>
+    )},
   ];
+
 
   return (
     <div>

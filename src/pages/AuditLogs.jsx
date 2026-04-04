@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+﻿import React, { useState } from 'react';
+import { fixit } from '@/api/fixitClient';
 import { useQuery } from '@tanstack/react-query';
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,7 +24,7 @@ export default function AuditLogs() {
   const [search, setSearch] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
 
-  const { data: logs = [], isLoading } = useQuery({ queryKey: ['auditLogs'], queryFn: () => base44.entities.AuditLog.list('-created_date', 200) });
+  const { data: logs = [], isLoading } = useQuery({ queryKey: ['auditLogs'], queryFn: () => fixit.entities.AuditLog.list('-created_date', 200) });
 
   const filtered = logs.filter(l => {
     const ms = l.entity_label?.toLowerCase().includes(search.toLowerCase()) || l.user_name?.toLowerCase().includes(search.toLowerCase()) || l.details?.toLowerCase().includes(search.toLowerCase());

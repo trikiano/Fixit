@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { fixit } from '@/api/fixitClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAppSettings } from "@/components/settings/SettingsContext";
 import { Button } from "@/components/ui/button";
+
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,27 +12,30 @@ import { Label } from "@/components/ui/label";
 import PageHeader from "@/components/ui/PageHeader";
 import DataTable from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
+import PhoneInput from "@/components/ui/PhoneInput";
 import { Truck, Plus, Search, Eye, Pencil, Trash2 } from 'lucide-react';
 import SupplierDetailPanel from '@/components/suppliers/SupplierDetailPanel';
 
 const emptyForm = { name: '', contact_name: '', phone: '', email: '', address: '', payment_terms: 'comptant', notes: '' };
 
 export default function Suppliers() {
+  const { formatCurrency } = useAppSettings();
   const [search, setSearch] = useState('');
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailSupplier, setDetailSupplier] = useState(null);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const qc = useQueryClient();
 
-  const { data: suppliers = [], isLoading } = useQuery({ queryKey: ['suppliers'], queryFn: () => base44.entities.Supplier.list('-created_date') });
+  const { data: suppliers = [], isLoading } = useQuery({ queryKey: ['suppliers'], queryFn: () => fixit.entities.Supplier.list('-created_date') });
 
   const saveMutation = useMutation({
-    mutationFn: (data) => editing ? base44.entities.Supplier.update(editing.id, data) : base44.entities.Supplier.create(data),
+    mutationFn: (data) => editing ? fixit.entities.Supplier.update(editing.id, data) : fixit.entities.Supplier.create(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['suppliers'] }); closeDialog(); },
   });
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Supplier.delete(id),
+    mutationFn: (id) => fixit.entities.Supplier.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['suppliers'] }),
   });
 
@@ -50,7 +55,8 @@ export default function Suppliers() {
     { header: "Email", render: r => <span className="text-sm text-muted-foreground">{r.email || '-'}</span> },
     { header: "Conditions", render: r => <span className="text-xs capitalize">{r.payment_terms?.replace('_', ' ')}</span> },
     { header: "Commandes", render: r => <span className="text-sm">{r.total_orders || 0}</span> },
-    { header: "Total", render: r => <span className="text-sm font-medium">{(r.total_amount || 0).toFixed(2)} €</span> },
+    { header: "Total", render: r => <span className="text-sm font-medium">{formatCurrency(r.total_amount || 0)}</span> },
+
     { header: "Actions", render: r => (
       <div className="flex gap-1" onClick={e => e.stopPropagation()}>
         <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(r)}><Pencil className="h-3.5 w-3.5" /></Button>
@@ -87,7 +93,7 @@ export default function Suppliers() {
               <div><Label>Contact</Label><Input value={form.contact_name} onChange={e => setForm({...form, contact_name: e.target.value})} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Téléphone *</Label><Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} /></div>
+              <div><Label>Téléphone *</Label><PhoneInput value={form.phone} onChange={v => setForm({...form, phone: v})} /></div>
               <div><Label>Email</Label><Input value={form.email} onChange={e => setForm({...form, email: e.target.value})} /></div>
             </div>
             <div><Label>Adresse</Label><Input value={form.address} onChange={e => setForm({...form, address: e.target.value})} /></div>

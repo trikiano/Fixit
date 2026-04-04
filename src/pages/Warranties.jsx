@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+﻿import React, { useState } from 'react';
+import { fixit } from '@/api/fixitClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,10 +23,10 @@ export default function Warranties() {
   const [form, setForm] = useState(emptyForm);
   const qc = useQueryClient();
 
-  const { data: warranties = [], isLoading } = useQuery({ queryKey: ['warranties'], queryFn: () => base44.entities.Warranty.list('-created_date') });
+  const { data: warranties = [], isLoading } = useQuery({ queryKey: ['warranties'], queryFn: () => fixit.entities.Warranty.list('-created_date') });
 
   const saveMutation = useMutation({
-    mutationFn: (data) => editing ? base44.entities.Warranty.update(editing.id, data) : base44.entities.Warranty.create(data),
+    mutationFn: (data) => editing ? fixit.entities.Warranty.update(editing.id, data) : fixit.entities.Warranty.create(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['warranties'] }); closeDialog(); },
   });
 

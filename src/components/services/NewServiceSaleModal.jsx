@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ShoppingBag, AlertTriangle } from 'lucide-react';
 import { useAppSettings } from "@/components/settings/SettingsContext";
+import PhoneInput from "@/components/ui/PhoneInput";
 
 const paymentMethods = [
   { value: 'especes', label: 'Espèces' },
@@ -78,7 +79,7 @@ export default function NewServiceSaleModal({ open, onClose, services, cards, on
             </div>
             <div>
               <Label>Téléphone</Label>
-              <Input className="mt-1" placeholder="0X XX XX XX..." value={form.client_phone} onChange={e => setForm(f => ({ ...f, client_phone: e.target.value }))} />
+              <PhoneInput className="mt-1" value={form.client_phone} onChange={v => setForm(f => ({ ...f, client_phone: v }))} />
             </div>
           </div>
 

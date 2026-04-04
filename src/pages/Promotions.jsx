@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { fixit } from '@/api/fixitClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAppSettings } from "@/components/settings/SettingsContext";
 import { Button } from "@/components/ui/button";
+
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -16,16 +18,18 @@ import { Tag, Plus, Search } from 'lucide-react';
 const emptyForm = { name: '', code: '', type: 'pourcentage', value: 0, min_purchase: 0, applicable_to: 'tous', start_date: '', end_date: '', max_uses: 0, is_active: true };
 
 export default function Promotions() {
+  const { settings } = useAppSettings();
   const [search, setSearch] = useState('');
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const qc = useQueryClient();
 
-  const { data: promos = [], isLoading } = useQuery({ queryKey: ['promotions'], queryFn: () => base44.entities.Promotion.list('-created_date') });
+  const { data: promos = [], isLoading } = useQuery({ queryKey: ['promotions'], queryFn: () => fixit.entities.Promotion.list('-created_date') });
 
   const saveMutation = useMutation({
-    mutationFn: (data) => editing ? base44.entities.Promotion.update(editing.id, data) : base44.entities.Promotion.create(data),
+    mutationFn: (data) => editing ? fixit.entities.Promotion.update(editing.id, data) : fixit.entities.Promotion.create(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['promotions'] }); closeDialog(); },
   });
 
@@ -46,7 +50,8 @@ export default function Promotions() {
       </div>
     )},
     { header: "Type", render: r => <span className="text-sm capitalize">{r.type?.replace('_', ' ')}</span> },
-    { header: "Valeur", render: r => <span className="text-sm font-bold">{r.type === 'pourcentage' ? `${r.value}%` : `${r.value} €`}</span> },
+    { header: "Valeur", render: r => <span className="text-sm font-bold">{r.type === 'pourcentage' ? `${r.value}%` : `${r.value} ${settings.currency_symbol || 'DT'}`}</span> },
+
     { header: "Applicable", render: r => <span className="text-xs capitalize">{r.applicable_to?.replace('_', ' ')}</span> },
     { header: "Utilisation", render: r => <span className="text-sm">{r.current_uses || 0}/{r.max_uses || '∞'}</span> },
     { header: "Actif", render: r => <Badge variant={r.is_active ? "default" : "secondary"} className="text-xs">{r.is_active ? 'Actif' : 'Inactif'}</Badge> },
@@ -88,10 +93,12 @@ export default function Promotions() {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>Valeur {form.type === 'pourcentage' ? '(%)' : '(€)'}</Label><Input type="number" value={form.value} onChange={e => setForm({...form, value: parseFloat(e.target.value) || 0})} /></div>
+              <div><Label>Valeur {form.type === 'pourcentage' ? '(%)' : `(${settings.currency_symbol || 'DT'})`}</Label><Input type="number" value={form.value} onChange={e => setForm({...form, value: parseFloat(e.target.value) || 0})} /></div>
+
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Achat minimum (€)</Label><Input type="number" value={form.min_purchase} onChange={e => setForm({...form, min_purchase: parseFloat(e.target.value) || 0})} /></div>
+              <div><Label>Achat minimum ({settings.currency_symbol || 'DT'})</Label><Input type="number" value={form.min_purchase} onChange={e => setForm({...form, min_purchase: parseFloat(e.target.value) || 0})} /></div>
+
               <div><Label>Utilisations max</Label><Input type="number" value={form.max_uses} onChange={e => setForm({...form, max_uses: parseInt(e.target.value) || 0})} placeholder="0 = illimité" /></div>
             </div>
             <div><Label>Applicable à</Label>

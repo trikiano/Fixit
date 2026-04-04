@@ -6,10 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Wifi, CreditCard } from 'lucide-react';
+import { useAppSettings } from "@/components/settings/SettingsContext";
 import ClientSelector from "@/components/ui/ClientSelector";
 
+
 export default function NewSaleModal({ open, onClose, packages, accounts, onSave }) {
+  const { formatCurrency, settings } = useAppSettings();
   const empty = {
+
     client_name: '', client_phone: '', package_id: '', package_name: '',
     data_amount: '', validity_days: '', sell_price: '', cost_price: '',
     payment_method: 'especes', account_used: accounts?.[0] || '',
@@ -77,7 +81,8 @@ export default function NewSaleModal({ open, onClose, packages, accounts, onSave
                 <SelectContent>
                   {packages.filter(p => p.is_active !== false).map(p => (
                     <SelectItem key={p.id} value={p.id}>
-                      {p.name} — {p.data_amount} — {p.sell_price} €
+                      {p.name} — {p.data_amount} — {formatCurrency(p.sell_price)}
+
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -98,14 +103,16 @@ export default function NewSaleModal({ open, onClose, packages, accounts, onSave
               <Input type="number" value={form.validity_days} onChange={e => set('validity_days', e.target.value)} placeholder="30" />
             </div>
             <div className="space-y-1.5">
-              <Label>Prix vendu (€) *</Label>
+              <Label>Prix vendu ({settings.currency_symbol || 'DT'}) *</Label>
+
               <Input type="number" value={form.sell_price} onChange={e => set('sell_price', e.target.value)} placeholder="0.00" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Prix coûtant (€)</Label>
+              <Label>Prix coûtant ({settings.currency_symbol || 'DT'})</Label>
+
               <Input type="number" value={form.cost_price} onChange={e => set('cost_price', e.target.value)} placeholder="0.00" />
             </div>
             <div className="space-y-1.5">

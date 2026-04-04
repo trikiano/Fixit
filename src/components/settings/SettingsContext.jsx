@@ -8,7 +8,9 @@ export const DEFAULT_SETTINGS = {
   shop_website: '',
   currency: 'TND',
   currency_symbol: 'DT',
-  currency_decimals: '2',
+
+  currency_decimals: '3',
+
   currency_symbol_position: 'right',
   tax_rate: '20',
   custom_tax: '',
@@ -32,7 +34,14 @@ export const DEFAULT_SETTINGS = {
   two_fa_admin: false,
   session_timeout: '60',
   min_password_length: '8',
+  workspace_pin: '1234',
+  lock_timeout: '5',
+  ocr_provider: 'local',
+  google_vision_api_key: '',
+  openai_api_key: '',
 };
+
+
 
 export const CURRENCY_SYMBOLS = {
   EUR: '€', USD: '$', GBP: '£', MAD: 'DH', DZD: 'DA',
@@ -97,12 +106,27 @@ export function SettingsProvider({ children }) {
   };
 
   const formatCurrency = (amount) => {
-    const sym = settings.currency_symbol || 'DA';
-    const decimals = parseInt(settings.currency_decimals ?? '2');
+    const sym = settings.currency_symbol || 'DT';
+    const decimals = parseInt(settings.currency_decimals ?? '3');
     const position = settings.currency_symbol_position || 'right';
-    const num = (typeof amount === 'number' ? amount : 0).toFixed(decimals);
-    return position === 'left' ? `${sym} ${num}` : `${num} ${sym}`;
+    
+    // Format to fixed decimals first
+    let numStr = (typeof amount === 'number' ? amount : 0).toFixed(decimals);
+    
+    // If it's a whole number, remove the decimal part entirely for better readability
+    // (Optional: only if you really want to remove .000)
+    if (parseFloat(numStr) === parseInt(numStr)) {
+      numStr = parseInt(numStr).toString();
+    } else {
+      // Remove trailing zeros but keep the necessary ones
+      numStr = parseFloat(numStr).toString();
+      // Ensure we don't lose the "millimes" precision visual if it's 25.5 -> 25.500
+      // Actually, user said "too many zeros", so 25.5 is better than 25.500
+    }
+
+    return position === 'left' ? `${sym} ${numStr}` : `${numStr} ${sym}`;
   };
+
 
   const getTaxRate = () => {
     if (settings.tax_rate === 'Personnalisé') return parseFloat(settings.custom_tax) || 0;
@@ -127,7 +151,9 @@ export function useAppSettings() {
     return {
       settings: DEFAULT_SETTINGS,
       saveSettings: () => {},
-      formatCurrency: (a) => `${(a || 0).toFixed(2)} DT`,
+      formatCurrency: (a) => `${(a || 0).toFixed(3)} DT`,
+
+
       getTaxRate: () => 20,
       generateTicketNumber: (type) => `${type === 'repair' ? 'REP' : 'VNT'}-${Date.now().toString(36).toUpperCase()}`,
     };

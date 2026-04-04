@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+﻿import React, { useState } from 'react';
+import { fixit } from '@/api/fixitClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,18 +25,18 @@ export default function Clients() {
   const [form, setForm] = useState({ full_name: '', phone: '', email: '', address: '', segment: 'particulier', notes: '', credit_balance: 0 });
   const qc = useQueryClient();
 
-  const { data: clients = [], isLoading } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list('-created_date') });
+  const { data: clients = [], isLoading } = useQuery({ queryKey: ['clients'], queryFn: () => fixit.entities.Client.list('-created_date') });
 
   const saveMutation = useMutation({
-    mutationFn: (data) => editingClient ? base44.entities.Client.update(editingClient.id, data) : base44.entities.Client.create(data),
+    mutationFn: (data) => editingClient ? fixit.entities.Client.update(editingClient.id, data) : fixit.entities.Client.create(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['clients'] }); closeDialog(); },
   });
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Client.delete(id),
+    mutationFn: (id) => fixit.entities.Client.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['clients'] }),
   });
   const toggleBlacklistMutation = useMutation({
-    mutationFn: ({ id, val }) => base44.entities.Client.update(id, { is_blacklisted: val }),
+    mutationFn: ({ id, val }) => fixit.entities.Client.update(id, { is_blacklisted: val }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['clients'] }),
   });
 

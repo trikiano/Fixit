@@ -1,12 +1,12 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+﻿import { createClientFromRequest } from 'npm:@fixit/sdk@0.8.21';
 
 Deno.serve(async (req) => {
   try {
     // Lire le body en premier (avant auth qui peut consommer le stream)
     const body = await req.json();
 
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    const fixit = createClientFromRequest(req);
+    const user = await fixit.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { to, message, provider, apiKey, apiSecret, from } = body;

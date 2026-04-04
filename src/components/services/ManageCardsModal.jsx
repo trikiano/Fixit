@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CreditCard, Plus, Trash2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { fixit } from '@/api/fixitClient';
 
 const emptyCard = { name: '', card_number: '', provider: '', currency: 'DZD', current_balance: '', notes: '' };
 
@@ -15,12 +15,12 @@ export default function ManageCardsModal({ open, onClose, cards }) {
   const [form, setForm] = useState(emptyCard);
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.PrepaidCard.create(data),
+    mutationFn: (data) => fixit.entities.PrepaidCard.create(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['prepaid-cards'] }); setShowForm(false); setForm(emptyCard); },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.PrepaidCard.delete(id),
+    mutationFn: (id) => fixit.entities.PrepaidCard.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['prepaid-cards'] }),
   });
 

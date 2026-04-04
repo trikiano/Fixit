@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+﻿import { useState, useEffect, useCallback } from 'react';
+import { fixit } from '@/api/fixitClient';
 
 const QUEUE_KEY = 'pos_offline_queue';
 
@@ -60,12 +60,12 @@ export function useOfflineQueue() {
       try {
         const { _queued_at, _id, _stock_updates, ...saleData } = item;
         // Create the sale
-        await base44.entities.Sale.create(saleData);
+        await fixit.entities.Sale.create(saleData);
         // Apply stock updates if any
         if (_stock_updates) {
           for (const upd of _stock_updates) {
-            await base44.entities.Product.update(upd.id, { quantity: upd.newQty });
-            await base44.entities.StockMovement.create(upd.movement);
+            await fixit.entities.Product.update(upd.id, { quantity: upd.newQty });
+            await fixit.entities.StockMovement.create(upd.movement);
           }
         }
         synced++;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { fixit } from '@/api/fixitClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { Wrench, ShoppingBag, Ban, Phone, Mail } from 'lucide-react';
 import { useAppSettings } from "@/components/settings/SettingsContext";
+import PhoneInput from "@/components/ui/PhoneInput";
 import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
 
@@ -29,11 +30,11 @@ export default function ClientDetailPanel({ client, onClose }) {
 
   const { data: allRepairs = [] } = useQuery({
     queryKey: ['repairs'],
-    queryFn: () => base44.entities.Repair.list('-created_date', 500),
+    queryFn: () => fixit.entities.Repair.list('-created_date', 500),
   });
   const { data: allSales = [] } = useQuery({
     queryKey: ['sales'],
-    queryFn: () => base44.entities.Sale.list('-created_date', 500),
+    queryFn: () => fixit.entities.Sale.list('-created_date', 500),
   });
 
   const repairs = allRepairs.filter(r =>
@@ -44,12 +45,12 @@ export default function ClientDetailPanel({ client, onClose }) {
   );
 
   const saveMutation = useMutation({
-    mutationFn: (data) => base44.entities.Client.update(client.id, data),
+    mutationFn: (data) => fixit.entities.Client.update(client.id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['clients'] }),
   });
 
   const toggleBlacklistMutation = useMutation({
-    mutationFn: (val) => base44.entities.Client.update(client.id, { is_blacklisted: val }),
+    mutationFn: (val) => fixit.entities.Client.update(client.id, { is_blacklisted: val }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['clients'] }),
   });
 
@@ -184,7 +185,7 @@ export default function ClientDetailPanel({ client, onClose }) {
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Nom complet</Label><Input value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} /></div>
-                <div><Label>Téléphone</Label><Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} /></div>
+                <div><Label>Téléphone</Label><PhoneInput value={form.phone} onChange={v => setForm({...form, phone: v})} /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Email</Label><Input value={form.email} onChange={e => setForm({...form, email: e.target.value})} /></div>

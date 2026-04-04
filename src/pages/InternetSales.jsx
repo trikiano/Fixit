@@ -1,6 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
+import { useAppSettings } from "@/components/settings/SettingsContext";
+import { fixit } from '@/api/fixitClient';
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +26,9 @@ const statusColor = { vendu: 'bg-blue-500/10 text-blue-400', active: 'bg-green-5
 const statusLabel = { vendu: 'Vendu', active: 'Actif', expire: 'Expiré', annule: 'Annulé' };
 
 export default function InternetSalesPage() {
+  const { formatCurrency, settings } = useAppSettings();
   const qc = useQueryClient();
+
   const [showNew, setShowNew] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
@@ -37,31 +42,31 @@ export default function InternetSalesPage() {
 
   const { data: sales = [], isLoading } = useQuery({
     queryKey: ['internet-sales'],
-    queryFn: () => base44.entities.InternetSale.list('-created_date', 500),
+    queryFn: () => fixit.entities.InternetSale.list('-created_date', 500),
   });
 
   const { data: packages = [] } = useQuery({
     queryKey: ['internet-packages'],
-    queryFn: () => base44.entities.InternetPackage.list('-created_date', 100),
+    queryFn: () => fixit.entities.InternetPackage.list('-created_date', 100),
   });
 
   const { data: supplierPayments = [] } = useQuery({
     queryKey: ['supplier-payments'],
-    queryFn: () => base44.entities.SupplierPayment.list('-created_date', 200),
+    queryFn: () => fixit.entities.SupplierPayment.list('-created_date', 200),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.InternetSale.create(data),
+    mutationFn: (data) => fixit.entities.InternetSale.create(data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['internet-sales'] }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.InternetSale.delete(id),
+    mutationFn: (id) => fixit.entities.InternetSale.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['internet-sales'] }),
   });
 
   const paymentMutation = useMutation({
-    mutationFn: (data) => base44.entities.SupplierPayment.create(data),
+    mutationFn: (data) => fixit.entities.SupplierPayment.create(data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['supplier-payments'] }),
   });
 
@@ -136,14 +141,16 @@ export default function InternetSalesPage() {
         <Card className="border-border/50">
           <CardContent className="p-4 flex items-center gap-3">
             <div className="h-9 w-9 rounded-lg bg-green-500/10 flex items-center justify-center"><DollarSign className="h-4 w-4 text-green-400" /></div>
-            <div><p className="text-xl font-bold text-green-400">{totalRevenue.toFixed(2)} €</p><p className="text-xs text-muted-foreground">Total encaissé</p></div>
+            <div><p className="text-xl font-bold text-green-400">{formatCurrency(totalRevenue)}</p><p className="text-xs text-muted-foreground">Total encaissé</p></div>
+
           </CardContent>
         </Card>
         <Card className="border-2 border-orange-500/40 bg-orange-500/5">
           <CardContent className="p-4 flex items-center gap-3">
             <div className="h-9 w-9 rounded-lg bg-orange-500/20 flex items-center justify-center"><HandCoins className="h-4 w-4 text-orange-400" /></div>
             <div>
-              <p className="text-xl font-bold text-orange-400">{totalDueToSupplier.toFixed(2)} €</p>
+              <p className="text-xl font-bold text-orange-400">{formatCurrency(totalDueToSupplier)}</p>
+
               <p className="text-xs text-muted-foreground">À donner fournisseur</p>
             </div>
           </CardContent>
@@ -152,7 +159,8 @@ export default function InternetSalesPage() {
           <CardContent className="p-4 flex items-center gap-3">
             <div className="h-9 w-9 rounded-lg bg-blue-500/20 flex items-center justify-center"><Wallet className="h-4 w-4 text-blue-400" /></div>
             <div>
-              <p className="text-xl font-bold text-blue-400">{totalProfit.toFixed(2)} €</p>
+              <p className="text-xl font-bold text-blue-400">{formatCurrency(totalProfit)}</p>
+
               <p className="text-xs text-muted-foreground">Votre bénéfice</p>
             </div>
           </CardContent>
@@ -190,16 +198,19 @@ export default function InternetSalesPage() {
                   <div className="space-y-1.5 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Total vendu</span>
-                      <span className="font-semibold">{data.revenue.toFixed(2)} €</span>
+                      <span className="font-semibold">{formatCurrency(data.revenue)}</span>
+
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Déjà payé fournisseur</span>
-                      <span className="font-semibold text-green-400">-{data.paid.toFixed(2)} €</span>
+                      <span className="font-semibold text-green-400">-{formatCurrency(data.paid)}</span>
+
                     </div>
                     <Separator />
                     <div className="flex justify-between font-bold text-base">
                       <span>Reste à donner</span>
-                      <span className={data.unpaid > 0 ? 'text-orange-400' : 'text-green-400'}>{data.unpaid.toFixed(2)} €</span>
+                      <span className={data.unpaid > 0 ? 'text-orange-400' : 'text-green-400'}>{formatCurrency(data.unpaid)}</span>
+
                     </div>
                   </div>
                   <div className="flex gap-2 mt-3">
@@ -256,9 +267,11 @@ export default function InternetSalesPage() {
                           {p.payment_date ? format(new Date(p.payment_date), 'dd/MM/yyyy HH:mm') : format(new Date(p.created_date), 'dd/MM/yyyy HH:mm')}
                         </td>
                         <td className="p-3 font-medium">{p.account_name}</td>
-                        <td className="p-3 text-right text-muted-foreground">{p.total_sales_amount ? `${p.total_sales_amount.toFixed(2)} €` : '—'}</td>
+                        <td className="p-3 text-right text-muted-foreground">{p.total_sales_amount ? formatCurrency(p.total_sales_amount) : '—'}</td>
+
                         <td className="p-3 text-right">
-                          <span className="font-bold text-orange-400 text-base">{p.amount_given.toFixed(2)} €</span>
+                          <span className="font-bold text-orange-400 text-base">{formatCurrency(p.amount_given)}</span>
+
                         </td>
                         <td className="p-3 text-xs text-muted-foreground">{p.notes || '—'}</td>
                       </tr>
@@ -267,7 +280,8 @@ export default function InternetSalesPage() {
                   <tfoot>
                     <tr className="border-t-2 border-border bg-muted/20">
                       <td colSpan={3} className="p-3 font-semibold text-sm">Total payé au fournisseur</td>
-                      <td className="p-3 text-right font-bold text-orange-400 text-base">{totalPaidToSupplier.toFixed(2)} €</td>
+                      <td className="p-3 text-right font-bold text-orange-400 text-base">{formatCurrency(totalPaidToSupplier)}</td>
+
                       <td></td>
                     </tr>
                   </tfoot>
@@ -370,8 +384,9 @@ export default function InternetSalesPage() {
                                 {paymentLabel[s.payment_method] || s.payment_method}
                               </span>
                             </td>
-                            <td className="p-3 text-right font-bold text-green-400">{(s.sell_price || 0).toFixed(2)} €</td>
-                            <td className="p-3 text-right font-semibold text-blue-400">{profit.toFixed(2)} €</td>
+                            <td className="p-3 text-right font-bold text-green-400">{formatCurrency(s.sell_price || 0)}</td>
+                            <td className="p-3 text-right font-semibold text-blue-400">{formatCurrency(profit)}</td>
+
                             <td className="p-3">
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
                                 onClick={() => { if (window.confirm('Supprimer cette vente ?')) deleteMutation.mutate(s.id); }}>

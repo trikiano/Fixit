@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+﻿import React, { useState, useEffect } from 'react';
+import { fixit } from '@/api/fixitClient';
 import { useAppSettings } from "@/components/settings/SettingsContext";
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,11 +17,11 @@ const COLORS = ['hsl(217,91%,60%)', 'hsl(160,60%,45%)', 'hsl(30,80%,55%)', 'hsl(
 
 export default function Dashboard() {
   const { formatCurrency, settings } = useAppSettings();
-  const { data: sales = [] } = useQuery({ queryKey: ['sales'], queryFn: () => base44.entities.Sale.list('-created_date', 100) });
-  const { data: repairs = [] } = useQuery({ queryKey: ['repairs'], queryFn: () => base44.entities.Repair.list('-created_date', 100) });
-  const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: () => base44.entities.Product.list() });
-  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list('-created_date', 50) });
-  const { data: expenses = [] } = useQuery({ queryKey: ['expenses'], queryFn: () => base44.entities.Expense.list('-created_date', 50) });
+  const { data: sales = [] } = useQuery({ queryKey: ['sales'], queryFn: () => fixit.entities.Sale.list('-created_date', 100) });
+  const { data: repairs = [] } = useQuery({ queryKey: ['repairs'], queryFn: () => fixit.entities.Repair.list('-created_date', 100) });
+  const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: () => fixit.entities.Product.list() });
+  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => fixit.entities.Client.list('-created_date', 50) });
+  const { data: expenses = [] } = useQuery({ queryKey: ['expenses'], queryFn: () => fixit.entities.Expense.list('-created_date', 50) });
 
   const todaySales = sales.filter(s => s.status === 'completee');
   const totalCA = todaySales.reduce((sum, s) => sum + (s.total || 0), 0);

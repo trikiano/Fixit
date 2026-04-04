@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { fixit } from '@/api/fixitClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import PageHeader from "@/components/ui/PageHeader";
 import DataTable from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
+import EntityRefSelect from "@/components/ui/EntityRefSelect";
 import { FileText, Plus, Search, CreditCard, History, AlertCircle, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAppSettings } from "@/components/settings/SettingsContext";
@@ -42,14 +43,14 @@ export default function SupplierInvoices() {
   const [filterSupplier, setFilterSupplier] = useState('');
   const qc = useQueryClient();
 
-  const { data: invoices = [], isLoading } = useQuery({ queryKey: ['supplierInvoices'], queryFn: () => base44.entities.SupplierInvoice.list('-created_date') });
-  const { data: suppliers = [] } = useQuery({ queryKey: ['suppliers'], queryFn: () => base44.entities.Supplier.list() });
+  const { data: invoices = [], isLoading } = useQuery({ queryKey: ['supplierInvoices'], queryFn: () => fixit.entities.SupplierInvoice.list('-created_date') });
+  const { data: suppliers = [] } = useQuery({ queryKey: ['suppliers'], queryFn: () => fixit.entities.Supplier.list() });
 
   const createMutation = useMutation({
     mutationFn: (data) => {
       const total = parseFloat(data.total_amount) || 0;
       const invNum = data.invoice_number || `FACT-${Date.now().toString(36).toUpperCase()}`;
-      return base44.entities.SupplierInvoice.create({ ...data, invoice_number: invNum, total_amount: total, amount_paid: 0, remaining_debt: total, status: 'en_attente', payments: [] });
+      return fixit.entities.SupplierInvoice.create({ ...data, invoice_number: invNum, total_amount: total, amount_paid: 0, remaining_debt: total, status: 'en_attente', payments: [] });
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['supplierInvoices'] }); setDialogOpen(false); setForm(emptyForm); },
   });
@@ -61,12 +62,12 @@ export default function SupplierInvoices() {
       const newRemaining = invoice.total_amount - newPaid;
       const newStatus = newRemaining <= 0 ? 'soldee' : 'partielle';
       const newPayments = [...(invoice.payments || []), { date: payment.date, amount, method: payment.method, notes: payment.notes }];
-      const updated = await base44.entities.SupplierInvoice.update(invoice.id, {
+      const updated = await fixit.entities.SupplierInvoice.update(invoice.id, {
         amount_paid: newPaid, remaining_debt: Math.max(newRemaining, 0),
         status: newStatus, payments: newPayments,
       });
       // Créer automatiquement une dépense pour ce paiement
-      await base44.entities.Expense.create({
+      await fixit.entities.Expense.create({
         description: `Paiement facture ${invoice.invoice_number} — ${invoice.supplier_name}`,
         amount,
         category: 'fournitures',
@@ -168,10 +169,11 @@ export default function SupplierInvoices() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div><Label>Fournisseur *</Label>
-                <Select value={form.supplier_id} onValueChange={v => setForm({ ...form, supplier_id: v, supplier_name: suppliers.find(s => s.id === v)?.name || '' })}>
-                  <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
-                  <SelectContent>{suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                </Select>
+                <EntityRefSelect
+                  entityType="supplier"
+                  value={form.supplier_id}
+                  onChange={(v, label) => setForm({ ...form, supplier_id: v, supplier_name: label || suppliers.find(s => s.id === v)?.name || '' })}
+                />
               </div>
               <div><Label>N° Facture</Label><Input value={form.invoice_number} onChange={e => setForm({ ...form, invoice_number: e.target.value })} placeholder="Auto-généré si vide" /></div>
             </div>

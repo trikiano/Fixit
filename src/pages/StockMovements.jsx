@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+﻿import React, { useState } from 'react';
+import { fixit } from '@/api/fixitClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,8 +28,8 @@ export default function StockMovements() {
   const [form, setForm] = useState({ product_id: '', type: 'ajustement', quantity: 0, reason: '' });
   const qc = useQueryClient();
 
-  const { data: movements = [], isLoading } = useQuery({ queryKey: ['stockMovements'], queryFn: () => base44.entities.StockMovement.list('-created_date', 200) });
-  const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: () => base44.entities.Product.list() });
+  const { data: movements = [], isLoading } = useQuery({ queryKey: ['stockMovements'], queryFn: () => fixit.entities.StockMovement.list('-created_date', 200) });
+  const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: () => fixit.entities.Product.list() });
 
   const adjustMutation = useMutation({
     mutationFn: async (data) => {
@@ -38,8 +38,8 @@ export default function StockMovements() {
       const newStock = data.type === 'entree' ? (product.quantity || 0) + data.quantity :
                        data.type === 'sortie' ? Math.max(0, (product.quantity || 0) - data.quantity) :
                        data.quantity; // ajustement = set to value
-      await base44.entities.Product.update(product.id, { quantity: newStock });
-      await base44.entities.StockMovement.create({
+      await fixit.entities.Product.update(product.id, { quantity: newStock });
+      await fixit.entities.StockMovement.create({
         product_id: product.id, product_name: product.name, type: data.type,
         quantity: data.type === 'ajustement' ? Math.abs(newStock - (product.quantity || 0)) : data.quantity,
         previous_stock: product.quantity || 0, new_stock: newStock,

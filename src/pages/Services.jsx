@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { fixit } from '@/api/fixitClient';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -38,39 +38,39 @@ export default function ServicesPage() {
 
   const { data: sales = [], isLoading } = useQuery({
     queryKey: ['service-sales'],
-    queryFn: () => base44.entities.ServiceSale.list('-created_date', 500),
+    queryFn: () => fixit.entities.ServiceSale.list('-created_date', 500),
   });
 
   const { data: cards = [] } = useQuery({
     queryKey: ['prepaid-cards'],
-    queryFn: () => base44.entities.PrepaidCard.list('-created_date', 100),
+    queryFn: () => fixit.entities.PrepaidCard.list('-created_date', 100),
   });
 
   const { data: services = [] } = useQuery({
     queryKey: ['service-items'],
-    queryFn: () => base44.entities.ServiceItem.list('-created_date', 200),
+    queryFn: () => fixit.entities.ServiceItem.list('-created_date', 200),
   });
 
   const { data: categories = [] } = useQuery({
     queryKey: ['service-categories'],
-    queryFn: () => base44.entities.ServiceCategory.list('-created_date', 100),
+    queryFn: () => fixit.entities.ServiceCategory.list('-created_date', 100),
   });
 
   const { data: topups = [] } = useQuery({
     queryKey: ['card-topups'],
-    queryFn: () => base44.entities.CardTopup.list('-created_date', 500),
+    queryFn: () => fixit.entities.CardTopup.list('-created_date', 500),
   });
 
   // Vendre un service : crée la vente + débite la carte
   const createSaleMutation = useMutation({
     mutationFn: async (data) => {
-      const sale = await base44.entities.ServiceSale.create(data);
+      const sale = await fixit.entities.ServiceSale.create(data);
       // Débiter la carte
       const card = cards.find(c => c.id === data.card_id);
       if (card) {
         const newBalance = (card.current_balance || 0) - (data.cost_price || 0);
         const newSpent = (card.total_spent || 0) + (data.cost_price || 0);
-        await base44.entities.PrepaidCard.update(data.card_id, {
+        await fixit.entities.PrepaidCard.update(data.card_id, {
           current_balance: Math.max(0, newBalance),
           total_spent: newSpent,
         });
@@ -86,10 +86,10 @@ export default function ServicesPage() {
   // Recharger une carte : crée un topup + met à jour le solde
   const topupMutation = useMutation({
     mutationFn: async (data) => {
-      const topup = await base44.entities.CardTopup.create(data);
+      const topup = await fixit.entities.CardTopup.create(data);
       const card = cards.find(c => c.id === data.card_id);
       if (card) {
-        await base44.entities.PrepaidCard.update(data.card_id, {
+        await fixit.entities.PrepaidCard.update(data.card_id, {
           current_balance: (card.current_balance || 0) + data.amount,
           total_loaded: (card.total_loaded || 0) + data.amount,
         });
@@ -104,11 +104,11 @@ export default function ServicesPage() {
 
   const deleteSaleMutation = useMutation({
     mutationFn: async (sale) => {
-      await base44.entities.ServiceSale.delete(sale.id);
+      await fixit.entities.ServiceSale.delete(sale.id);
       // Rembourser le solde de la carte
       const card = cards.find(c => c.id === sale.card_id);
       if (card) {
-        await base44.entities.PrepaidCard.update(sale.card_id, {
+        await fixit.entities.PrepaidCard.update(sale.card_id, {
           current_balance: (card.current_balance || 0) + (sale.cost_price || 0),
           total_spent: Math.max(0, (card.total_spent || 0) - (sale.cost_price || 0)),
         });
