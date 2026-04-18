@@ -15,5 +15,6 @@ export function defineServiceSale(sequelize) {
     card_id: { type: DataTypes.UUID },
     status: { type: DataTypes.STRING, defaultValue: 'completee' },
     notes: { type: DataTypes.TEXT },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   }, { tableName: 'service_sales' });
 }

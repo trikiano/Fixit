@@ -14,5 +14,6 @@ export function defineStockMovement(sequelize) {
     reference_id: { type: DataTypes.UUID },
     user: { type: DataTypes.STRING },
     notes: { type: DataTypes.TEXT },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   }, { tableName: 'stock_movements' });
 }

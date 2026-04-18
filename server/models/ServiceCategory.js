@@ -8,5 +8,6 @@ export function defineServiceCategory(sequelize) {
     color: { type: DataTypes.STRING },
     icon: { type: DataTypes.STRING },
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   }, { tableName: 'service_categories' });
 }

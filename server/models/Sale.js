@@ -19,5 +19,6 @@ export function defineSale(sequelize) {
     cashier: { type: DataTypes.STRING },
     promo_code: { type: DataTypes.STRING },
     promo_discount: { type: DataTypes.FLOAT, defaultValue: 0 },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   }, { tableName: 'sales' });
 }

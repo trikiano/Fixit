@@ -16,6 +16,7 @@ export const defineBrand = (sequelize) => {
     category: {
       type: DataTypes.STRING,
       allowNull: true,
-    }
+    },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   });
 };

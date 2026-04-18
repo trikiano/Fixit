@@ -3,6 +3,7 @@ import { DataTypes } from 'sequelize';
 export function defineSetting(sequelize) {
   return sequelize.define('Setting', {
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
     shop_name: { type: DataTypes.STRING, defaultValue: 'Fixit' },
     shop_phone: { type: DataTypes.STRING },
     shop_email: { type: DataTypes.STRING },

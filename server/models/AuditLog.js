@@ -10,5 +10,6 @@ export function defineAuditLog(sequelize) {
     entity_id: { type: DataTypes.UUID },
     details: { type: DataTypes.JSON },
     ip_address: { type: DataTypes.STRING },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   }, { tableName: 'audit_logs' });
 }

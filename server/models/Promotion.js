@@ -16,5 +16,6 @@ export function definePromotion(sequelize) {
     applies_to: { type: DataTypes.STRING }, // 'all', 'category', 'product'
     applies_to_value: { type: DataTypes.STRING },
     description: { type: DataTypes.TEXT },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   }, { tableName: 'promotions' });
 }

@@ -10,5 +10,6 @@ export function defineNotification(sequelize) {
     entity_id: { type: DataTypes.UUID },
     is_read: { type: DataTypes.BOOLEAN, defaultValue: false },
     user_id: { type: DataTypes.UUID },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   }, { tableName: 'notifications' });
 }

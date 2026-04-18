@@ -18,6 +18,7 @@ export const defineDeviceModel = (sequelize) => {
     device_type: {
       type: DataTypes.STRING,
       allowNull: true,
-    }
+    },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   });
 };

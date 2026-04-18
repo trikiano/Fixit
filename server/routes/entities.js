@@ -2,6 +2,7 @@ import express from 'express';
 import { Op } from 'sequelize';
 import * as models from '../models/index.js';
 import { Brand, DeviceType, DeviceModel, ProductCategory } from '../models/index.js';
+import { checkSubscription } from '../middlewares/auth.js';
 
 const router = express.Router();
 
@@ -45,8 +46,14 @@ Object.entries(rawEntityMap).forEach(([key, model]) => {
   entityMap[key.toLowerCase()] = model;
 });
 
+// Helper: build shop_id filter for multi-tenant isolation
+function getShopFilter(req) {
+  if (req.user?.role === 'super_admin') return {}; // super_admin sees all
+  return req.user?.shop_id ? { shop_id: req.user.shop_id } : {};
+}
+
 // GET /api/entities/:entity — list all (with optional sort and limit)
-router.get('/:entity', async (req, res) => {
+router.get('/:entity', checkSubscription, async (req, res) => {
   const Model = entityMap[req.params.entity];
   if (!Model) {
     console.error(`[Entity Error] Model for "${req.params.entity}" is missing. Available: ${Object.keys(entityMap).join(', ')}`);
@@ -59,7 +66,7 @@ router.get('/:entity', async (req, res) => {
     const parsedLimit = limit ? parseInt(limit) : undefined;
 
     // Build filter conditions from query params
-    const where = {};
+    const where = { ...getShopFilter(req) };
     for (const [key, value] of Object.entries(filters)) {
       if (value !== undefined && value !== '' && Model.rawAttributes[key]) {
         where[key] = value;
@@ -79,12 +86,14 @@ router.get('/:entity', async (req, res) => {
 });
 
 // GET /api/entities/:entity/:id — get one
-router.get('/:entity/:id', async (req, res) => {
+router.get('/:entity/:id', checkSubscription, async (req, res) => {
   const Model = entityMap[req.params.entity];
   if (!Model) return res.status(404).json({ error: `Entity "${req.params.entity}" not found` });
 
   try {
-    const row = await Model.findByPk(req.params.id);
+    const shopFilter = getShopFilter(req);
+    const where = { id: req.params.id, ...shopFilter };
+    const row = await Model.findOne({ where });
     if (!row) return res.status(404).json({ error: 'Record not found' });
     res.json(row);
   } catch (err) {
@@ -93,19 +102,26 @@ router.get('/:entity/:id', async (req, res) => {
 });
 
 // POST /api/entities/:entity — create
-router.post('/:entity', async (req, res) => {
+router.post('/:entity', checkSubscription, async (req, res) => {
   const Model = entityMap[req.params.entity];
   if (!Model) return res.status(404).json({ error: `Entity "${req.params.entity}" not found` });
 
   try {
-    const row = await Model.create(req.body);
+    // Automatically inject shop_id for non-super_admin
+    const data = { ...req.body };
+    if (req.user?.role !== 'super_admin' && req.user?.shop_id && Model.rawAttributes.shop_id) {
+      data.shop_id = req.user.shop_id;
+    }
+
+    const row = await Model.create(data);
     res.status(201).json(row);
   } catch (err) {
     if (err.name === 'SequelizeUniqueConstraintError') {
       // Si on essaie de recréer une entité qui existe déjà (nom identique)
       if (req.body.name) {
         try {
-          const existing = await Model.findOne({ where: { name: req.body.name } });
+          const shopFilter = getShopFilter(req);
+          const existing = await Model.findOne({ where: { name: req.body.name, ...shopFilter } });
           if (existing) {
             // Retourne simplement l'entité existante, ce qui rend la création idempotente !
             return res.status(200).json(existing);
@@ -123,12 +139,14 @@ router.post('/:entity', async (req, res) => {
 });
 
 // PUT /api/entities/:entity/:id — update
-router.put('/:entity/:id', async (req, res) => {
+router.put('/:entity/:id', checkSubscription, async (req, res) => {
   try {
     const Model = entityMap[req.params.entity];
     if (!Model) return res.status(404).json({ error: `Entity "${req.params.entity}" not found` });
 
-    const row = await Model.findByPk(req.params.id);
+    const shopFilter = getShopFilter(req);
+    const where = { id: req.params.id, ...shopFilter };
+    const row = await Model.findOne({ where });
     if (!row) return res.status(404).json({ error: 'Record not found' });
 
     await row.update(req.body);
@@ -139,12 +157,14 @@ router.put('/:entity/:id', async (req, res) => {
 });
 
 // DELETE /api/entities/:entity/:id — delete
-router.delete('/:entity/:id', async (req, res) => {
+router.delete('/:entity/:id', checkSubscription, async (req, res) => {
   try {
     const Model = entityMap[req.params.entity];
     if (!Model) return res.status(404).json({ error: `Entity "${req.params.entity}" not found` });
 
-    const row = await Model.findByPk(req.params.id);
+    const shopFilter = getShopFilter(req);
+    const where = { id: req.params.id, ...shopFilter };
+    const row = await Model.findOne({ where });
     if (!row) return res.status(404).json({ error: 'Record not found' });
 
     await row.destroy();

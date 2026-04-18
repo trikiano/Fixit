@@ -10,5 +10,6 @@ export function defineCardTopup(sequelize) {
     amount_paid: { type: DataTypes.FLOAT, defaultValue: 0 },
     payment_method: { type: DataTypes.STRING },
     notes: { type: DataTypes.TEXT },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   }, { tableName: 'card_topups' });
 }

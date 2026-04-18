@@ -14,5 +14,6 @@ export function defineWarranty(sequelize) {
     end_date: { type: DataTypes.DATEONLY },
     status: { type: DataTypes.STRING, defaultValue: 'active' },
     notes: { type: DataTypes.TEXT },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   }, { tableName: 'warranties' });
 }

@@ -7,12 +7,14 @@ import { dirname, join } from 'path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, '.env') });
 
-import { sequelize, User, Setting } from './models/index.js';
+import { sequelize, User, Shop, Setting } from './models/index.js';
 import bcrypt from 'bcryptjs';
 import authRouter, { authenticate } from './routes/auth.js';
 import entitiesRouter from './routes/entities.js';
 import functionsRouter from './routes/functions.js';
 import uploadRouter from './routes/upload.js';
+import adminRouter from './routes/admin.js';
+import { requireSuperAdmin } from './middlewares/auth.js';
 
 
 const app = express();
@@ -27,6 +29,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/entities', authenticate, entitiesRouter);
 app.use('/api/functions', authenticate, functionsRouter);
 app.use('/api/upload', uploadRouter);
+app.use('/api/admin', authenticate, requireSuperAdmin, adminRouter);
 
 // --- Static files (images) ---
 app.use('/uploads', express.static(join(__dirname, '../uploads')));
@@ -45,10 +48,44 @@ app.get('/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/setup', async (req, res) => {
   try {
     await sequelize.sync({ force: true });
-    const password_hash = await bcrypt.hash('admin123', 10);
-    await User.create({ email: 'admin@fixit.local', password_hash, full_name: 'Administrateur', role: 'admin' });
-    await Setting.create({ shop_name: 'Fixit', currency: 'MAD', currency_symbol: 'DH' });
-    res.json({ success: true, message: 'Base initialisée ✅ — admin@fixit.local / admin123' });
+
+    // Create super_admin (no shop)
+    const superAdminHash = await bcrypt.hash('superadmin123', 10);
+    await User.create({
+      email: 'superadmin@fixit.local',
+      password_hash: superAdminHash,
+      full_name: 'Super Administrateur',
+      role: 'super_admin',
+      shop_id: null,
+    });
+
+    // Create demo shop
+    const demoShop = await Shop.create({
+      name: 'Fixit Demo',
+      email: 'admin@fixit.local',
+      subscription_status: 'demo',
+      plan: 'pro',
+    });
+
+    // Create demo shop admin
+    const adminHash = await bcrypt.hash('admin123', 10);
+    await User.create({
+      email: 'admin@fixit.local',
+      password_hash: adminHash,
+      full_name: 'Administrateur',
+      role: 'admin',
+      shop_id: demoShop.id,
+    });
+
+    // Create demo shop settings
+    await Setting.create({ shop_id: demoShop.id, shop_name: 'Fixit Demo', currency: 'MAD', currency_symbol: 'DH' });
+
+    res.json({
+      success: true,
+      message: 'Base initialisée ✅\n' +
+        'Super Admin: superadmin@fixit.local / superadmin123\n' +
+        'Admin Demo: admin@fixit.local / admin123'
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

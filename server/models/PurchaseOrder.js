@@ -12,5 +12,6 @@ export function definePurchaseOrder(sequelize) {
     expected_date: { type: DataTypes.DATE },
     received_date: { type: DataTypes.DATE },
     notes: { type: DataTypes.TEXT },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   }, { tableName: 'purchase_orders' });
 }

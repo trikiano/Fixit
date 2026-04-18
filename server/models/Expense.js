@@ -13,5 +13,6 @@ export function defineExpense(sequelize) {
     reference: { type: DataTypes.STRING },
     notes: { type: DataTypes.TEXT },
     is_recurring: { type: DataTypes.BOOLEAN, defaultValue: false },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   }, { tableName: 'expenses' });
 }

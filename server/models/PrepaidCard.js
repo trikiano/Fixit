@@ -17,5 +17,6 @@ export function definePrepaidCard(sequelize) {
     purchase_date: { type: DataTypes.DATEONLY },
     expiry_date: { type: DataTypes.DATEONLY },
     notes: { type: DataTypes.TEXT },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   }, { tableName: 'prepaid_cards' });
 }

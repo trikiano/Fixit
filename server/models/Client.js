@@ -11,5 +11,6 @@ export function defineClient(sequelize) {
     loyalty_points: { type: DataTypes.INTEGER, defaultValue: 0 },
     total_spent: { type: DataTypes.FLOAT, defaultValue: 0 },
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   }, { tableName: 'clients' });
 }

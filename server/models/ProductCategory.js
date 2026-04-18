@@ -11,6 +11,7 @@ export const defineProductCategory = (sequelize) => {
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
-    }
+    },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   });
 };

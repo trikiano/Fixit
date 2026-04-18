@@ -24,6 +24,8 @@ const sequelize = new Sequelize(
 );
 
 // Import all models
+import { defineShop } from './Shop.js';
+import { defineSubscription } from './Subscription.js';
 import { defineUser } from './User.js';
 import { defineCashRegister } from './CashRegister.js';
 import { defineClient } from './Client.js';
@@ -53,6 +55,8 @@ import { defineDeviceType } from './DeviceType.js';
 import { defineDeviceModel } from './DeviceModel.js';
 import { defineProductCategory } from './ProductCategory.js';
 
+const Shop = defineShop(sequelize);
+const Subscription = defineSubscription(sequelize);
 const User = defineUser(sequelize);
 const CashRegister = defineCashRegister(sequelize);
 const Client = defineClient(sequelize);
@@ -82,8 +86,43 @@ const DeviceType = defineDeviceType(sequelize);
 const DeviceModel = defineDeviceModel(sequelize);
 const ProductCategory = defineProductCategory(sequelize);
 
+// Associations
+Shop.hasMany(User, { foreignKey: 'shop_id', as: 'users' });
+User.belongsTo(Shop, { foreignKey: 'shop_id', as: 'shop' });
+
+Shop.hasMany(Subscription, { foreignKey: 'shop_id', as: 'subscriptions' });
+Subscription.belongsTo(Shop, { foreignKey: 'shop_id', as: 'shop' });
+
+Shop.hasMany(Setting, { foreignKey: 'shop_id', as: 'settings' });
+Setting.belongsTo(Shop, { foreignKey: 'shop_id', as: 'shop' });
+
+Shop.hasMany(Product, { foreignKey: 'shop_id' });
+Shop.hasMany(Repair, { foreignKey: 'shop_id' });
+Shop.hasMany(Client, { foreignKey: 'shop_id' });
+Shop.hasMany(Sale, { foreignKey: 'shop_id' });
+Shop.hasMany(CashRegister, { foreignKey: 'shop_id' });
+Shop.hasMany(Supplier, { foreignKey: 'shop_id' });
+Shop.hasMany(SupplierInvoice, { foreignKey: 'shop_id' });
+Shop.hasMany(PurchaseOrder, { foreignKey: 'shop_id' });
+Shop.hasMany(Expense, { foreignKey: 'shop_id' });
+Shop.hasMany(Warranty, { foreignKey: 'shop_id' });
+Shop.hasMany(Promotion, { foreignKey: 'shop_id' });
+Shop.hasMany(ServiceSale, { foreignKey: 'shop_id' });
+Shop.hasMany(ServiceItem, { foreignKey: 'shop_id' });
+Shop.hasMany(ServiceCategory, { foreignKey: 'shop_id' });
+Shop.hasMany(PrepaidCard, { foreignKey: 'shop_id' });
+Shop.hasMany(CardTopup, { foreignKey: 'shop_id' });
+Shop.hasMany(StockMovement, { foreignKey: 'shop_id' });
+Shop.hasMany(AuditLog, { foreignKey: 'shop_id' });
+Shop.hasMany(Notification, { foreignKey: 'shop_id' });
+Shop.hasMany(Brand, { foreignKey: 'shop_id' });
+Shop.hasMany(DeviceType, { foreignKey: 'shop_id' });
+Shop.hasMany(DeviceModel, { foreignKey: 'shop_id' });
+Shop.hasMany(ProductCategory, { foreignKey: 'shop_id' });
+
 export {
   sequelize,
+  Shop, Subscription,
   User, CashRegister, Client, Product, Repair, Sale, StockMovement,
 
   Supplier, SupplierInvoice, PurchaseOrder, Expense,

@@ -15,5 +15,6 @@ export function defineSupplierInvoice(sequelize) {
     paid_date: { type: DataTypes.DATE },
     payments: { type: DataTypes.JSON, defaultValue: [] },
     notes: { type: DataTypes.TEXT },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   }, { tableName: 'supplier_invoices' });
 }

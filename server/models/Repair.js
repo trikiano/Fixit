@@ -34,5 +34,6 @@ export function defineRepair(sequelize) {
 
     pin_code: { type: DataTypes.STRING },
     images: { type: DataTypes.JSON, defaultValue: [] },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   }, { tableName: 'repairs' });
 }

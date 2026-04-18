@@ -21,5 +21,6 @@ export function defineProduct(sequelize) {
     supplier_id: { type: DataTypes.UUID },
 
     location: { type: DataTypes.STRING },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   }, { tableName: 'products' });
 }

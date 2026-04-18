@@ -11,5 +11,6 @@ export function defineServiceItem(sequelize) {
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
     allow_cards: { type: DataTypes.BOOLEAN, defaultValue: false },
     unit: { type: DataTypes.STRING },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   }, { tableName: 'service_items' });
 }

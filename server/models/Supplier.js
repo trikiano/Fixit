@@ -11,5 +11,6 @@ export function defineSupplier(sequelize) {
     website: { type: DataTypes.STRING },
     notes: { type: DataTypes.TEXT },
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
+    shop_id: { type: DataTypes.UUID, allowNull: true },
   }, { tableName: 'suppliers' });
 }
