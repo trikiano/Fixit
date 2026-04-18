@@ -31,6 +31,12 @@ app.use('/api/upload', uploadRouter);
 // --- Static files (images) ---
 app.use('/uploads', express.static(join(__dirname, '../uploads')));
 
+// --- Serve React frontend ---
+app.use(express.static(join(__dirname, '../dist')));
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) return next();
+  res.sendFile(join(__dirname, '../dist/index.html'));
+});
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
