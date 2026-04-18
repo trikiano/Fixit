@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "start": "node index.js",
+    "build": "test -d dist && echo 'dist already exists, skipping build' || vite build",
+    "start": "node server/index.js",
+    "server": "node server/index.js",
+    "server:dev": "node --watch server/index.js",
     "lint": "eslint . --quiet",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p ./jsconfig.json",
