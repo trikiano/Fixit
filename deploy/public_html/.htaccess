@@ -1,0 +1,11 @@
+Options -MultiViews
+RewriteEngine On
+
+# Redirect /api to Node.js backend
+RewriteCond %{REQUEST_URI} ^/api [NC]
+RewriteRule ^api/(.*)$ http://localhost:3000/api/$1 [P,L]
+
+# React Router - redirect all non-file requests to index.html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]
