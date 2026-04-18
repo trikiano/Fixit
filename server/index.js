@@ -40,7 +40,10 @@ app.get('/health', (req, res) => res.json({ status: 'ok' }));
 // Setup route (one-time init)
 app.get('/setup', async (req, res) => {
   try {
+    // Disable FK checks to allow dropping tables in any order
+    await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
     await sequelize.sync({ force: true });
+    await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
 
     // Create super_admin (no shop)
     const superAdminHash = await bcrypt.hash('superadmin123', 10);
