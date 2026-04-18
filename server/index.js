@@ -7,7 +7,8 @@ import { dirname, join } from 'path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, '.env') });
 
-import { sequelize } from './models/index.js';
+import { sequelize, User, Setting } from './models/index.js';
+import bcrypt from 'bcryptjs';
 import authRouter, { authenticate } from './routes/auth.js';
 import entitiesRouter from './routes/entities.js';
 import functionsRouter from './routes/functions.js';
@@ -33,6 +34,19 @@ app.use('/uploads', express.static(join(__dirname, '../uploads')));
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+// Setup route (one-time init)
+app.get('/setup', async (req, res) => {
+  try {
+    await sequelize.sync({ force: true });
+    const password_hash = await bcrypt.hash('admin123', 10);
+    await User.create({ email: 'admin@fixit.local', password_hash, full_name: 'Administrateur', role: 'admin' });
+    await Setting.create({ shop_name: 'Fixit', currency: 'MAD', currency_symbol: 'DH' });
+    res.json({ success: true, message: 'Base initialisée ✅ — admin@fixit.local / admin123' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // --- Start server ---
 async function start() {
