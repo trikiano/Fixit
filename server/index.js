@@ -34,13 +34,6 @@ app.use('/api/admin', authenticate, requireSuperAdmin, adminRouter);
 // --- Static files (images) ---
 app.use('/uploads', express.static(join(__dirname, '../uploads')));
 
-// --- Serve React frontend ---
-app.use(express.static(join(__dirname, '../dist')));
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) return next();
-  res.sendFile(join(__dirname, '../dist/index.html'));
-});
-
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
@@ -89,6 +82,12 @@ app.get('/setup', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// --- Serve React frontend (AFTER API routes) ---
+app.use(express.static(join(__dirname, '../dist')));
+app.get('*', (req, res) => {
+  res.sendFile(join(__dirname, '../dist/index.html'));
 });
 
 // --- Start server ---
