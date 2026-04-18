@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { Wrench, Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
 
@@ -110,12 +110,10 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Default credentials hint */}
-          <div className="mt-6 p-3 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground">
-            <p className="font-medium text-foreground mb-1">💡 Accès par défaut</p>
-            <p>Email : <span className="font-mono text-foreground">admin@fixit.local</span></p>
-            <p>Mot de passe : <span className="font-mono text-foreground">admin123</span></p>
-          </div>
+          <p className="text-center text-sm text-muted-foreground mt-4">
+            Pas encore de compte ?{' '}
+            <Link to="/register" className="text-primary font-medium hover:underline">Créer votre boutique</Link>
+          </p>
         </div>
       </div>
 

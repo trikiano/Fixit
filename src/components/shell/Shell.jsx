@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
-import { Wrench, X, Home, Delete, Lock, ShieldCheck, LogOut, User } from 'lucide-react';
+import { Wrench, X, Home, Delete, Lock, ShieldCheck, LogOut, User, Crown } from 'lucide-react';
+import TrialBanner from '@/components/ui/TrialBanner';
 
 import { cn } from '@/lib/utils';
 import { SettingsProvider, useAppSettings } from '@/components/settings/SettingsContext';
@@ -216,6 +217,8 @@ function ShellInner() {
   return (
     <ShellContext_.Provider value={{ openTab }}>
     <div className="flex flex-col h-screen bg-background overflow-hidden">
+      {/* Trial banner */}
+      <TrialBanner />
       {/* Tab bar */}
       <div className="flex items-center bg-card border-b border-border h-11 flex-shrink-0 shadow-sm relative z-40" style={{WebkitOverflowScrolling:'touch'}}>
         {/* Scrollable Tabs Area */}
@@ -283,6 +286,15 @@ function ShellInner() {
                     <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Session active</p>
                     <p className="text-xs font-semibold truncate">{user.full_name || user.email}</p>
                   </div>
+                  {user?.role === 'super_admin' && (
+                    <button
+                      onClick={() => window.location.href = '/admin'}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors mb-1"
+                    >
+                      <Crown className="h-3.5 w-3.5" />
+                      Dashboard Admin
+                    </button>
+                  )}
                   <button
                     onClick={() => { logout(); window.location.href = '/login'; }}
                     className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-destructive hover:bg-destructive/10 rounded-lg transition-colors group"

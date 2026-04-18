@@ -1,5 +1,13 @@
 ﻿import React, { createContext, useState, useContext, useEffect } from 'react';
-import { fixit, setToken, clearToken } from '@/api/fixitClient';
+import { fixit, setToken, clearToken, getToken } from '@/api/fixitClient';
+
+// Decode JWT payload without library
+function decodeJWT(token) {
+  try {
+    const payload = token.split('.')[1];
+    return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+  } catch { return null; }
+}
 
 const AuthContext = createContext();
 
@@ -33,7 +41,8 @@ export const AuthProvider = ({ children }) => {
     }
     try {
       const currentUser = await fixit.auth.me();
-      setUser(currentUser);
+      const claims = decodeJWT(token);
+      setUser({ ...currentUser, ...claims });
       setIsAuthenticated(true);
     } catch {
       setUser(null);
@@ -44,7 +53,9 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const data = await fixit.auth.login(email, password);
-    setUser(data.user);
+    // Merge JWT claims (subscription_status, trial_ends_at, shop_id) into user
+    const claims = decodeJWT(getToken());
+    setUser({ ...data.user, ...claims });
     setIsAuthenticated(true);
     return data;
   };

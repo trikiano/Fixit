@@ -4,6 +4,8 @@ import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate, useNavigate } from 'react-router-dom';
 import Shell from './components/shell/Shell';
 import Login from './pages/Login';
+import Register from './pages/Register';
+import AdminDashboard from './pages/AdminDashboard';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { useEffect } from 'react';
 import OfflineSyncIndicator from './components/ui/OfflineSyncIndicator';
@@ -45,10 +47,22 @@ function AuthEventListener() {
   return null;
 }
 
+const RequireSuperAdmin = ({ children }) => {
+  const { user, isAuthenticated, isLoadingAuth } = useAuth();
+  if (isLoadingAuth) return null;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user?.role !== 'super_admin') return <Navigate to="/" replace />;
+  return children;
+};
+
 const AuthenticatedApp = () => (
   <Routes>
     {/* Public */}
     <Route path="/login" element={<RedirectIfAuth><Login /></RedirectIfAuth>} />
+    <Route path="/register" element={<RedirectIfAuth><Register /></RedirectIfAuth>} />
+
+    {/* Super admin */}
+    <Route path="/admin" element={<RequireSuperAdmin><AdminDashboard /></RequireSuperAdmin>} />
 
     {/* Protected — Shell handles ALL navigation via tabs */}
     <Route path="/" element={<RequireAuth><Shell /></RequireAuth>} />
