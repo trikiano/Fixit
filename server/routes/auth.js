@@ -82,11 +82,10 @@ router.post('/register', async (req, res) => {
       plan: 'starter',
     });
 
-    // Create admin user for this shop
-    const password_hash = await bcrypt.hash(password, 10);
+    // Create admin user — beforeSave hook will hash the password
     const user = await User.create({
       email,
-      password_hash,
+      password_hash: password,
       full_name,
       role: role || 'admin',
       shop_id: shop.id,

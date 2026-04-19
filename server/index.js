@@ -59,11 +59,10 @@ app.get('/setup', async (req, res) => {
     await sequelize.sync({ force: true });
     await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
 
-    // Create super_admin (no shop)
-    const superAdminHash = await bcrypt.hash('superadmin123', 10);
+    // Create super_admin (no shop) — hook will hash the password
     await User.create({
       email: 'superadmin@fixit.local',
-      password_hash: superAdminHash,
+      password_hash: 'superadmin123',
       full_name: 'Super Administrateur',
       role: 'super_admin',
       shop_id: null,
@@ -77,11 +76,10 @@ app.get('/setup', async (req, res) => {
       plan: 'pro',
     });
 
-    // Create demo shop admin
-    const adminHash = await bcrypt.hash('admin123', 10);
+    // Create demo shop admin — hook will hash the password
     await User.create({
       email: 'admin@fixit.local',
-      password_hash: adminHash,
+      password_hash: 'admin123',
       full_name: 'Administrateur',
       role: 'admin',
       shop_id: demoShop.id,
