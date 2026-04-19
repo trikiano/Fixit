@@ -59,7 +59,7 @@ app.get('/setup', async (req, res) => {
     await sequelize.sync({ force: true });
     await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
 
-    // Create super_admin (no shop)
+    // Create super_admin only (no shop)
     await User.create({
       email: 'superadmin@fixit.local',
       password_hash: await bcrypt.hash('superadmin123', 10),
@@ -68,31 +68,9 @@ app.get('/setup', async (req, res) => {
       shop_id: null,
     });
 
-    // Create demo shop
-    const demoShop = await Shop.create({
-      name: 'Fixit Demo',
-      email: 'admin@fixit.local',
-      subscription_status: 'demo',
-      plan: 'pro',
-    });
-
-    // Create demo shop admin
-    await User.create({
-      email: 'admin@fixit.local',
-      password_hash: await bcrypt.hash('admin123', 10),
-      full_name: 'Administrateur',
-      role: 'admin',
-      shop_id: demoShop.id,
-    });
-
-    // Create demo shop settings
-    await Setting.create({ shop_id: demoShop.id, shop_name: 'Fixit Demo', currency: 'MAD', currency_symbol: 'DH' });
-
     res.json({
       success: true,
-      message: 'Base initialisée ✅\n' +
-        'Super Admin: superadmin@fixit.local / superadmin123\n' +
-        'Admin Demo: admin@fixit.local / admin123'
+      message: 'Base initialisée ✅\nSuper Admin: superadmin@fixit.local / superadmin123\nLes boutiques s\'inscrivent via /register'
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
