@@ -37,6 +37,20 @@ app.use('/uploads', express.static(join(__dirname, '../uploads')));
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
+// Debug login (temporary)
+app.post('/debug-login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ where: { email } });
+    if (!user) return res.json({ step: 'user_not_found', email });
+    const bcrypt = (await import('bcryptjs')).default;
+    const valid = await bcrypt.compare(password, user.password_hash);
+    res.json({ step: valid ? 'password_ok' : 'password_wrong', email, role: user.role, is_active: user.is_active });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Setup route (one-time init)
 app.get('/setup', async (req, res) => {
   try {
