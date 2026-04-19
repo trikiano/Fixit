@@ -9,7 +9,7 @@ const QUEUE_KEY = 'fixit_offline_queue';
 const CACHE_PREFIX = 'fixit_cache_';
 
 export const OfflineManager = {
-  isOnline: navigator.onLine,
+  isOnline: true, // Default to online; real offline detection via failed fetches
   listeners: [],
   syncing: false,
 

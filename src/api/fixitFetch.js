@@ -14,11 +14,6 @@ export function clearToken() {
 }
 
 export async function fixitFetch(path, options = {}) {
-  // 1. Check if browser knows it is offline
-  if (!navigator.onLine) {
-    throw new Error('OFFLINE');
-  }
-
   const token = getToken();
   const headers = {
     'Content-Type': 'application/json',

@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 
 export default function OfflineSyncIndicator() {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(true); // Default online; real state comes from OfflineManager
   const [syncing, setSyncing] = useState(false);
   const [showSyncSuccess, setShowSyncSuccess] = useState(false);
   const qc = useQueryClient();
