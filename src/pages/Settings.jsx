@@ -99,7 +99,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Téléphone</Label>
-                  <PhoneInput value={local.shop_phone} onChange={v => update('shop_phone', v)} placeholder="+33 1 23 45 67 89" />
+                  <PhoneInput value={local.shop_phone} onChange={v => update('shop_phone', v)} />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

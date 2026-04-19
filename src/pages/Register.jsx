@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Wrench, Eye, EyeOff, UserPlus, AlertCircle, CheckCircle, Store, Mail, Phone, User, Lock } from 'lucide-react';
+import { Wrench, Eye, EyeOff, UserPlus, AlertCircle, CheckCircle, Store, Mail, User, Lock } from 'lucide-react';
 import { fixitFetch, setToken } from '@/api/fixitFetch';
+import PhoneInput from '@/components/ui/PhoneInput';
 
 export default function Register() {
   const [form, setForm] = useState({ shop_name: '', full_name: '', email: '', phone: '', password: '', confirm_password: '' });
@@ -118,11 +119,7 @@ export default function Register() {
             {/* Phone */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground">Téléphone</label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input type="tel" value={form.phone} onChange={set('phone')} placeholder="+212 6XX XXX XXX"
-                  className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all" />
-              </div>
+              <PhoneInput value={form.phone} onChange={v => setForm(f => ({ ...f, phone: v }))} className="h-11" />
             </div>
 
             {/* Password */}

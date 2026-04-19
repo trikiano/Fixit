@@ -68,7 +68,7 @@ router.get('/me', authenticate, async (req, res) => {
 // Register — creates a new Shop + admin User + Setting (trial 7 days)
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, full_name, shop_name, role } = req.body;
+    const { email, password, full_name, shop_name, phone, role } = req.body;
     const existing = await User.findOne({ where: { email } });
     if (existing) return res.status(409).json({ error: 'Email déjà utilisé' });
 
@@ -93,7 +93,12 @@ router.post('/register', async (req, res) => {
     });
 
     // Create default settings for this shop
-    await Setting.create({ shop_id: shop.id, shop_name: shop.name });
+    await Setting.create({
+      shop_id: shop.id,
+      shop_name: shop.name,
+      shop_phone: phone || '',
+      shop_email: email,
+    });
 
     res.status(201).json({
       id: user.id,
