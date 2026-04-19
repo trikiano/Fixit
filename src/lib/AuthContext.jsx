@@ -62,6 +62,8 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     clearToken();
+    localStorage.removeItem('app_settings'); // Clear shop settings cache on logout
+    localStorage.removeItem('fixit_locked');
     setUser(null);
     setIsAuthenticated(false);
   };

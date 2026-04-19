@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { fixitFetch } from '@/api/fixitFetch';
 
 export const DEFAULT_SETTINGS = {
   shop_name: 'TechRepair Pro',
@@ -85,17 +86,51 @@ export function SettingsProvider({ children }) {
     try {
       const stored = localStorage.getItem('app_settings');
       const parsed = stored ? JSON.parse(stored) : {};
-      // If no theme was explicitly saved, use default (light)
       if (!parsed.theme) parsed.theme = 'light';
       const merged = { ...DEFAULT_SETTINGS, ...parsed };
       merged.currency_symbol = CURRENCY_SYMBOLS[merged.currency] || merged.currency;
       return merged;
     } catch { return DEFAULT_SETTINGS; }
   });
+  const [dbSettingId, setDbSettingId] = useState(null);
 
   useEffect(() => { applyTheme(settings.theme); }, [settings.theme]);
 
-  const saveSettings = (newSettings) => {
+  // Load settings from DB on mount (overrides localStorage with real shop data)
+  useEffect(() => {
+    const token = localStorage.getItem('fixit_token');
+    if (!token) return;
+    fixitFetch('/entities/Setting/list').then(data => {
+      const rows = Array.isArray(data) ? data : (data?.data || []);
+      if (rows.length > 0) {
+        const dbSetting = rows[0];
+        setDbSettingId(dbSetting.id);
+        // Merge DB values into settings (DB wins for shop identity fields)
+        setSettings(prev => {
+          const merged = {
+            ...prev,
+            ...(dbSetting.shop_name ? { shop_name: dbSetting.shop_name } : {}),
+            ...(dbSetting.shop_phone ? { shop_phone: dbSetting.shop_phone } : {}),
+            ...(dbSetting.shop_email ? { shop_email: dbSetting.shop_email } : {}),
+            ...(dbSetting.shop_address ? { shop_address: dbSetting.shop_address } : {}),
+            ...(dbSetting.shop_logo ? { shop_logo: dbSetting.shop_logo } : {}),
+            ...(dbSetting.currency ? { currency: dbSetting.currency } : {}),
+            ...(dbSetting.currency_symbol ? { currency_symbol: dbSetting.currency_symbol } : {}),
+            ...(dbSetting.tax_rate != null ? { tax_rate: String(dbSetting.tax_rate) } : {}),
+            ...(dbSetting.receipt_footer ? { receipt_footer: dbSetting.receipt_footer } : {}),
+            ...(dbSetting.repair_prefix ? { repair_prefix: dbSetting.repair_prefix } : {}),
+            ...(dbSetting.low_stock_threshold != null ? { low_stock_threshold: dbSetting.low_stock_threshold } : {}),
+          };
+          merged.currency_symbol = CURRENCY_SYMBOLS[merged.currency] || merged.currency_symbol;
+          localStorage.setItem('app_settings', JSON.stringify(merged));
+          return merged;
+        });
+      }
+    }).catch(() => {}); // Silently fail — use localStorage fallback
+  }, []);
+
+  const saveSettings = (newSettings, settingId) => {
+    const id = settingId || dbSettingId;
     const updated = {
       ...newSettings,
       currency_symbol: CURRENCY_SYMBOLS[newSettings.currency] || newSettings.currency,
@@ -103,6 +138,24 @@ export function SettingsProvider({ children }) {
     localStorage.setItem('app_settings', JSON.stringify(updated));
     setSettings(updated);
     applyTheme(updated.theme);
+    // Persist to DB
+    if (id) {
+      fixitFetch(`/entities/Setting/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          shop_name: updated.shop_name,
+          shop_phone: updated.shop_phone,
+          shop_email: updated.shop_email,
+          shop_address: updated.shop_address,
+          currency: updated.currency,
+          currency_symbol: updated.currency_symbol,
+          tax_rate: parseFloat(updated.tax_rate) || 0,
+          receipt_footer: updated.receipt_footer,
+          repair_prefix: updated.repair_prefix,
+          low_stock_threshold: parseInt(updated.low_stock_threshold) || 5,
+        }),
+      }).catch(() => {});
+    }
   };
 
   const formatCurrency = (amount) => {
@@ -139,7 +192,7 @@ export function SettingsProvider({ children }) {
   };
 
   return (
-    <SettingsContext.Provider value={{ settings, saveSettings, formatCurrency, getTaxRate, generateTicketNumber }}>
+    <SettingsContext.Provider value={{ settings, saveSettings, dbSettingId, formatCurrency, getTaxRate, generateTicketNumber }}>
       {children}
     </SettingsContext.Provider>
   );
