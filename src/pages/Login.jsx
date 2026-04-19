@@ -18,8 +18,9 @@ export default function Login() {
     setLoading(true);
     setError('');
     try {
-      await login(email, password);
-      navigate('/', { replace: true });
+      const data = await login(email, password);
+      const role = data?.user?.role;
+      navigate(role === 'super_admin' ? '/admin' : '/', { replace: true });
     } catch (err) {
       setError(err.message || 'Email ou mot de passe incorrect');
     }

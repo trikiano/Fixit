@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { fixitFetch } from '@/api/fixitFetch';
-import { Store, Users, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw, Plus, LogIn, Trash2, Settings, Crown } from 'lucide-react';
+import { fixitFetch, clearToken } from '@/api/fixitFetch';
+import { Store, Users, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw, Plus, LogIn, Trash2, Settings, Crown, LogOut, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/lib/AuthContext';
 
 const STATUS_CONFIG = {
   trial:     { label: 'Essai', color: 'bg-blue-100 text-blue-700' },
@@ -31,8 +32,14 @@ function StatCard({ icon: Icon, label, value, color }) {
 }
 
 export default function AdminDashboard() {
+  const { logout } = useAuth();
   const [shops, setShops] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = '/login';
+  };
   const [editShop, setEditShop] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [showCreateDemo, setShowCreateDemo] = useState(false);
@@ -116,6 +123,27 @@ export default function AdminDashboard() {
   };
 
   return (
+    <div className="min-h-screen bg-background">
+      {/* Top navbar */}
+      <div className="bg-card border-b border-border px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+            <Wrench className="h-4 w-4 text-primary-foreground" />
+          </div>
+          <span className="font-bold text-foreground">Fixit</span>
+          <span className="text-muted-foreground/40">·</span>
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Crown className="h-3.5 w-3.5 text-primary" />
+            <span>Super Admin</span>
+          </div>
+        </div>
+        <button onClick={handleLogout}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-colors">
+          <LogOut className="h-4 w-4" />
+          Déconnexion
+        </button>
+      </div>
+
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -124,7 +152,7 @@ export default function AdminDashboard() {
             <Crown className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Super Admin</h1>
+            <h1 className="text-2xl font-bold text-foreground">Tableau de bord</h1>
             <p className="text-sm text-muted-foreground">Gestion des boutiques et abonnements</p>
           </div>
         </div>
@@ -302,6 +330,7 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }
