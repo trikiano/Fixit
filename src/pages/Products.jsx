@@ -76,11 +76,28 @@ export default function Products() {
 
 
   const saveMutation = useMutation({
-    mutationFn: async (data) => editing ? fixit.entities.Product.update(editing.id, data) : fixit.entities.Product.create(data),
-    onSuccess: () => { 
-      qc.invalidateQueries({ queryKey: ['products'] }); 
+    mutationFn: async (data) => {
+      if (editing) return fixit.entities.Product.update(editing.id, data);
+      const product = await fixit.entities.Product.create(data);
+      if (data.quantity > 0) {
+        await fixit.entities.StockMovement.create({
+          product_id: product.id,
+          type: 'entree',
+          quantity: data.quantity,
+          previous_stock: 0,
+          new_stock: data.quantity,
+          reason: 'Stock initial',
+          reference_type: 'inventaire',
+          unit_cost: data.buy_price || 0,
+        });
+      }
+      return product;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['stockmovements'] });
       toast.success(editing ? "Produit mis à jour" : "Produit créé");
-      closeDialog(); 
+      closeDialog();
     },
     onError: () => toast.error("Erreur lors de l'enregistrement")
   });
@@ -412,7 +429,10 @@ export default function Products() {
               <div><Label>Prix vente ({settings.currency_symbol || 'DT'}) *</Label><Input type="number" value={form.sell_price} onChange={e => setForm({...form, sell_price: parseFloat(e.target.value) || 0})} /></div>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <div><Label>Quantité</Label><Input type="number" value={form.quantity} onChange={e => setForm({...form, quantity: parseInt(e.target.value) || 0})} disabled={true} /></div>
+              <div>
+                <Label>Quantité {editing && <span className="text-xs text-muted-foreground font-normal">(via Mouvements de stock)</span>}</Label>
+                <Input type="number" min="0" value={form.quantity} onChange={e => setForm({...form, quantity: parseInt(e.target.value) || 0})} disabled={!!editing} />
+              </div>
 
 
               <div><Label>Stock minimum</Label><Input type="number" value={form.min_stock} onChange={e => setForm({...form, min_stock: parseInt(e.target.value) || 0})} /></div>
