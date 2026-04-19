@@ -66,8 +66,8 @@ router.post('/shops/demo', async (req, res) => {
       plan: 'pro',
     });
 
-    // beforeSave hook will hash the password
-    await User.create({ email, password_hash: password || 'demo123', full_name: full_name || shop_name, role: 'admin', shop_id: shop.id });
+    const password_hash = await bcrypt.hash(password || 'demo123', 10);
+    await User.create({ email, password_hash, full_name: full_name || shop_name, role: 'admin', shop_id: shop.id });
     await Setting.create({ shop_id: shop.id, shop_name });
 
     res.status(201).json({ message: 'Boutique démo créée', shop });
