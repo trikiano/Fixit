@@ -107,20 +107,26 @@ app.get('*', (req, res) => {
 
 // --- Start server ---
 async function start() {
+  // Start HTTP server immediately so requests are never refused
+  app.listen(PORT, () => {
+    console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
+  });
+
+  // Connect to DB after server is up
   try {
     await sequelize.authenticate();
     console.log('✅ Connexion MySQL réussie');
+  } catch (err) {
+    console.error('❌ Connexion MySQL échouée:', err.message);
+    return; // Keep server running but don't sync
+  }
 
-    // sync: alter updates tables without dropping data
+  try {
     await sequelize.sync({ alter: true });
     console.log('✅ Base de données synchronisée');
-
-    app.listen(PORT, () => {
-      console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
-    });
   } catch (err) {
-    console.error('❌ Erreur de démarrage:', err.message);
-    process.exit(1);
+    console.error('❌ Sync DB échouée (tables existantes utilisées):', err.message);
+    // Continue anyway — tables may already be correct
   }
 }
 
