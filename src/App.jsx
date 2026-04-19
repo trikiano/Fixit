@@ -6,6 +6,8 @@ import Shell from './components/shell/Shell';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import AdminDashboard from './pages/AdminDashboard';
+import NotFound from './pages/NotFound';
+import ErrorPage from './pages/ErrorPage';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { useEffect } from 'react';
 import OfflineSyncIndicator from './components/ui/OfflineSyncIndicator';
@@ -67,8 +69,13 @@ const AuthenticatedApp = () => (
     {/* Protected — Shell handles ALL navigation via tabs */}
     <Route path="/" element={<RequireAuth><Shell /></RequireAuth>} />
 
-    {/* All named page URLs redirect back to home Shell */}
-    <Route path="*" element={<RequireAuth><Navigate to="/" replace /></RequireAuth>} />
+    {/* Error pages */}
+    <Route path="/403" element={<ErrorPage code={403} />} />
+    <Route path="/500" element={<ErrorPage code={500} />} />
+    <Route path="/503" element={<ErrorPage code={503} />} />
+
+    {/* 404 — catch all */}
+    <Route path="*" element={<NotFound />} />
   </Routes>
 );
 

@@ -41,10 +41,25 @@ export async function fixitFetch(path, options = {}) {
     
     clearTimeout(timeoutId);
 
+    // Auth errors — only redirect if NOT on login/register page
     if (res.status === 401) {
-      clearToken();
-      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
-      throw new Error('Non authentifié');
+      const isAuthRoute = path.includes('/auth/login') || path.includes('/auth/register');
+      if (!isAuthRoute) {
+        clearToken();
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+      }
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Non authentifié');
+    }
+
+    if (res.status === 403) {
+      window.location.href = '/403';
+      throw new Error('Accès refusé');
+    }
+
+    if (res.status === 503) {
+      window.location.href = '/503';
+      throw new Error('Service indisponible');
     }
 
     const data = await res.json();
