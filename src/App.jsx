@@ -10,7 +10,6 @@ import NotFound from './pages/NotFound';
 import ErrorPage from './pages/ErrorPage';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { useEffect } from 'react';
-import OfflineSyncIndicator from './components/ui/OfflineSyncIndicator';
 
 
 
@@ -87,7 +86,6 @@ function App() {
           <AuthEventListener />
           <AuthenticatedApp />
         </Router>
-        <OfflineSyncIndicator />
         <Toaster position="top-right" richColors closeButton />
       </QueryClientProvider>
 
