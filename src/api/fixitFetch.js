@@ -1,5 +1,3 @@
-import { OfflineManager } from './OfflineManager';
-
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 
@@ -62,12 +60,6 @@ export async function fixitFetch(path, options = {}) {
     return data;
   } catch (err) {
     clearTimeout(timeoutId);
-    
-    // Detect net error or timeout
-    if (err.name === 'AbortError' || (err.name === 'TypeError' && err.message.includes('fetch'))) {
-      OfflineManager.setOnline(false);
-      throw new Error('OFFLINE');
-    }
     throw err;
   }
 
