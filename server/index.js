@@ -11,6 +11,7 @@ import { sequelize, User, Shop, Setting } from './models/index.js';
 import bcrypt from 'bcryptjs';
 import authRouter, { authenticate } from './routes/auth.js';
 import entitiesRouter from './routes/entities.js';
+import tablesRouter from './routes/tables.js';
 import functionsRouter from './routes/functions.js';
 import uploadRouter from './routes/upload.js';
 import adminRouter from './routes/admin.js';
@@ -26,10 +27,13 @@ app.use(express.json({ limit: '10mb' }));
 
 // --- Routes ---
 app.use('/api/auth', authRouter);
-app.use('/api/entities', authenticate, entitiesRouter);
 app.use('/api/functions', authenticate, functionsRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/admin', authenticate, requireSuperAdmin, adminRouter);
+// REST table routes: /api/products, /api/repairs, /api/clients, etc.
+app.use('/api', authenticate, tablesRouter);
+// Legacy entity routes (backward compat) — keep until fully removed
+app.use('/api/entities', authenticate, entitiesRouter);
 
 // --- Static files (images) ---
 app.use('/uploads', express.static(join(__dirname, '../uploads')));

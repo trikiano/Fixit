@@ -100,7 +100,7 @@ export function SettingsProvider({ children }) {
   useEffect(() => {
     const token = localStorage.getItem('fixit_token');
     if (!token) return;
-    fixitFetch('/entities/Setting/list').then(data => {
+    fixitFetch('/settings').then(data => {
       const rows = Array.isArray(data) ? data : (data?.data || []);
       if (rows.length > 0) {
         const dbSetting = rows[0];
@@ -140,7 +140,7 @@ export function SettingsProvider({ children }) {
     applyTheme(updated.theme);
     // Persist to DB
     if (id) {
-      fixitFetch(`/entities/Setting/${id}`, {
+      fixitFetch(`/settings/${id}`, {
         method: 'PUT',
         body: JSON.stringify({
           shop_name: updated.shop_name,
