@@ -82,12 +82,22 @@ function ProductRow({ item, index, onChange, onRemove }) {
             <p className="text-sm text-destructive">{item.error}</p>
           )}
           {item.status === STATUS.DONE && (
-            <p className="text-sm font-medium truncate">{d?.name || 'Produit sans nom'}</p>
+            <div>
+              <p className="text-sm font-medium truncate">{d?.name || 'Produit sans nom'}</p>
+              <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                {d?.brand && <span className="text-xs text-muted-foreground">{d.brand}</span>}
+                {d?.model && <span className="text-xs text-muted-foreground">· {d.model}</span>}
+                {(d?.sell_price > 0) && (
+                  <Badge variant="outline" className="text-[10px] h-4 px-1 text-green-600 border-green-300 bg-green-50 dark:bg-green-950/30">
+                    {d.sell_price} (prix détecté)
+                  </Badge>
+                )}
+              </div>
+            </div>
           )}
           {item.status === STATUS.PENDING && (
             <p className="text-sm text-muted-foreground">En attente…</p>
           )}
-          {d?.brand && <p className="text-xs text-muted-foreground">{d.brand} {d.model ? `· ${d.model}` : ''}</p>}
         </div>
 
         {/* Actions */}
@@ -167,7 +177,17 @@ export default function PhotoScanner({ open, onOpenChange }) {
         });
         setItems(prev => prev.map(i =>
           i.id === item.id
-            ? { ...i, status: STATUS.DONE, data: { ...result, sell_price: 0, buy_price: 0, quantity: 0 } }
+            ? {
+                ...i,
+                status: STATUS.DONE,
+                data: {
+                  ...result,
+                  // Use AI-detected prices if present, else default to 0
+                  sell_price: result.sell_price != null ? parseFloat(result.sell_price) || 0 : 0,
+                  buy_price:  result.buy_price  != null ? parseFloat(result.buy_price)  || 0 : 0,
+                  quantity: 0, // always start at 0, user sets stock
+                },
+              }
             : i
         ));
       } catch (err) {

@@ -127,20 +127,23 @@ router.post('/analyzeProductPhoto', async (req, res) => {
       });
     }
 
-    const prompt = `Tu es un assistant spécialisé dans l'identification de produits pour un atelier de réparation.
-Analyse cette photo de produit et extrais toutes les informations visibles.
+    const prompt = `Tu es un assistant spécialisé dans l'identification de produits pour un atelier de réparation et de vente.
+Analyse soigneusement cette photo et extrais TOUTES les informations visibles : texte sur l'emballage, étiquettes de prix, codes-barres, logos, noms de modèles.
 Réponds UNIQUEMENT avec un objet JSON valide (sans markdown, sans backticks) avec ces champs :
 {
-  "name": "nom complet du produit",
-  "brand": "marque / fabricant",
-  "model": "numéro ou nom du modèle",
-  "category": "catégorie (ex: Smartphone, Tablette, Laptop, Accessoire, Câble, Batterie, Ecran, Pièce détachée, Autre)",
-  "barcode": "code-barres ou EAN visible sur l'image (null si non visible)",
-  "sku": "référence SKU si visible (null sinon)",
+  "name": "nom complet du produit (marque + modèle si possible)",
+  "brand": "marque ou fabricant",
+  "model": "numéro ou nom de modèle exact (ex: iPhone 13 Pro, Galaxy S23, etc.)",
+  "category": "catégorie précise (Smartphone, Tablette, Laptop, Accessoire, Câble, Batterie, Ecran, Chargeur, Coque, Pièce détachée, Autre)",
+  "barcode": "numéro de code-barres ou EAN visible (null si absent)",
+  "sku": "référence ou code article visible (null si absent)",
   "condition": "neuf ou occasion ou reconditionne",
-  "description": "description courte du produit"
+  "sell_price": "prix de vente visible sur étiquette ou emballage sous forme de nombre décimal (null si absent)",
+  "buy_price": "prix d'achat ou coût si visible (null si absent)",
+  "description": "description courte incluant caractéristiques importantes visibles"
 }
-Si une information n'est pas visible, utilise null. Réponds UNIQUEMENT avec le JSON.`;
+IMPORTANT pour les prix : cherche attentivement toute étiquette de prix, autocollant, sticker, prix barré, prix promotionnel. Retourne uniquement le nombre (ex: 29.99), pas de symboles monétaires.
+Si une information n'est pas visible, utilise null. Réponds UNIQUEMENT avec le JSON brut.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -150,7 +153,7 @@ Si une information n'est pas visible, utilise null. Réponds UNIQUEMENT avec le 
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
-        max_tokens: 600,
+        max_tokens: 800,
         messages: [{
           role: 'user',
           content: [

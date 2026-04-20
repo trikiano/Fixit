@@ -20,6 +20,10 @@ export function defineProduct(sequelize) {
     is_spare_part: { type: DataTypes.BOOLEAN, defaultValue: false },
     supplier_id: { type: DataTypes.UUID },
 
+    model: { type: DataTypes.STRING },
+    condition: { type: DataTypes.STRING, defaultValue: 'neuf' },
+    imei: { type: DataTypes.STRING },
+    serial_number: { type: DataTypes.STRING },
     location: { type: DataTypes.STRING },
     shop_id: { type: DataTypes.UUID, allowNull: true },
   }, { tableName: 'products' });
