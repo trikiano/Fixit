@@ -62,8 +62,12 @@ function ProductRow({ item, index, onChange, onRemove }) {
     }`}>
       {/* Header row */}
       <div className="flex items-center gap-3 px-3 py-2.5">
-        {/* Thumbnail */}
-        <img src={item.preview} alt="" className="h-12 w-12 rounded-lg object-cover shrink-0 border border-border/50" />
+        {/* Thumbnail — use uploaded URL once available, fallback to local preview */}
+        <img
+          src={item.data?.image_url || item.preview}
+          alt=""
+          className="h-12 w-12 rounded-lg object-cover shrink-0 border border-border/50"
+        />
 
         {/* Status icon */}
         <div className="shrink-0">
@@ -171,10 +175,16 @@ export default function PhotoScanner({ open, onOpenChange }) {
       try {
         const base64 = await resizeImage(item.file);
         const mimeType = item.file.type || 'image/jpeg';
-        const result = await fixitFetch('/functions/analyzeProductPhoto', {
-          method: 'POST',
-          body: JSON.stringify({ imageBase64: base64, mimeType }),
-        });
+
+        // Run AI analysis + file upload in parallel
+        const [result, uploadResult] = await Promise.all([
+          fixitFetch('/functions/analyzeProductPhoto', {
+            method: 'POST',
+            body: JSON.stringify({ imageBase64: base64, mimeType }),
+          }),
+          fixit.integrations.Core.UploadFile({ file: item.file }).catch(() => null),
+        ]);
+
         setItems(prev => prev.map(i =>
           i.id === item.id
             ? {
@@ -182,10 +192,10 @@ export default function PhotoScanner({ open, onOpenChange }) {
                 status: STATUS.DONE,
                 data: {
                   ...result,
-                  // Use AI-detected prices if present, else default to 0
+                  image_url: uploadResult?.file_url || '',
                   sell_price: result.sell_price != null ? parseFloat(result.sell_price) || 0 : 0,
                   buy_price:  result.buy_price  != null ? parseFloat(result.buy_price)  || 0 : 0,
-                  quantity: 0, // always start at 0, user sets stock
+                  quantity: 0,
                 },
               }
             : i
@@ -236,6 +246,7 @@ export default function PhotoScanner({ open, onOpenChange }) {
           buy_price: parseFloat(d.buy_price) || 0,
           quantity: parseInt(d.quantity) || 0,
           condition: d.condition || 'neuf',
+          image_url: d.image_url || '',
         });
         if ((parseInt(d.quantity) || 0) > 0) {
           await fixit.entities.StockMovement.create({
