@@ -14,10 +14,11 @@ import DataTable from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
 import EntityRefSelect from "@/components/ui/EntityRefSelect";
 import { Switch } from "@/components/ui/switch";
-import { Package, Plus, Search, AlertTriangle, Upload, X, Pencil, Trash2, Printer, Info, CheckCircle2, Wrench } from 'lucide-react';
+import { Package, Plus, Search, AlertTriangle, Upload, X, Pencil, Trash2, Printer, Info, CheckCircle2, Wrench, Sparkles } from 'lucide-react';
 
 import { toast } from "sonner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import PhotoScanner from "@/components/products/PhotoScanner";
 
 
 import { cn } from "@/lib/utils";
@@ -50,6 +51,7 @@ export default function Products() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [confirmState, setConfirmState] = useState({ open: false, title: '', description: '', onConfirm: () => {}, variant: 'danger' });
+  const [photoScannerOpen, setPhotoScannerOpen] = useState(false);
   const qc = useQueryClient();
 
 
@@ -271,6 +273,13 @@ export default function Products() {
           <Button variant="outline" onClick={generateStockPDF} disabled={filtered.length === 0}>
             <Printer className="h-4 w-4 mr-2" />Imprimer Inventaire
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => setPhotoScannerOpen(true)}
+            className="gap-2 border-primary/40 text-primary hover:bg-primary/10 hover:border-primary"
+          >
+            <Sparkles className="h-4 w-4" />Scanner par photos
+          </Button>
           <Button onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />Nouveau produit
           </Button>
@@ -462,7 +471,7 @@ export default function Products() {
           </div>
         </DialogContent>
       </Dialog>
-      <ConfirmDialog 
+      <ConfirmDialog
         open={confirmState.open}
         onOpenChange={v => setConfirmState({...confirmState, open: v})}
         title={confirmState.title}
@@ -470,6 +479,7 @@ export default function Products() {
         variant={confirmState.variant}
         onConfirm={confirmState.onConfirm}
       />
+      <PhotoScanner open={photoScannerOpen} onOpenChange={setPhotoScannerOpen} />
     </div>
   );
 }

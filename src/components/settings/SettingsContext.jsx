@@ -120,6 +120,8 @@ export function SettingsProvider({ children }) {
             ...(dbSetting.receipt_footer ? { receipt_footer: dbSetting.receipt_footer } : {}),
             ...(dbSetting.repair_prefix ? { repair_prefix: dbSetting.repair_prefix } : {}),
             ...(dbSetting.low_stock_threshold != null ? { low_stock_threshold: dbSetting.low_stock_threshold } : {}),
+            ...(dbSetting.openai_api_key ? { openai_api_key: dbSetting.openai_api_key } : {}),
+            ...(dbSetting.google_vision_api_key ? { google_vision_api_key: dbSetting.google_vision_api_key } : {}),
           };
           merged.currency_symbol = CURRENCY_SYMBOLS[merged.currency] || merged.currency_symbol;
           localStorage.setItem('app_settings', JSON.stringify(merged));
@@ -153,6 +155,8 @@ export function SettingsProvider({ children }) {
           receipt_footer: updated.receipt_footer,
           repair_prefix: updated.repair_prefix,
           low_stock_threshold: parseInt(updated.low_stock_threshold) || 5,
+          openai_api_key: updated.openai_api_key || '',
+          google_vision_api_key: updated.google_vision_api_key || '',
         }),
       }).catch(() => {});
     }

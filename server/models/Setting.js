@@ -26,5 +26,7 @@ export function defineSetting(sequelize) {
     low_stock_threshold: { type: DataTypes.INTEGER, defaultValue: 5 },
     warranty_default_days: { type: DataTypes.INTEGER, defaultValue: 90 },
     loyalty_points_rate: { type: DataTypes.FLOAT, defaultValue: 0 },
+    openai_api_key: { type: DataTypes.STRING },
+    google_vision_api_key: { type: DataTypes.STRING },
   }, { tableName: 'settings' });
 }

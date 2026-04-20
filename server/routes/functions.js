@@ -1,5 +1,5 @@
 import express from 'express';
-import { sequelize } from '../models/index.js';
+import { sequelize, Setting } from '../models/index.js';
 
 const router = express.Router();
 
@@ -108,6 +108,84 @@ router.post('/getDistinctValues', async (req, res) => {
 
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/functions/analyzeProductPhoto — IA vision pour détecter un produit depuis une photo
+router.post('/analyzeProductPhoto', async (req, res) => {
+  try {
+    const { imageBase64, mimeType = 'image/jpeg' } = req.body;
+    if (!imageBase64) return res.status(400).json({ error: 'Image manquante' });
+
+    // Récupère la clé API depuis les paramètres de la boutique
+    const setting = await Setting.findOne({ where: { shop_id: req.user?.shop_id } });
+    const apiKey = setting?.openai_api_key || process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      return res.status(400).json({
+        error: 'Clé API OpenAI non configurée. Allez dans Paramètres → Intégrations pour ajouter votre clé.',
+      });
+    }
+
+    const prompt = `Tu es un assistant spécialisé dans l'identification de produits pour un atelier de réparation.
+Analyse cette photo de produit et extrais toutes les informations visibles.
+Réponds UNIQUEMENT avec un objet JSON valide (sans markdown, sans backticks) avec ces champs :
+{
+  "name": "nom complet du produit",
+  "brand": "marque / fabricant",
+  "model": "numéro ou nom du modèle",
+  "category": "catégorie (ex: Smartphone, Tablette, Laptop, Accessoire, Câble, Batterie, Ecran, Pièce détachée, Autre)",
+  "barcode": "code-barres ou EAN visible sur l'image (null si non visible)",
+  "sku": "référence SKU si visible (null sinon)",
+  "condition": "neuf ou occasion ou reconditionne",
+  "description": "description courte du produit"
+}
+Si une information n'est pas visible, utilise null. Réponds UNIQUEMENT avec le JSON.`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        max_tokens: 600,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image_url',
+              image_url: { url: `data:${mimeType};base64,${imageBase64}`, detail: 'high' },
+            },
+            { type: 'text', text: prompt },
+          ],
+        }],
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      return res.status(502).json({ error: err.error?.message || 'Erreur OpenAI' });
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content?.trim();
+    if (!content) return res.status(502).json({ error: 'Réponse vide de l\'IA' });
+
+    // Nettoie les éventuels backticks markdown
+    const clean = content.replace(/^```json?\s*/i, '').replace(/```\s*$/i, '').trim();
+    let product;
+    try {
+      product = JSON.parse(clean);
+    } catch {
+      return res.status(502).json({ error: 'L\'IA n\'a pas retourné un JSON valide', raw: content });
+    }
+
+    res.json(product);
+  } catch (err) {
+    console.error('[analyzeProductPhoto]', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
