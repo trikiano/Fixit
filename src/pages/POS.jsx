@@ -71,6 +71,7 @@ export default function POS() {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeBrand, setActiveBrand] = useState('all');
+  const searchRef = useRef(null);
 
   // Pré-charger un article depuis URL params (ex: ?preload=repair:id:label:price:client)
   const [tickets, setTickets] = useState(() => {
@@ -116,6 +117,49 @@ export default function POS() {
   const [isOnline, setIsOnline] = useState(OfflineManager.isOnline);
   useEffect(() => {
     return OfflineManager.subscribe((online) => setIsOnline(online));
+  }, []);
+
+  // Global barcode scanner capture — redirects keystrokes to search input
+  // Barcode scanners type fast (< 50ms between chars) then send Enter
+  useEffect(() => {
+    let scanBuffer = '';
+    let scanTimer = null;
+
+    const onKey = (e) => {
+      // Ignore if user is typing in any input/textarea/select (except our search input)
+      const tag = document.activeElement?.tagName;
+      const isSearchFocused = document.activeElement === searchRef.current;
+      if ((tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') && !isSearchFocused) return;
+      // Ignore modifier combos
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+      if (e.key === 'Enter') {
+        if (scanBuffer.length >= 3) {
+          // Focus search and trigger lookup
+          if (searchRef.current) {
+            searchRef.current.focus();
+            setSearch(scanBuffer);
+            // Dispatch synthetic Enter after state update
+            setTimeout(() => {
+              searchRef.current?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+            }, 50);
+          }
+        }
+        scanBuffer = '';
+        clearTimeout(scanTimer);
+        return;
+      }
+
+      if (e.key.length === 1) {
+        scanBuffer += e.key;
+        clearTimeout(scanTimer);
+        // Reset buffer if no more chars within 200ms (slow human typing = not a scanner)
+        scanTimer = setTimeout(() => { scanBuffer = ''; }, 200);
+      }
+    };
+
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener('keydown', onKey); clearTimeout(scanTimer); };
   }, []);
 
 
@@ -404,7 +448,8 @@ export default function POS() {
     const searchLow = search.toLowerCase().trim();
     const ms = p.name?.toLowerCase().includes(searchLow) ||
       p.brand?.toLowerCase().includes(searchLow) ||
-      p.sku?.toLowerCase().includes(searchLow);
+      p.sku?.toLowerCase().includes(searchLow) ||
+      (p.barcode && p.barcode.toLowerCase().includes(searchLow));
     
     if (activeCategory === 'spareparts') {
       if (!p.is_spare_part) return false;
@@ -606,8 +651,44 @@ export default function POS() {
           <div className="relative w-48 xl:w-64">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
+              ref={searchRef}
               value={search}
               onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => {
+                if (e.key !== 'Enter') return;
+                const q = search.trim();
+                if (!q) return;
+                // Exact barcode match → auto-add + clear
+                const exactBarcode = products.find(
+                  p => p.is_active !== false && p.barcode && p.barcode.trim() === q
+                );
+                if (exactBarcode) {
+                  addToCart(exactBarcode);
+                  setSearch('');
+                  return;
+                }
+                // Exact SKU match
+                const exactSku = products.find(
+                  p => p.is_active !== false && p.sku && p.sku.trim().toLowerCase() === q.toLowerCase()
+                );
+                if (exactSku) {
+                  addToCart(exactSku);
+                  setSearch('');
+                  return;
+                }
+                // If only one result → auto-add it
+                const visible = products.filter(p => {
+                  if (p.is_active === false) return false;
+                  const low = q.toLowerCase();
+                  return p.name?.toLowerCase().includes(low) ||
+                    p.sku?.toLowerCase().includes(low) ||
+                    p.barcode?.toLowerCase().includes(low);
+                });
+                if (visible.length === 1) {
+                  addToCart(visible[0]);
+                  setSearch('');
+                }
+              }}
               placeholder="Rechercher ou scanner..."
               className="w-full h-9 pl-9 pr-10 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground shadow-sm transition-all"
             />
