@@ -119,48 +119,9 @@ export default function POS() {
     return OfflineManager.subscribe((online) => setIsOnline(online));
   }, []);
 
-  // Global barcode scanner capture — redirects keystrokes to search input
-  // Barcode scanners type fast (< 50ms between chars) then send Enter
-  useEffect(() => {
-    let scanBuffer = '';
-    let scanTimer = null;
-
-    const onKey = (e) => {
-      // Ignore if user is typing in any input/textarea/select (except our search input)
-      const tag = document.activeElement?.tagName;
-      const isSearchFocused = document.activeElement === searchRef.current;
-      if ((tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') && !isSearchFocused) return;
-      // Ignore modifier combos
-      if (e.ctrlKey || e.altKey || e.metaKey) return;
-
-      if (e.key === 'Enter') {
-        if (scanBuffer.length >= 3) {
-          // Focus search and trigger lookup
-          if (searchRef.current) {
-            searchRef.current.focus();
-            setSearch(scanBuffer);
-            // Dispatch synthetic Enter after state update
-            setTimeout(() => {
-              searchRef.current?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-            }, 50);
-          }
-        }
-        scanBuffer = '';
-        clearTimeout(scanTimer);
-        return;
-      }
-
-      if (e.key.length === 1) {
-        scanBuffer += e.key;
-        clearTimeout(scanTimer);
-        // Reset buffer if no more chars within 200ms (slow human typing = not a scanner)
-        scanTimer = setTimeout(() => { scanBuffer = ''; }, 200);
-      }
-    };
-
-    window.addEventListener('keydown', onKey);
-    return () => { window.removeEventListener('keydown', onKey); clearTimeout(scanTimer); };
-  }, []);
+  // Refs updated every render so the scanner listener always has fresh data
+  const productsRef  = useRef([]);
+  const addToCartRef = useRef(null);
 
 
 
@@ -396,6 +357,71 @@ export default function POS() {
       return { ...t, cart: newCart, selectedCartIdx: newCart.length - 1, numpadBuffer: '' };
     }));
   };
+
+  // Keep refs fresh every render so the scanner listener can access latest data
+  productsRef.current  = products;
+  addToCartRef.current = addToCart;
+
+  // Global barcode scanner listener — captures fast keystrokes from USB/BT scanners
+  useEffect(() => {
+    let scanBuffer = '';
+    let scanTimer  = null;
+
+    const onKey = (e) => {
+      // Skip if typing in a focused input that isn't our search field
+      const tag = document.activeElement?.tagName;
+      const isSearch = document.activeElement === searchRef.current;
+      if ((tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') && !isSearch) return;
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+      if (e.key === 'Enter') {
+        const q = scanBuffer.trim();
+        scanBuffer = '';
+        clearTimeout(scanTimer);
+        if (q.length < 2) return;
+
+        const prods = productsRef.current;
+
+        // 1. Exact barcode match
+        const byBarcode = prods.find(
+          p => p.is_active !== false && p.barcode && p.barcode.trim() === q
+        );
+        if (byBarcode) { addToCartRef.current(byBarcode); setSearch(''); return; }
+
+        // 2. Exact SKU match
+        const bySku = prods.find(
+          p => p.is_active !== false && p.sku && p.sku.trim().toLowerCase() === q.toLowerCase()
+        );
+        if (bySku) { addToCartRef.current(bySku); setSearch(''); return; }
+
+        // 3. Single result in filtered list → auto-add
+        const low = q.toLowerCase();
+        const matches = prods.filter(p =>
+          p.is_active !== false && (
+            p.name?.toLowerCase().includes(low) ||
+            p.sku?.toLowerCase().includes(low) ||
+            p.barcode?.toLowerCase().includes(low)
+          )
+        );
+        if (matches.length === 1) { addToCartRef.current(matches[0]); setSearch(''); return; }
+
+        // 4. Multiple results → show in grid
+        setSearch(q);
+        if (searchRef.current) searchRef.current.focus();
+        return;
+      }
+
+      if (e.key.length === 1) {
+        scanBuffer += e.key;
+        clearTimeout(scanTimer);
+        // Scanner chars arrive < 50ms apart; reset after 200ms silence (human typing)
+        scanTimer = setTimeout(() => { scanBuffer = ''; }, 200);
+      }
+    };
+
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener('keydown', onKey); clearTimeout(scanTimer); };
+  }, []); // empty deps — always reads fresh data via refs
 
   // --- Numpad logic ---
   const handleNumpad = useCallback((key) => {
@@ -655,39 +681,19 @@ export default function POS() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               onKeyDown={e => {
+                // Enter on search field — same logic as scanner (field is already focused)
                 if (e.key !== 'Enter') return;
                 const q = search.trim();
                 if (!q) return;
-                // Exact barcode match → auto-add + clear
-                const exactBarcode = products.find(
-                  p => p.is_active !== false && p.barcode && p.barcode.trim() === q
-                );
-                if (exactBarcode) {
-                  addToCart(exactBarcode);
-                  setSearch('');
-                  return;
-                }
-                // Exact SKU match
-                const exactSku = products.find(
-                  p => p.is_active !== false && p.sku && p.sku.trim().toLowerCase() === q.toLowerCase()
-                );
-                if (exactSku) {
-                  addToCart(exactSku);
-                  setSearch('');
-                  return;
-                }
-                // If only one result → auto-add it
-                const visible = products.filter(p => {
-                  if (p.is_active === false) return false;
-                  const low = q.toLowerCase();
-                  return p.name?.toLowerCase().includes(low) ||
-                    p.sku?.toLowerCase().includes(low) ||
-                    p.barcode?.toLowerCase().includes(low);
-                });
-                if (visible.length === 1) {
-                  addToCart(visible[0]);
-                  setSearch('');
-                }
+                const byBarcode = products.find(p => p.is_active !== false && p.barcode?.trim() === q);
+                if (byBarcode) { addToCart(byBarcode); setSearch(''); return; }
+                const bySku = products.find(p => p.is_active !== false && p.sku?.trim().toLowerCase() === q.toLowerCase());
+                if (bySku) { addToCart(bySku); setSearch(''); return; }
+                const low = q.toLowerCase();
+                const matches = products.filter(p => p.is_active !== false && (
+                  p.name?.toLowerCase().includes(low) || p.sku?.toLowerCase().includes(low) || p.barcode?.toLowerCase().includes(low)
+                ));
+                if (matches.length === 1) { addToCart(matches[0]); setSearch(''); }
               }}
               placeholder="Rechercher ou scanner..."
               className="w-full h-9 pl-9 pr-10 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground shadow-sm transition-all"
