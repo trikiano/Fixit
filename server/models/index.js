@@ -54,6 +54,7 @@ import { defineBrand } from './Brand.js';
 import { defineDeviceType } from './DeviceType.js';
 import { defineDeviceModel } from './DeviceModel.js';
 import { defineProductCategory } from './ProductCategory.js';
+import { defineInvoice } from './Invoice.js';
 
 const Shop = defineShop(sequelize);
 const Subscription = defineSubscription(sequelize);
@@ -85,6 +86,7 @@ const Brand = defineBrand(sequelize);
 const DeviceType = defineDeviceType(sequelize);
 const DeviceModel = defineDeviceModel(sequelize);
 const ProductCategory = defineProductCategory(sequelize);
+const Invoice = defineInvoice(sequelize);
 
 // Associations
 Shop.hasMany(User, { foreignKey: 'shop_id', as: 'users' });
@@ -119,6 +121,7 @@ Shop.hasMany(Brand, { foreignKey: 'shop_id' });
 Shop.hasMany(DeviceType, { foreignKey: 'shop_id' });
 Shop.hasMany(DeviceModel, { foreignKey: 'shop_id' });
 Shop.hasMany(ProductCategory, { foreignKey: 'shop_id' });
+Shop.hasMany(Invoice, { foreignKey: 'shop_id' });
 
 export {
   sequelize,
@@ -128,6 +131,6 @@ export {
   Supplier, SupplierInvoice, PurchaseOrder, Expense,
   Warranty, Promotion, ServiceSale, ServiceItem, ServiceCategory,
   PrepaidCard, CardTopup, AuditLog, Notification, NotificationLog, Setting,
-  Brand, DeviceType, DeviceModel, ProductCategory,
+  Brand, DeviceType, DeviceModel, ProductCategory, Invoice,
 
 };

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { Wrench, X, Home, Delete, Lock, ShieldCheck, LogOut, User, Crown } from 'lucide-react';
+import { toast } from 'sonner';
 import TrialBanner from '@/components/ui/TrialBanner';
 
 import { cn } from '@/lib/utils';
@@ -25,6 +26,7 @@ const PAGES = {
   Suppliers: lazy(() => import('../../pages/Suppliers')),
   PurchaseOrders: lazy(() => import('../../pages/PurchaseOrders')),
   SupplierInvoices: lazy(() => import('../../pages/SupplierInvoices')),
+  Invoices: lazy(() => import('../../pages/Invoices')),
   Expenses: lazy(() => import('../../pages/Expenses')),
   AuditLogs: lazy(() => import('../../pages/AuditLogs')),
   Notifications: lazy(() => import('../../pages/Notifications')),
@@ -39,7 +41,7 @@ const PAGE_LABELS = {
   Services: 'Services', CashRegister: 'Caisse', Promotions: 'Promotions',
   Repairs: 'Réparations', Warranties: 'Garanties', Products: 'Produits',
   StockMovements: 'Stock', Suppliers: 'Fournisseurs', PurchaseOrders: 'Commandes',
-  SupplierInvoices: 'Factures', Expenses: 'Dépenses', AuditLogs: 'Audit',
+  SupplierInvoices: 'Achats', Invoices: 'Factures', Expenses: 'Dépenses', AuditLogs: 'Audit',
   Notifications: 'Notifications', Settings: 'Paramètres', POS: 'Caisse POS',
 };
 
@@ -189,6 +191,7 @@ function ShellInner() {
 
     if (existing) {
       setActiveTab(existing.id);
+      if (page === 'POS') toast.info('La caisse POS est déjà ouverte', { duration: 2000 });
     } else {
       const id = `tab_${page}_${Date.now()}`;
       setTabs(prev => [...prev, { id, page, label: PAGE_LABELS[page] || page }]);

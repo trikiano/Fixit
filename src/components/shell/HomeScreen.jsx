@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/AuthContext';
 import {
   LayoutDashboard, Users, ShoppingCart, ShoppingBag, DollarSign,
   Tag, Wrench, Shield, Package, Warehouse, Truck, Receipt,
-  FileText, ClipboardList, ScrollText, Bell, Settings, Monitor, UsersRound
+  FileText, ClipboardList, ScrollText, Bell, Settings, Monitor, UsersRound, FileBadge
 } from 'lucide-react';
 
 const APP_PAGES = [
@@ -21,7 +21,8 @@ const APP_PAGES = [
   { page: 'StockMovements', label: 'Stock', icon: Warehouse, color: 'bg-slate-500', desc: 'Mouvements stock' },
   { page: 'Suppliers', label: 'Fournisseurs', icon: Truck, color: 'bg-indigo-500', desc: 'Gestion fournisseurs' },
   { page: 'PurchaseOrders', label: 'Commandes', icon: Receipt, color: 'bg-lime-600', desc: 'Commandes achat' },
-  { page: 'SupplierInvoices', label: 'Factures', icon: FileText, color: 'bg-rose-500', desc: 'Factures fournisseurs' },
+  { page: 'SupplierInvoices', label: 'Achats', icon: FileText, color: 'bg-rose-500', desc: 'Factures fournisseurs' },
+  { page: 'Invoices', label: 'Factures', icon: FileBadge, color: 'bg-blue-600', desc: 'Factures clients' },
   { page: 'Expenses', label: 'Dépenses', icon: ClipboardList, color: 'bg-fuchsia-500', desc: 'Charges & dépenses' },
   { page: 'AuditLogs', label: 'Audit', icon: ScrollText, color: 'bg-gray-600', desc: 'Journal d\'audit' },
   { page: 'Notifications', label: 'Notifications', icon: Bell, color: 'bg-sky-500', desc: 'Alertes & notifs' },

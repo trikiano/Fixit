@@ -142,18 +142,24 @@ export default function POS() {
 
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
-  const todayRegister = registers.find(r => r.date === todayStr);
+  // Session belongs to this user (or legacy sessions without user_id for backward compat)
+  const todayRegister = registers.find(r => r.date === todayStr && (!r.user_id || r.user_id === user?.id));
   const isCashOpen = todayRegister && todayRegister.status === 'ouverte';
+  // Another user has an open session today → block
+  const otherUserSession = !isCashOpen && registers.find(
+    r => r.date === todayStr && r.user_id && r.user_id !== user?.id && r.status === 'ouverte'
+  );
 
 
 
 
   const openSessionMutation = useMutation({
-    mutationFn: () => fixit.entities.CashRegister.create({ 
-      date: todayStr, 
-      opening_balance: openingBalanceInput, 
+    mutationFn: () => fixit.entities.CashRegister.create({
+      date: todayStr,
+      opening_balance: openingBalanceInput,
       status: 'ouverte',
-      opened_by: user?.full_name || 'Directeur'
+      opened_by: user?.full_name || 'Directeur',
+      user_id: user?.id || null,
     }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['cashRegisters'] }); },
   });
@@ -540,6 +546,26 @@ export default function POS() {
     );
   }
 
+
+  if (otherUserSession) {
+    return (
+      <div className="fixed inset-0 bg-background flex items-center justify-center p-4 z-[100]">
+        <div className="w-full max-w-sm text-center space-y-4 p-8 bg-card border border-border rounded-3xl shadow-2xl">
+          <div className="h-16 w-16 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto">
+            <Lock className="h-8 w-8 text-amber-500" />
+          </div>
+          <h2 className="text-xl font-bold">Caisse déjà ouverte</h2>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-semibold text-foreground">{otherUserSession.opened_by}</span> a déjà
+            une session POS active pour aujourd'hui. Fermez cette session avant d'en ouvrir une nouvelle.
+          </p>
+          <Button variant="outline" onClick={() => window.location.href = '/'} className="w-full">
+            <ArrowLeft className="h-4 w-4 mr-2" />Retour à l'accueil
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (!isCashOpen) {
     return (

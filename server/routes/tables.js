@@ -1,6 +1,7 @@
 import express from 'express';
 import * as models from '../models/index.js';
 import { checkSubscription } from '../middlewares/auth.js';
+import { Op } from 'sequelize';
 
 const router = express.Router();
 
@@ -31,6 +32,7 @@ const tableMap = {
   'device-models':      models.DeviceModel,
   'product-categories': models.ProductCategory,
   'cash-registers':     models.CashRegister,
+  'invoices':           models.Invoice,
 };
 
 // Helper: shop_id filter for multi-tenant isolation

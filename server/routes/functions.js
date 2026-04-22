@@ -111,6 +111,19 @@ router.post('/getDistinctValues', async (req, res) => {
   }
 });
 
+// POST /api/functions/nextInvoiceNumber — generate next invoice number for shop
+router.post('/nextInvoiceNumber', async (req, res) => {
+  try {
+    const { Invoice } = await import('../models/index.js');
+    const count = await Invoice.count({ where: { shop_id: req.user?.shop_id } });
+    const num = String(count + 1).padStart(6, '0');
+    const prefix = req.body?.prefix || 'FAC';
+    res.json({ invoice_number: `${prefix}-${num}` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/functions/analyzeProductPhoto — IA vision pour détecter un produit depuis une photo
 router.post('/analyzeProductPhoto', async (req, res) => {
   try {

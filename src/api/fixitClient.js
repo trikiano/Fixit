@@ -136,5 +136,6 @@ export const fixit = {
     DeviceType:       createTableClient('device-types'),
     DeviceModel:      createTableClient('device-models'),
     ProductCategory:  createTableClient('product-categories'),
+    Invoice:          createTableClient('invoices'),
   },
 };

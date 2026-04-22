@@ -66,9 +66,17 @@ export default function CashRegister() {
       closed_by: user?.full_name || 'Haj',
       closing_date: new Date().toISOString()
     }),
-
-
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['cashRegisters'] }); setCloseDialogOpen(false); },
+  });
+
+  // Quick-close any session directly from the list (force close without balance check)
+  const quickCloseMutation = useMutation({
+    mutationFn: (registerId) => fixit.entities.CashRegister.update(registerId, {
+      status: 'fermee',
+      closed_by: user?.full_name || 'Admin',
+      closing_date: new Date().toISOString(),
+    }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['cashRegisters'] }); },
   });
 
   const columns = [
@@ -90,7 +98,11 @@ export default function CashRegister() {
         <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/10" onClick={(e) => { e.stopPropagation(); setSelectedRegister(r); }}>
           <FileText className="h-4 w-4 mr-2" /> PDF
         </Button>
-
+        {r.status === 'ouverte' && (
+          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); quickCloseMutation.mutate(r.id); }}>
+            <Lock className="h-4 w-4 mr-2" /> Fermer
+          </Button>
+        )}
       </div>
     )},
   ];
