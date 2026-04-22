@@ -4,6 +4,7 @@ export function defineSale(sequelize) {
   return sequelize.define('Sale', {
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     sale_number: { type: DataTypes.STRING },
+    sale_date: { type: DataTypes.STRING(10), allowNull: true }, // YYYY-MM-DD for easy date filtering
     client_id: { type: DataTypes.UUID },
     client_name: { type: DataTypes.STRING },
     client_phone: { type: DataTypes.STRING },

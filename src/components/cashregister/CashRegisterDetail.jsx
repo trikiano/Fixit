@@ -42,40 +42,36 @@ export default function CashRegisterDetail({ register, onClose }) {
   if (!register) return null;
   const { formatCurrency, settings } = useAppSettings();
 
-  const { data: allSales = [], isLoading } = useQuery({
+  const regDate = register.date || format(new Date(), 'yyyy-MM-dd');
 
-    queryKey: ['sales-all'],
-    queryFn: () => fixit.entities.Sale.filter({ status: 'completee' }, '-created_date', 500),
+  // Fetch sales for this specific date using sale_date field (server-side filter)
+  const { data: allSales = [], isLoading } = useQuery({
+    queryKey: ['sales-by-date', regDate],
+    queryFn: async () => {
+      // Try filtering by sale_date first (new field); fallback: fetch recent and filter by created_date prefix
+      const bySaleDate = await fixit.entities.Sale.filter({ sale_date: regDate }, '-created_date', 1000);
+      if (bySaleDate.length > 0) return bySaleDate;
+      // Fallback: for old sales (before sale_date was added), fetch recent and filter by created_date
+      const recent = await fixit.entities.Sale.list('-created_date', 2000);
+      return recent.filter(s => s && String(s.created_date || '').slice(0, 10) === regDate);
+    },
+    staleTime: 0,
   });
 
   const { data: allExpenses = [] } = useQuery({
-    queryKey: ['expenses-all'],
-    queryFn: () => fixit.entities.Expense.list('-created_date', 200),
+    queryKey: ['expenses-by-date', regDate],
+    queryFn: () => fixit.entities.Expense.list('-created_date', 500),
+    staleTime: 0,
   });
 
-  const { sales, expenses, totalCash, totalCard, totalSales, totalExp, openTime, closeTime } = useMemo(() => {
+  const { sales, expenses, totalCash, totalCard, totalSales, totalExp } = useMemo(() => {
     try {
-      const regDate = register.date || format(new Date(), 'yyyy-MM-dd');
-      const isOpen = register.status === 'ouverte';
-      
-      const parseSafeDate = (d, fallback) => {
-        if (!d) return fallback;
-        const date = new Date(d);
-        return isNaN(date.getTime()) ? fallback : date;
-      };
-
-      const ot = parseSafeDate(register.created_date, new Date(`${regDate}T00:00:00`));
-      const ct = parseSafeDate(register.closing_date, (isOpen ? new Date() : new Date(`${regDate}T23:59:59`)));
-
-      const filteredSales = (allSales || []).filter(s => {
-        if (!s || !s.created_date) return false;
-        const d = new Date(s.created_date);
-        return d >= ot && d <= ct;
-      });
+      // allSales already filtered by date from the query above
+      const filteredSales = allSales || [];
 
       const filteredExpenses = (allExpenses || []).filter(e => {
         if (!e) return false;
-        return e.date === regDate || e.created_date?.startsWith(regDate);
+        return e.date === regDate || String(e.created_date || '').slice(0, 10) === regDate;
       });
 
       const cash = filteredSales.reduce((sum, s) => {
@@ -93,20 +89,15 @@ export default function CashRegisterDetail({ register, onClose }) {
       const tSales = filteredSales.reduce((s, v) => s + (Number(v.total) || 0), 0);
       const tExp = filteredExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
-      return { 
-        sales: filteredSales, expenses: filteredExpenses, 
+      return {
+        sales: filteredSales, expenses: filteredExpenses,
         totalCash: cash, totalCard: card, totalSales: tSales, totalExp: tExp,
-        openTime: ot, closeTime: ct
       };
     } catch (e) {
-      console.error("Crash in CashRegisterDetail logic:", e);
-      return { 
-        sales: [], expenses: [], 
-        totalCash: 0, totalCard: 0, totalSales: 0, totalExp: 0,
-        openTime: new Date(), closeTime: new Date()
-      };
+      console.error('Crash in CashRegisterDetail logic:', e);
+      return { sales: [], expenses: [], totalCash: 0, totalCard: 0, totalSales: 0, totalExp: 0 };
     }
-  }, [register, allSales, allExpenses]);
+  }, [regDate, allSales, allExpenses]);
 
 
 

@@ -231,6 +231,7 @@ export default function POS() {
 
       const saleData = {
         sale_number: saleNum, client_name: clientName || 'Client comptoir', type: 'vente',
+        sale_date: format(new Date(), 'yyyy-MM-dd'),
         items: saleItems, subtotal, discount_total: 0, total: subtotal,
         payment_method: paymentMethod,
         payments: [{ method: paymentMethod, amount: subtotal }],

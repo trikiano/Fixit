@@ -15,6 +15,7 @@ export const defineCashRegister = (sequelize) => {
     status: { type: DataTypes.STRING(20), defaultValue: 'ouverte' }, // 'ouverte', 'fermee'
     opened_by: { type: DataTypes.STRING(100), allowNull: true },
     closed_by: { type: DataTypes.STRING(100), allowNull: true },
+    closing_date: { type: DataTypes.STRING(30), allowNull: true }, // ISO string when closed
     user_id:   { type: DataTypes.UUID, allowNull: true },
     shop_id:   { type: DataTypes.UUID, allowNull: true },
   });
