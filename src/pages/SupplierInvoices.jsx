@@ -120,7 +120,7 @@ export default function SupplierInvoices() {
 
   return (
     <div>
-      <PageHeader title="Factures Fournisseurs" subtitle={`${totalPending} impayée(s) — Dette totale: ${formatCurrency(totalDebt)}`}>
+      <PageHeader title="Achats" subtitle={`${totalPending} impayée(s) — Dette totale: ${formatCurrency(totalDebt)}`}>
         <Button onClick={() => setDialogOpen(true)}><Plus className="h-4 w-4 mr-2" />Nouvelle facture</Button>
       </PageHeader>
 
@@ -150,7 +150,7 @@ export default function SupplierInvoices() {
         <Select value={filterSupplier} onValueChange={setFilterSupplier}>
           <SelectTrigger className="w-48"><SelectValue placeholder="Tous les fournisseurs" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value={null}>Tous les fournisseurs</SelectItem>
+            <SelectItem value="">Tous les fournisseurs</SelectItem>
             {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
           </SelectContent>
         </Select>

@@ -114,131 +114,168 @@ export default function CashRegisterDetail({ register, onClose }) {
   const handleGeneratePDF = () => {
     try {
       const doc = new jsPDF('p', 'mm', 'a4');
-      const bName = settings.business_name || 'FIXIT PRO';
-      
-      // Header
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(22);
-      doc.setTextColor(30, 41, 59); // slate-800
-      doc.text(bName.toUpperCase(), 15, 20);
-      
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(100, 116, 139); // slate-500
-      doc.text('Système de Gestion POS & Stock', 15, 25);
-      doc.text(`Généré le ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 15, 29);
-      
-      doc.setDrawColor(226, 232, 240); // slate-200
-      doc.line(15, 35, 195, 35);
-      
-      // Title
-      doc.setFontSize(16);
-      doc.setTextColor(30, 41, 59);
-      doc.text('RAPPORT DE CAISSE', 195, 20, { align: 'right' });
-      doc.setFontSize(12);
-      doc.text(`SESSION DU ${register.date}`, 195, 27, { align: 'right' });
+      const bName = settings.shop_name || settings.business_name || 'FIXIT PRO';
+      const DARK  = [30, 41, 59];
+      const GRAY  = [100, 116, 139];
+      const BLUE  = [37, 99, 235];
+      const RED   = [185, 28, 28];
 
-      // Summary Section
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(51, 65, 85);
-      doc.text('RÉSUMÉ FINANCIER', 15, 45);
-      
+      // ── Header band ──
+      doc.setFillColor(...DARK);
+      doc.rect(0, 0, 210, 30, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+      doc.text(bName.toUpperCase(), 15, 12);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+      doc.text('RAPPORT DE CAISSE DÉTAILLÉ', 15, 19);
+      doc.text(`Session du ${register.date}  —  Généré le ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 15, 24);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(20);
+      doc.text(`#${(register.id || '').toString().slice(-6).padStart(6,'0')}`, 195, 20, { align: 'right' });
+
+      // ── Summary 2 columns ──
       const summaryData = [
         ['Fond de caisse initial', formatCurrency(register.opening_balance || 0)],
-        ['Total Ventes Brutes', formatCurrency(totalSales)],
-        ['Dépenses Totales', `-${formatCurrency(totalExp)}`],
-        ['Solde Attendu (Théorique)', formatCurrency((Number(register.opening_balance) || 0) + totalSales - totalExp)],
-        ['Solde Réel (Clôture)', register.closing_balance != null ? formatCurrency(register.closing_balance) : '-'],
-        ['Écart de Caisse', formatCurrency(register.difference || 0)]
+        ['Total ventes brutes', formatCurrency(totalSales)],
+        ['Dépenses totales', `-${formatCurrency(totalExp)}`],
+        ['Solde attendu', formatCurrency((Number(register.opening_balance) || 0) + totalCash - totalExp)],
+        ['Solde réel (clôture)', register.closing_balance != null ? formatCurrency(register.closing_balance) : 'N/A'],
+        ['Écart', formatCurrency(register.difference || 0)],
       ];
-
-      autoTable(doc, {
-        startY: 48,
-        body: summaryData,
-        theme: 'grid',
-        styles: { fontSize: 9, cellPadding: 2.5 },
-        columnStyles: { 0: { cellWidth: 50, fontStyle: 'normal' }, 1: { fontStyle: 'bold', halign: 'right' } },
-        margin: { left: 15, right: 100 }
-      });
-
-      const summaryFinalY = doc.lastAutoTable?.finalY || 48;
-
-      // Payment methods summary
-      doc.text('DÉTAILS ENCAISSEMENTS', 115, 45);
       const paymentData = [
-        ['Espèces', formatCurrency(totalCash)],
-        ['Carte Bancaire', formatCurrency(totalCard)],
-        ['Nombre de Tickets', sales.length.toString()],
-        ['Statut Session', (register.status || 'ouverte').toUpperCase()],
-        ['Caissier', register.opened_by || 'Non défini'],
-        ['ID Session', `SES-${(register.date || '').replace(/-/g, '')}-${(register.id || '').toString().slice(-4)}`]
+        ['Espèces encaissées', formatCurrency(totalCash)],
+        ['Carte bancaire', formatCurrency(totalCard)],
+        ['Nombre de tickets', String(sales.length)],
+        ['Statut session', (register.status || 'ouverte').toUpperCase()],
+        ['Caissier ouverture', register.opened_by || '—'],
+        ['Caissier clôture', register.closed_by || '—'],
       ];
-      
-      autoTable(doc, {
-        startY: 48,
-        body: paymentData,
-        theme: 'plain',
-        styles: { fontSize: 9, cellPadding: 2.5 },
-        columnStyles: { 0: { cellWidth: 40, fontStyle: 'normal' }, 1: { fontStyle: 'bold', halign: 'right' } },
-        margin: { left: 115 }
-      });
 
-      const paymentFinalY = doc.lastAutoTable?.finalY || 48;
-      const finalTopY = Math.max(summaryFinalY, paymentFinalY);
-
-      // Sales Table
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(51, 65, 85);
-      doc.text('JOURNAL DES VENTES', 15, finalTopY + 20);
+      doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...DARK);
+      doc.text('RÉSUMÉ FINANCIER', 15, 38);
+      doc.text('ENCAISSEMENTS', 115, 38);
 
       autoTable(doc, {
-        startY: finalTopY + 23,
-        head: [['Heure', 'Ticket #', 'Client', 'Mode', 'Montant']],
-        body: sales.map(s => [
-          fmtTime(s.created_date),
-          s.sale_number || '-',
-          s.client_name || 'Passager',
-          s.payment_method || '-',
-          formatCurrency(s.total || 0)
-        ]),
-        styles: { fontSize: 8, cellPadding: 3 },
-        headStyles: { fillColor: [51, 65, 85], textColor: 255, fontStyle: 'bold' },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
-        columnStyles: { 4: { halign: 'right', fontStyle: 'bold' } }
+        startY: 41, body: summaryData, theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2 },
+        columnStyles: { 0: { cellWidth: 45 }, 1: { fontStyle: 'bold', halign: 'right' } },
+        margin: { left: 15, right: 105 },
       });
+      const yA = doc.lastAutoTable?.finalY || 41;
 
-      const salesFinalY = doc.lastAutoTable?.finalY || finalTopY + 23;
+      autoTable(doc, {
+        startY: 41, body: paymentData, theme: 'plain',
+        styles: { fontSize: 8, cellPadding: 2 },
+        columnStyles: { 0: { cellWidth: 45 }, 1: { fontStyle: 'bold', halign: 'right' } },
+        margin: { left: 115 },
+      });
+      const yB = doc.lastAutoTable?.finalY || 41;
+      let y = Math.max(yA, yB) + 8;
 
-      // Expenses Table if any
-      if (expenses.length > 0) {
-        doc.text('JOURNAL DES DÉPENSES', 15, salesFinalY + 15);
-        autoTable(doc, {
-          startY: salesFinalY + 18,
-          head: [['Description', 'Montant']],
-          body: expenses.map(e => [e.description, `-${formatCurrency(e.amount || 0)}`]),
-          styles: { fontSize: 8, cellPadding: 3 },
-          headStyles: { fillColor: [185, 28, 28], textColor: 255 },
-          columnStyles: { 1: { halign: 'right', fontStyle: 'bold', textColor: [185, 28, 28] } }
+      // ── Product summary table ──
+      const productMap = {};
+      sales.forEach(s => {
+        const items = Array.isArray(s.items) ? s.items : (() => { try { return JSON.parse(s.items || '[]'); } catch { return []; } })();
+        items.forEach(it => {
+          const key = it.product_name || 'Inconnu';
+          if (!productMap[key]) productMap[key] = { qty: 0, total: 0 };
+          productMap[key].qty   += Number(it.quantity) || 0;
+          productMap[key].total += Number(it.total)    || 0;
         });
+      });
+      const productRows = Object.entries(productMap)
+        .sort((a, b) => b[1].total - a[1].total)
+        .map(([name, v]) => [name, String(v.qty), formatCurrency(v.total)]);
+
+      if (productRows.length > 0) {
+        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...DARK);
+        doc.text('RÉSUMÉ PAR ARTICLE', 15, y);
+        autoTable(doc, {
+          startY: y + 3,
+          head: [['Article', 'Qté vendue', 'Total']],
+          body: productRows,
+          styles: { fontSize: 8, cellPadding: 2.5 },
+          headStyles: { fillColor: BLUE, textColor: 255, fontStyle: 'bold' },
+          alternateRowStyles: { fillColor: [241, 245, 249] },
+          columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right', fontStyle: 'bold' } },
+          margin: { left: 15, right: 15 },
+        });
+        y = (doc.lastAutoTable?.finalY || y) + 8;
       }
 
-      // Signatures
-      const finalReportY = doc.lastAutoTable?.finalY || salesFinalY;
-      const ySign = finalReportY + 30;
-      doc.setFontSize(8);
-      doc.setTextColor(148, 163, 184);
+      // ── Detailed sales journal ──
+      doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...DARK);
+      doc.text(`JOURNAL DES VENTES (${sales.length} ticket${sales.length !== 1 ? 's' : ''})`, 15, y);
+
+      const salesRows = [];
+      sales.forEach(s => {
+        const items = Array.isArray(s.items) ? s.items : (() => { try { return JSON.parse(s.items || '[]'); } catch { return []; } })();
+        // Ticket header row
+        salesRows.push([
+          { content: fmtTime(s.created_date), styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+          { content: s.sale_number || '—', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+          { content: s.client_name || 'Client passager', styles: { fillColor: [241, 245, 249] } },
+          { content: s.payment_method === 'especes' ? 'Espèces' : s.payment_method === 'carte' ? 'Carte' : (s.payment_method || '—'), styles: { fillColor: [241, 245, 249] } },
+          { content: '', styles: { fillColor: [241, 245, 249] } },
+          { content: formatCurrency(s.total || 0), styles: { fontStyle: 'bold', halign: 'right', textColor: BLUE, fillColor: [241, 245, 249] } },
+        ]);
+        // Item rows
+        items.forEach(it => {
+          salesRows.push([
+            '',
+            { content: '↳ ' + (it.product_name || '—'), colSpan: 2, styles: { fontSize: 7, textColor: GRAY } },
+            '',
+            { content: `×${it.quantity}`, styles: { fontSize: 7, halign: 'center', textColor: GRAY } },
+            { content: formatCurrency(it.unit_price || 0), styles: { fontSize: 7, halign: 'right', textColor: GRAY } },
+            { content: formatCurrency(it.total || 0), styles: { fontSize: 7, halign: 'right', textColor: GRAY } },
+          ]);
+        });
+      });
+
+      autoTable(doc, {
+        startY: y + 3,
+        head: [['Heure', 'Ticket #', 'Client', 'Mode', 'P.U.', 'Montant']],
+        body: salesRows,
+        styles: { fontSize: 8, cellPadding: 2.5 },
+        headStyles: { fillColor: DARK, textColor: 255, fontStyle: 'bold' },
+        columnStyles: {
+          0: { cellWidth: 14 }, 1: { cellWidth: 22 }, 2: { cellWidth: 'auto' },
+          3: { cellWidth: 18 }, 4: { halign: 'right', cellWidth: 24 }, 5: { halign: 'right', fontStyle: 'bold', cellWidth: 26 },
+        },
+        margin: { left: 15, right: 15 },
+      });
+      y = (doc.lastAutoTable?.finalY || y) + 8;
+
+      // ── Expenses ──
+      if (expenses.length > 0) {
+        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...RED);
+        doc.text('DÉPENSES', 15, y);
+        autoTable(doc, {
+          startY: y + 3,
+          head: [['Description', 'Montant']],
+          body: expenses.map(e => [e.description || '—', `-${formatCurrency(e.amount || 0)}`]),
+          styles: { fontSize: 8, cellPadding: 2.5 },
+          headStyles: { fillColor: RED, textColor: 255 },
+          columnStyles: { 1: { halign: 'right', fontStyle: 'bold', textColor: RED } },
+          margin: { left: 15, right: 15 },
+        });
+        y = (doc.lastAutoTable?.finalY || y) + 8;
+      }
+
+      // ── Signature zone ──
+      if (y > 250) doc.addPage();
+      const ySign = Math.max(y + 15, 250);
+      doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(...GRAY);
       doc.text('SIGNATURE DU RESPONSABLE', 15, ySign);
-      doc.text('CACHET DE L\'ÉTABLISSEMENT', 150, ySign);
+      doc.text("CACHET DE L'ÉTABLISSEMENT", 155, ySign);
       doc.setDrawColor(203, 213, 225);
-      doc.line(15, ySign + 10, 65, ySign + 10);
-      doc.rect(150, ySign + 5, 30, 20);
+      doc.line(15, ySign + 12, 70, ySign + 12);
+      doc.rect(155, ySign + 4, 30, 18);
 
       doc.save(`RapportCaisse_${register.date}.pdf`);
+      toast.success('PDF généré');
     } catch (err) {
-      console.error("PDF generator error:", err);
-      toast.error("Erreur lors de la création du PDF. Veuillez vérifier la console.");
+      console.error('PDF generator error:', err);
+      toast.error('Erreur lors de la création du PDF.');
     }
   };
 
@@ -418,6 +455,56 @@ export default function CashRegisterDetail({ register, onClose }) {
             <span className="text-muted-foreground">Écart: <span className={`font-bold ${(register.difference || 0) !== 0 ? 'text-destructive' : 'text-foreground'}`}>{formatCurrency(register.difference || 0)}</span></span>
           </div>
         )}
+
+        {/* Résumé par article */}
+        {(() => {
+          const productMap = {};
+          sales.forEach(s => {
+            const items = Array.isArray(s.items) ? s.items : (() => { try { return JSON.parse(s.items || '[]'); } catch { return []; } })();
+            items.forEach(it => {
+              const key = it.product_name || 'Inconnu';
+              if (!productMap[key]) productMap[key] = { qty: 0, total: 0 };
+              productMap[key].qty   += Number(it.quantity) || 0;
+              productMap[key].total += Number(it.total)    || 0;
+            });
+          });
+          const rows = Object.entries(productMap).sort((a, b) => b[1].total - a[1].total);
+          if (!rows.length) return null;
+          return (
+            <div>
+              <p className="text-sm font-semibold mb-2 flex items-center gap-2">
+                <Package className="h-4 w-4 text-primary" />Articles vendus — résumé
+              </p>
+              <div className="rounded-xl border border-border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/50 border-b border-border text-xs text-muted-foreground">
+                      <th className="text-left px-3 py-2 font-medium">Article</th>
+                      <th className="text-center px-3 py-2 font-medium">Qté</th>
+                      <th className="text-right px-3 py-2 font-medium">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map(([name, v], i) => (
+                      <tr key={i} className="border-b border-border/30 last:border-0 hover:bg-muted/20">
+                        <td className="px-3 py-2">{name}</td>
+                        <td className="px-3 py-2 text-center text-muted-foreground">×{v.qty}</td>
+                        <td className="px-3 py-2 text-right font-semibold text-primary">{formatCurrency(v.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-muted/30 border-t border-border">
+                      <td className="px-3 py-2 text-xs text-muted-foreground font-semibold">{rows.length} article{rows.length > 1 ? 's' : ''} différent{rows.length > 1 ? 's' : ''}</td>
+                      <td className="px-3 py-2 text-center text-xs font-semibold">{rows.reduce((s, [,v]) => s + v.qty, 0)}</td>
+                      <td className="px-3 py-2 text-right text-sm font-bold text-primary">{formatCurrency(totalSales)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Liste des ventes */}
         <div>

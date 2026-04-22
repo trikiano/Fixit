@@ -495,7 +495,10 @@ export default function Invoices() {
   };
 
   const openEdit = (inv) => {
-    setForm({ ...inv, items: inv.items || [emptyItem()] });
+    const safeItems = Array.isArray(inv.items)
+      ? inv.items
+      : (typeof inv.items === 'string' ? (() => { try { return JSON.parse(inv.items); } catch { return [emptyItem()]; } })() : [emptyItem()]);
+    setForm({ ...inv, items: safeItems.length ? safeItems : [emptyItem()] });
     setEditing(inv);
     setDialogOpen(true);
   };
@@ -522,16 +525,16 @@ export default function Invoices() {
   };
 
   const setClientFromId = (clientId) => {
-    const c = clients.find(cl => cl.id === clientId);
+    const c = clients.find(cl => String(cl.id) === String(clientId));
     if (!c) return;
     setForm(f => ({
       ...f,
       client_id: clientId,
-      client_name:    c.name        || '',
-      client_address: c.address     || '',
-      client_phone:   c.phone       || '',
-      client_email:   c.email       || '',
-      client_tax_id:  c.tax_id      || '',
+      client_name:    c.full_name || c.name || '',
+      client_address: c.address   || '',
+      client_phone:   c.phone     || '',
+      client_email:   c.email     || '',
+      client_tax_id:  c.tax_id    || '',
     }));
   };
 
@@ -697,12 +700,16 @@ export default function Invoices() {
               {clients.length > 0 && (
                 <div>
                   <Label>Sélectionner un client existant</Label>
-                  <Select value={form.client_id} onValueChange={setClientFromId}>
+                  <Select value={String(form.client_id || '')} onValueChange={setClientFromId}>
                     <SelectTrigger>
                       <SelectValue placeholder="Choisir un client…" />
                     </SelectTrigger>
                     <SelectContent>
-                      {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      {clients.map(c => (
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {c.full_name || c.name || '—'}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
