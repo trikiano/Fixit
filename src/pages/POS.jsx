@@ -362,66 +362,64 @@ export default function POS() {
   productsRef.current  = products;
   addToCartRef.current = addToCart;
 
-  // Global barcode scanner listener — captures fast keystrokes from USB/BT scanners
+  // Auto-add when scan produces exactly 1 exact barcode/SKU match
+  // This fires reliably as soon as React has updated `search` + `filtered`
   useEffect(() => {
-    let scanBuffer = '';
-    let scanTimer  = null;
+    const q = search.trim();
+    if (q.length < 2 || filtered.length !== 1) return;
+    const p = filtered[0];
+    const isExact =
+      (p.barcode && p.barcode.trim() === q) ||
+      (p.sku    && p.sku.trim().toLowerCase() === q.toLowerCase());
+    if (!isExact) return;
+    // Small delay so React finishes rendering before we mutate cart
+    const t = setTimeout(() => {
+      addToCartRef.current(p);
+      setSearch('');
+    }, 80);
+    return () => clearTimeout(t);
+  }, [search, filtered.length]); // eslint-disable-line
+
+  // Global keydown: redirect scanner keystrokes to the search field
+  // even when no input is focused (scanner plugged in, user not clicked anywhere)
+  useEffect(() => {
+    let buf = '';
+    let timer = null;
 
     const onKey = (e) => {
-      // Skip if typing in a focused input that isn't our search field
-      const tag = document.activeElement?.tagName;
-      const isSearch = document.activeElement === searchRef.current;
-      if ((tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') && !isSearch) return;
       if (e.ctrlKey || e.altKey || e.metaKey) return;
+      const tag = document.activeElement?.tagName;
+      const onSearch = document.activeElement === searchRef.current;
+
+      // If focus is on another input/textarea — don't interfere
+      if ((tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') && !onSearch) return;
 
       if (e.key === 'Enter') {
-        const q = scanBuffer.trim();
-        scanBuffer = '';
-        clearTimeout(scanTimer);
-        if (q.length < 2) return;
-
-        const prods = productsRef.current;
-
-        // 1. Exact barcode match
-        const byBarcode = prods.find(
-          p => p.is_active !== false && p.barcode && p.barcode.trim() === q
-        );
-        if (byBarcode) { addToCartRef.current(byBarcode); setSearch(''); return; }
-
-        // 2. Exact SKU match
-        const bySku = prods.find(
-          p => p.is_active !== false && p.sku && p.sku.trim().toLowerCase() === q.toLowerCase()
-        );
-        if (bySku) { addToCartRef.current(bySku); setSearch(''); return; }
-
-        // 3. Single result in filtered list → auto-add
-        const low = q.toLowerCase();
-        const matches = prods.filter(p =>
-          p.is_active !== false && (
-            p.name?.toLowerCase().includes(low) ||
-            p.sku?.toLowerCase().includes(low) ||
-            p.barcode?.toLowerCase().includes(low)
-          )
-        );
-        if (matches.length === 1) { addToCartRef.current(matches[0]); setSearch(''); return; }
-
-        // 4. Multiple results → show in grid
-        setSearch(q);
-        if (searchRef.current) searchRef.current.focus();
+        clearTimeout(timer);
+        // If search field already has value (typed by onChange), Enter is handled by onKeyDown below
+        // Here we only act if scanner filled buf while search was not focused
+        if (buf.length >= 2 && !onSearch) {
+          setSearch(buf.trim());
+          if (searchRef.current) searchRef.current.focus();
+        }
+        buf = '';
         return;
       }
 
       if (e.key.length === 1) {
-        scanBuffer += e.key;
-        clearTimeout(scanTimer);
-        // Scanner chars arrive < 50ms apart; reset after 200ms silence (human typing)
-        scanTimer = setTimeout(() => { scanBuffer = ''; }, 200);
+        // If not on search field, auto-focus it and stream chars there
+        if (!onSearch && searchRef.current) {
+          searchRef.current.focus();
+        }
+        buf += e.key;
+        clearTimeout(timer);
+        timer = setTimeout(() => { buf = ''; }, 300);
       }
     };
 
     window.addEventListener('keydown', onKey);
-    return () => { window.removeEventListener('keydown', onKey); clearTimeout(scanTimer); };
-  }, []); // empty deps — always reads fresh data via refs
+    return () => { window.removeEventListener('keydown', onKey); clearTimeout(timer); };
+  }, []);
 
   // --- Numpad logic ---
   const handleNumpad = useCallback((key) => {
@@ -679,11 +677,17 @@ export default function POS() {
             <input
               ref={searchRef}
               value={search}
+              autoFocus
               onChange={e => setSearch(e.target.value)}
+              onBlur={() => {
+                // Re-focus unless a dialog/modal has taken focus
+                const hasDialog = document.querySelector('[data-radix-dialog-content], [role="dialog"], [data-state="open"]');
+                if (!hasDialog) setTimeout(() => searchRef.current?.focus(), 80);
+              }}
               onKeyDown={e => {
-                // Enter on search field — same logic as scanner (field is already focused)
                 if (e.key !== 'Enter') return;
-                const q = search.trim();
+                // Use DOM value directly (always fresh, no batching issues)
+                const q = (searchRef.current?.value || '').trim();
                 if (!q) return;
                 const byBarcode = products.find(p => p.is_active !== false && p.barcode?.trim() === q);
                 if (byBarcode) { addToCart(byBarcode); setSearch(''); return; }
