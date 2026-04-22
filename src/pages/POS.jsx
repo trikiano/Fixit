@@ -362,24 +362,6 @@ export default function POS() {
   productsRef.current  = products;
   addToCartRef.current = addToCart;
 
-  // Auto-add when scan produces exactly 1 exact barcode/SKU match
-  // This fires reliably as soon as React has updated `search` + `filtered`
-  useEffect(() => {
-    const q = search.trim();
-    if (q.length < 2 || filtered.length !== 1) return;
-    const p = filtered[0];
-    const isExact =
-      (p.barcode && p.barcode.trim() === q) ||
-      (p.sku    && p.sku.trim().toLowerCase() === q.toLowerCase());
-    if (!isExact) return;
-    // Small delay so React finishes rendering before we mutate cart
-    const t = setTimeout(() => {
-      addToCartRef.current(p);
-      setSearch('');
-    }, 80);
-    return () => clearTimeout(t);
-  }, [search, filtered.length]); // eslint-disable-line
-
   // Global keydown: redirect scanner keystrokes to the search field
   // even when no input is focused (scanner plugged in, user not clicked anywhere)
   useEffect(() => {
@@ -495,7 +477,22 @@ export default function POS() {
     return ms && (isCatMatch || isBrandMatch);
   });
 
-
+  // Auto-add when scan produces exactly 1 exact barcode/SKU match
+  // Must be AFTER `filtered` is defined
+  useEffect(() => {
+    const q = search.trim();
+    if (q.length < 2 || filtered.length !== 1) return;
+    const p = filtered[0];
+    const isExact =
+      (p.barcode && p.barcode.trim() === q) ||
+      (p.sku    && p.sku.trim().toLowerCase() === q.toLowerCase());
+    if (!isExact) return;
+    const t = setTimeout(() => {
+      addToCartRef.current(p);
+      setSearch('');
+    }, 80);
+    return () => clearTimeout(t);
+  }, [search, filtered.length]); // eslint-disable-line
 
   const categories = useMemo(() => {
     const dbCats = dbCategories.map(c => c.name);
