@@ -22,6 +22,7 @@ const PAGES = {
   Repairs: lazy(() => import('../../pages/Repairs')),
   Warranties: lazy(() => import('../../pages/Warranties')),
   Products: lazy(() => import('../../pages/Products')),
+  ProductCategories: lazy(() => import('../../pages/ProductCategories')),
   StockMovements: lazy(() => import('../../pages/StockMovements')),
   Suppliers: lazy(() => import('../../pages/Suppliers')),
   PurchaseOrders: lazy(() => import('../../pages/PurchaseOrders')),
@@ -40,7 +41,7 @@ const PAGE_LABELS = {
   Dashboard: 'Dashboard', Clients: 'Clients', Sales: 'Ventes',
   Services: 'Services', CashRegister: 'Caisse', Promotions: 'Promotions',
   Repairs: 'Réparations', Warranties: 'Garanties', Products: 'Produits',
-  StockMovements: 'Stock', Suppliers: 'Fournisseurs', PurchaseOrders: 'Commandes',
+  ProductCategories: 'Catégories', StockMovements: 'Stock', Suppliers: 'Fournisseurs', PurchaseOrders: 'Commandes',
   SupplierInvoices: 'Achats', Invoices: 'Factures', Expenses: 'Dépenses', AuditLogs: 'Audit',
   Notifications: 'Notifications', Settings: 'Paramètres', POS: 'Caisse POS',
 };

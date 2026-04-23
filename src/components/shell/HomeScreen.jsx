@@ -18,6 +18,7 @@ const APP_PAGES = [
   { page: 'Repairs', label: 'Réparations', icon: Wrench, color: 'bg-amber-600', desc: 'Atelier réparation' },
   { page: 'Warranties', label: 'Garanties', icon: Shield, color: 'bg-teal-500', desc: 'SAV & garanties' },
   { page: 'Products', label: 'Produits', icon: Package, color: 'bg-cyan-500', desc: 'Inventaire' },
+  { page: 'ProductCategories', label: 'Catégories', icon: Tag, color: 'bg-violet-600', desc: 'Catégories produits' },
   { page: 'StockMovements', label: 'Stock', icon: Warehouse, color: 'bg-slate-500', desc: 'Mouvements stock' },
   { page: 'Suppliers', label: 'Fournisseurs', icon: Truck, color: 'bg-indigo-500', desc: 'Gestion fournisseurs' },
   { page: 'PurchaseOrders', label: 'Commandes', icon: Receipt, color: 'bg-lime-600', desc: 'Commandes achat' },

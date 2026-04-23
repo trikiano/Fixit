@@ -205,4 +205,38 @@ Si une information n'est pas visible, utilise null. Réponds UNIQUEMENT avec le 
   }
 });
 
+// POST /api/functions/renameCategory — renomme une catégorie + met à jour tous les produits
+router.post('/renameCategory', async (req, res) => {
+  try {
+    const { oldName, newName } = req.body;
+    if (!oldName || !newName) return res.status(400).json({ error: 'oldName et newName requis' });
+    const { Product } = await import('../models/index.js');
+    const shopWhere = (req.user?.role !== 'super_admin' && req.user?.shop_id) ? { shop_id: req.user.shop_id } : {};
+    const [count] = await Product.update({ category: newName }, { where: { category: oldName, ...shopWhere } });
+    res.json({ updated: count });
+  } catch (err) {
+    console.error('[renameCategory]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/functions/categoryProductCount — nombre de produits par catégorie
+router.post('/categoryProductCount', async (req, res) => {
+  try {
+    const { Product } = await import('../models/index.js');
+    const { QueryTypes } = await import('sequelize');
+    const shopWhere = (req.user?.role !== 'super_admin' && req.user?.shop_id) ? `AND shop_id = '${req.user.shop_id}'` : '';
+    const rows = await sequelize.query(
+      `SELECT category, COUNT(*) as count FROM products WHERE category IS NOT NULL ${shopWhere} GROUP BY category`,
+      { type: QueryTypes.SELECT }
+    );
+    const map = {};
+    rows.forEach(r => { map[r.category] = Number(r.count); });
+    res.json(map);
+  } catch (err) {
+    console.error('[categoryProductCount]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
