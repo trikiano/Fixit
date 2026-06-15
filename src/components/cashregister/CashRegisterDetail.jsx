@@ -275,23 +275,22 @@ export default function CashRegisterDetail({ register, onClose }) {
           ['CA Ventes produits',  formatCurrency(salesTotal)],
           ['CA Réparations',      formatCurrency(repairTotal)],
           ['CA Services',         formatCurrency(serviceTotal)],
-          ['──────────────────', '──────────'],
           ['CHIFFRE D\'AFFAIRES TOTAL', formatCurrency(totalRevenue)],
           ['Remises accordées',   salesDiscounts > 0 ? `-${formatCurrency(salesDiscounts)}` : formatCurrency(0)],
-          ['Dépenses',            `-${formatCurrency(totalExpenses)}`],
-          ['RÉSULTAT NET', formatCurrency(totalRevenue - totalExpenses)],
+          ['Depenses',            `-${formatCurrency(totalExpenses)}`],
+          ['RESULTAT NET', formatCurrency(totalRevenue - totalExpenses)],
         ],
         theme: 'grid',
         styles: { fontSize: 8, cellPadding: 2.2 },
         columnStyles: { 0: { cellWidth: 52 }, 1: { fontStyle: 'bold', halign: 'right', cellWidth: 30 } },
         bodyStyles: {},
         didParseCell(data) {
-          if (data.row.index === 4 || data.row.index === 7) {
-            data.cell.styles.fillColor = data.row.index === 4 ? BLUE : GREEN;
+          if (data.row.index === 3 || data.row.index === 6) {
+            data.cell.styles.fillColor = data.row.index === 3 ? BLUE : GREEN;
             data.cell.styles.textColor = [255, 255, 255];
             data.cell.styles.fontStyle = 'bold';
           }
-          if (data.row.index === 6) data.cell.styles.textColor = RED;
+          if (data.row.index === 5) data.cell.styles.textColor = RED;
         },
         margin: { left: 14, right: 112 },
       });
@@ -301,24 +300,23 @@ export default function CashRegisterDetail({ register, onClose }) {
         startY: y,
         body: [
           ['Fond d\'ouverture',    formatCurrency(openingBalance)],
-          ['Espèces ventes',       formatCurrency(metrics.salesCash)],
-          ['Espèces réparations',  formatCurrency(metrics.repairCash)],
-          ['Espèces services',     formatCurrency(metrics.serviceCash)],
-          ['──────────────────', '──────────'],
-          ['TOTAL ESPÈCES ENTRANTS', formatCurrency(allCash)],
-          ['Dépenses espèces',    `-${formatCurrency(totalExpenses)}`],
-          ['SOLDE ESPÈCES ATTENDU', formatCurrency(expectedCashBalance)],
+          ['Especes ventes',       formatCurrency(metrics.salesCash)],
+          ['Especes reparations',  formatCurrency(metrics.repairCash)],
+          ['Especes services',     formatCurrency(metrics.serviceCash)],
+          ['TOTAL ESPECES ENTRANTS', formatCurrency(allCash)],
+          ['Depenses especes',    `-${formatCurrency(totalExpenses)}`],
+          ['SOLDE ESPECES ATTENDU', formatCurrency(expectedCashBalance)],
         ],
         theme: 'grid',
         styles: { fontSize: 8, cellPadding: 2.2 },
         columnStyles: { 0: { cellWidth: 52 }, 1: { fontStyle: 'bold', halign: 'right', cellWidth: 30 } },
         didParseCell(data) {
-          if (data.row.index === 5 || data.row.index === 7) {
-            data.cell.styles.fillColor = data.row.index === 5 ? [71, 85, 105] : BLUE;
+          if (data.row.index === 4 || data.row.index === 6) {
+            data.cell.styles.fillColor = data.row.index === 4 ? [71, 85, 105] : BLUE;
             data.cell.styles.textColor = [255, 255, 255];
             data.cell.styles.fontStyle = 'bold';
           }
-          if (data.row.index === 6) data.cell.styles.textColor = RED;
+          if (data.row.index === 5) data.cell.styles.textColor = RED;
         },
         margin: { left: 112 },
       });
@@ -361,11 +359,11 @@ export default function CashRegisterDetail({ register, onClose }) {
         startY: y,
         head: [['Mode', 'Ventes', 'Réparations', 'Services', 'TOTAL', '% CA']],
         body: [
-          ['Espèces 💵',
+          ['Especes (cash)',
            formatCurrency(metrics.salesCash), formatCurrency(metrics.repairCash), formatCurrency(metrics.serviceCash),
            formatCurrency(allCash),
            totalRevenue > 0 ? `${((allCash / totalRevenue) * 100).toFixed(1)}%` : '0%'],
-          ['Carte bancaire 💳',
+          ['Carte bancaire',
            formatCurrency(metrics.salesCard), formatCurrency(metrics.repairCard), formatCurrency(metrics.serviceCard),
            formatCurrency(allCard),
            totalRevenue > 0 ? `${((allCard / totalRevenue) * 100).toFixed(1)}%` : '0%'],
@@ -429,7 +427,7 @@ export default function CashRegisterDetail({ register, onClose }) {
           items.forEach(it => {
             salesRows.push([
               '',
-              { content: '  ↳ ' + (it.product_name || '—'), colSpan: 2, styles: { fontSize: 7, textColor: GRAY } },
+              { content: '  > ' + (it.product_name || '-'), colSpan: 2, styles: { fontSize: 7, textColor: GRAY } },
               '',
               { content: `×${it.quantity}`, styles: { fontSize: 7, halign: 'center', textColor: GRAY } },
               { content: `@${formatCurrency(it.unit_price || 0)}`, styles: { fontSize: 7, halign: 'right', textColor: GRAY } },

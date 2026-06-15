@@ -44,15 +44,20 @@ export default function CashRegister() {
   const { data: todaySales = [] } = useQuery({
     queryKey: ['salesToday', todayStr],
     queryFn: async () => {
+      console.log('[CAISSE DEBUG] todayStr =', todayStr);
       try {
         const bySaleDate = await fixit.entities.Sale.filter({ sale_date: todayStr }, '-created_date', 500);
+        console.log('[CAISSE DEBUG] bySaleDate count =', bySaleDate?.length, '| sample =', JSON.stringify(bySaleDate?.[0])?.slice(0, 200));
         if (Array.isArray(bySaleDate) && bySaleDate.length > 0) return bySaleDate;
-      } catch (_) {}
+      } catch (e) { console.log('[CAISSE DEBUG] filter error =', e.message); }
       const all = await fixit.entities.Sale.list('-created_date', 500);
-      return all.filter(s => s && (
+      console.log('[CAISSE DEBUG] all sales count =', all?.length, '| first sale_date =', all?.[0]?.sale_date, '| first created_date =', all?.[0]?.created_date);
+      const filtered = all.filter(s => s && (
         String(s.sale_date  || '').slice(0, 10) === todayStr ||
         String(s.created_date || '').slice(0, 10) === todayStr
       ));
+      console.log('[CAISSE DEBUG] filtered count =', filtered.length);
+      return filtered;
     },
     staleTime: 0,
   });
