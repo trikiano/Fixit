@@ -33,38 +33,80 @@ export default function CashRegister() {
   const [selectedRegister, setSelectedRegister] = useState(null);
   const qc = useQueryClient();
 
-  const { data: registers = [], isLoading } = useQuery({ queryKey: ['cashRegisters'], queryFn: () => fixit.entities.CashRegister.list('-created_date') });
-  const { data: sales = [] } = useQuery({ queryKey: ['salesToday'], queryFn: () => fixit.entities.Sale.filter({ status: 'completee' }, '-created_date', 200) });
-  const { data: expenses = [] } = useQuery({ queryKey: ['expensesToday'], queryFn: () => fixit.entities.Expense.list('-created_date', 100) });
-  const { data: repairs = [] } = useQuery({ queryKey: ['repairsToday'], queryFn: () => fixit.entities.Repair.list('-created_date', 200) });
-  const { data: serviceSales = [] } = useQuery({ queryKey: ['serviceSalesToday'], queryFn: () => fixit.entities.ServiceSale.list('-created_date', 200) });
-
   const todayStr = format(new Date(), 'yyyy-MM-dd');
-  const todayRegister = registers.find(r => r.date === todayStr);
 
-  // Ventes produits du jour
-  const todaySales = sales.filter(s => s.created_date?.startsWith(todayStr));
-  const todayCash  = todaySales.filter(s => s.payment_method === 'especes').reduce((s, v) => s + (v.total || 0), 0);
-  const todayCard  = todaySales.filter(s => s.payment_method === 'carte').reduce((s, v) => s + (v.total || 0), 0);
-  const todaySalesTotal = todaySales.reduce((s, v) => s + (v.total || 0), 0);
-
-  // Réparations encaissées du jour
-  const todayRepairs = repairs.filter(r => {
-    const d = r.completed_date || r.created_date || '';
-    return String(d).slice(0, 10) === todayStr && (Number(r.final_cost) || 0) > 0;
+  const { data: registers = [], isLoading } = useQuery({
+    queryKey: ['cashRegisters'],
+    queryFn: () => fixit.entities.CashRegister.list('-created_date'),
   });
-  const todayRepairsTotal = todayRepairs.reduce((s, r) => s + (Number(r.final_cost) || 0), 0);
-  const todayRepairCash   = todayRepairs.filter(r => r.payment_method === 'especes').reduce((s, r) => s + (Number(r.final_cost) || 0), 0);
 
-  // Services du jour
-  const todayServices = serviceSales.filter(ss => ss.created_date?.startsWith(todayStr));
-  const todayServicesTotal = todayServices.reduce((s, ss) => s + (Number(ss.total) || 0), 0);
-  const todayServiceCash   = todayServices.filter(ss => ss.payment_method === 'especes').reduce((s, ss) => s + (Number(ss.total) || 0), 0);
+  // Ventes du jour — filtre par sale_date (serveur) avec fallback created_date (client)
+  const { data: todaySales = [] } = useQuery({
+    queryKey: ['salesToday', todayStr],
+    queryFn: async () => {
+      try {
+        const bySaleDate = await fixit.entities.Sale.filter({ sale_date: todayStr }, '-created_date', 500);
+        if (Array.isArray(bySaleDate) && bySaleDate.length > 0) return bySaleDate;
+      } catch (_) {}
+      const all = await fixit.entities.Sale.list('-created_date', 500);
+      return all.filter(s => s && (
+        String(s.sale_date  || '').slice(0, 10) === todayStr ||
+        String(s.created_date || '').slice(0, 10) === todayStr
+      ));
+    },
+    staleTime: 0,
+  });
 
   // Dépenses du jour
-  const todayExpenses = expenses.filter(e => e.date === todayStr || e.created_date?.startsWith(todayStr)).reduce((s, e) => s + (e.amount || 0), 0);
+  const { data: allExpenses = [] } = useQuery({
+    queryKey: ['expensesToday', todayStr],
+    queryFn: () => fixit.entities.Expense.list('-created_date', 200),
+    staleTime: 0,
+  });
 
-  // CA total toutes sources
+  // Réparations encaissées du jour
+  const { data: allRepairs = [] } = useQuery({
+    queryKey: ['repairsToday', todayStr],
+    queryFn: () => fixit.entities.Repair.list('-created_date', 300),
+    staleTime: 0,
+  });
+
+  // Services du jour
+  const { data: allServiceSales = [] } = useQuery({
+    queryKey: ['serviceSalesToday', todayStr],
+    queryFn: () => fixit.entities.ServiceSale.list('-created_date', 300),
+    staleTime: 0,
+  });
+
+  const todayRegister = registers.find(r => r.date === todayStr);
+
+  // Calculs ventes
+  const todayCash  = todaySales.filter(s => s.payment_method === 'especes').reduce((acc, v) => acc + (Number(v.total) || 0), 0);
+  const todayCard  = todaySales.filter(s => s.payment_method === 'carte').reduce((acc, v) => acc + (Number(v.total) || 0), 0);
+  const todaySalesTotal = todaySales.reduce((acc, v) => acc + (Number(v.total) || 0), 0);
+
+  // Calculs réparations
+  const todayRepairs = allRepairs.filter(r => {
+    if ((Number(r.final_cost) || 0) <= 0) return false;
+    const d = String(r.completed_date || r.created_date || '').slice(0, 10);
+    return d === todayStr;
+  });
+  const todayRepairsTotal = todayRepairs.reduce((acc, r) => acc + (Number(r.final_cost) || 0), 0);
+  const todayRepairCash   = todayRepairs.filter(r => r.payment_method === 'especes').reduce((acc, r) => acc + (Number(r.final_cost) || 0), 0);
+
+  // Calculs services
+  const todayServices = allServiceSales.filter(ss =>
+    String(ss.sale_date || ss.created_date || '').slice(0, 10) === todayStr
+  );
+  const todayServicesTotal = todayServices.reduce((acc, ss) => acc + (Number(ss.total) || 0), 0);
+  const todayServiceCash   = todayServices.filter(ss => ss.payment_method === 'especes').reduce((acc, ss) => acc + (Number(ss.total) || 0), 0);
+
+  // Calculs dépenses
+  const todayExpenses = allExpenses
+    .filter(e => String(e.date || e.created_date || '').slice(0, 10) === todayStr)
+    .reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
+
+  // Totaux consolidés
   const todayTotalRevenue = todaySalesTotal + todayRepairsTotal + todayServicesTotal;
   const todayAllCash      = todayCash + todayRepairCash + todayServiceCash;
 
