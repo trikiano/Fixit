@@ -18,6 +18,14 @@ import { toast } from 'sonner';
 import { useAppSettings } from "@/components/settings/SettingsContext";
 
 /* ─── helpers ─────────────────────────────────────────────────── */
+
+// Supprime les caractères hors Latin-1 (emojis, symboles Unicode) pour jsPDF
+function pdfSafe(str) {
+  if (!str) return '-';
+  // eslint-disable-next-line no-control-regex
+  return String(str).replace(/[^\x00-\xFF]/g, '').trim() || '-';
+}
+
 function fmtDate(d) {
   if (!d) return '-';
   try {
@@ -393,7 +401,7 @@ export default function CashRegisterDetail({ register, onClose }) {
           startY: y,
           head: [['Article', 'Qté', 'CA', '% CA ventes']],
           body: metrics.productRows.slice(0, 15).map(([name, v]) => [
-            name,
+            pdfSafe(name),
             String(v.qty),
             formatCurrency(v.total),
             salesTotal > 0 ? `${((v.total / salesTotal) * 100).toFixed(1)}%` : '0%',
@@ -418,16 +426,16 @@ export default function CashRegisterDetail({ register, onClose }) {
           const { cash, card } = extractPayments(s, 'total');
           salesRows.push([
             { content: fmtTime(s.created_date), styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
-            { content: s.sale_number || '—', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
-            { content: s.client_name || 'Passager', styles: { fillColor: [241, 245, 249] } },
-            { content: cash > 0 && card > 0 ? 'Mixte' : cash > 0 ? 'Espèces' : 'Carte', styles: { fillColor: [241, 245, 249] } },
-            { content: s.discount_total > 0 ? `-${formatCurrency(s.discount_total)}` : '—', styles: { fillColor: [241, 245, 249], textColor: AMBER } },
+            { content: pdfSafe(s.sale_number) || '-', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+            { content: pdfSafe(s.client_name) || 'Passager', styles: { fillColor: [241, 245, 249] } },
+            { content: cash > 0 && card > 0 ? 'Mixte' : cash > 0 ? 'Especes' : 'Carte', styles: { fillColor: [241, 245, 249] } },
+            { content: s.discount_total > 0 ? `-${formatCurrency(s.discount_total)}` : '-', styles: { fillColor: [241, 245, 249], textColor: AMBER } },
             { content: formatCurrency(s.total || 0), styles: { fontStyle: 'bold', halign: 'right', textColor: BLUE, fillColor: [241, 245, 249] } },
           ]);
           items.forEach(it => {
             salesRows.push([
               '',
-              { content: '  > ' + (it.product_name || '-'), colSpan: 2, styles: { fontSize: 7, textColor: GRAY } },
+              { content: '  > ' + pdfSafe(it.product_name), colSpan: 2, styles: { fontSize: 7, textColor: GRAY } },
               '',
               { content: `×${it.quantity}`, styles: { fontSize: 7, halign: 'center', textColor: GRAY } },
               { content: `@${formatCurrency(it.unit_price || 0)}`, styles: { fontSize: 7, halign: 'right', textColor: GRAY } },
@@ -465,11 +473,11 @@ export default function CashRegisterDetail({ register, onClose }) {
           body: repairs.map(r => {
             const { cash, card } = extractPayments(r, 'final_cost');
             return [
-              r.ticket_number || '—',
-              r.client_name || '—',
-              `${r.device_brand || ''} ${r.device_model || ''}`.trim() || '—',
-              r.assigned_to || '—',
-              cash > 0 && card > 0 ? 'Mixte' : cash > 0 ? 'Espèces' : 'Carte',
+              pdfSafe(r.ticket_number) || '-',
+              pdfSafe(r.client_name) || '-',
+              pdfSafe(`${r.device_brand || ''} ${r.device_model || ''}`.trim()) || '-',
+              pdfSafe(r.assigned_to) || '-',
+              cash > 0 && card > 0 ? 'Mixte' : cash > 0 ? 'Especes' : 'Carte',
               formatCurrency(r.final_cost || 0),
             ];
           }),
@@ -496,10 +504,10 @@ export default function CashRegisterDetail({ register, onClose }) {
           body: serviceSales.map(ss => {
             const { cash, card } = extractPayments(ss, 'total');
             return [
-              ss.service_name || '—',
-              ss.client_name || '—',
+              pdfSafe(ss.service_name) || '-',
+              pdfSafe(ss.client_name) || '-',
               String(ss.quantity || 1),
-              cash > 0 && card > 0 ? 'Mixte' : cash > 0 ? 'Espèces' : 'Carte',
+              cash > 0 && card > 0 ? 'Mixte' : cash > 0 ? 'Especes' : 'Carte',
               formatCurrency(ss.total || 0),
             ];
           }),
@@ -524,7 +532,7 @@ export default function CashRegisterDetail({ register, onClose }) {
           startY: y,
           head: [['Description', 'Date', 'Montant']],
           body: metrics.expenses.map(e => [
-            e.description || '—',
+            pdfSafe(e.description) || '-',
             fmtDate(e.date || e.created_date),
             `-${formatCurrency(e.amount || 0)}`,
           ]),
