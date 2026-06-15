@@ -1,57 +1,99 @@
 import React, { useMemo } from 'react';
-
 import { fixit } from '@/api/fixitClient';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { format } from 'date-fns';
-import { ShoppingCart, Package, CreditCard, Banknote, Receipt, FileText } from 'lucide-react';
+import {
+  ShoppingCart, Wrench, Zap, Banknote, CreditCard,
+  Receipt, FileText, TrendingUp, Tag, ArrowDownCircle,
+  BarChart3, Clock, Users
+} from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { toast } from 'sonner';
-
-
-
-
 import { useAppSettings } from "@/components/settings/SettingsContext";
 
-
+/* ─── helpers ─────────────────────────────────────────────────── */
 function fmtDate(d) {
   if (!d) return '-';
-  try { 
+  try {
     const date = new Date(d);
     if (isNaN(date.getTime())) return d;
-    return format(date, 'dd/MM/yyyy HH:mm'); 
+    return format(date, 'dd/MM/yyyy HH:mm');
   } catch { return d; }
 }
-
 function fmtTime(d) {
   if (!d) return '--:--';
-  try { 
+  try {
     const date = new Date(d);
     if (isNaN(date.getTime())) return '--:--';
-    return format(date, 'HH:mm'); 
+    return format(date, 'HH:mm');
   } catch { return '--:--'; }
 }
+function parseItems(raw) {
+  if (Array.isArray(raw)) return raw;
+  try { return JSON.parse(raw || '[]'); } catch { return []; }
+}
+function parsePayments(raw) {
+  if (Array.isArray(raw)) return raw;
+  try { return JSON.parse(raw || '[]'); } catch { return []; }
+}
 
+/* ─── extract cash / card from a record ──────────────────────── */
+function extractPayments(record, amountField = 'total') {
+  const total = Number(record[amountField]) || 0;
+  const method = record.payment_method || '';
+  const payments = parsePayments(record.payments);
 
+  if (payments.length > 0) {
+    const cash = payments.filter(p => p.method === 'especes').reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    const card = payments.filter(p => p.method === 'carte').reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    return { cash, card };
+  }
+  if (method === 'especes') return { cash: total, card: 0 };
+  if (method === 'carte')   return { cash: 0, card: total };
+  if (method === 'mixte')   return { cash: total / 2, card: total / 2 }; // fallback split
+  return { cash: 0, card: 0 };
+}
+
+/* ─── KPI card ────────────────────────────────────────────────── */
+function KpiCard({ label, value, sub, icon: Icon, color = 'text-foreground', bg = 'bg-muted/30' }) {
+  return (
+    <div className={`${bg} rounded-xl p-3 border border-border/50 flex flex-col gap-1`}>
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        {Icon && <Icon className="h-3.5 w-3.5" />}{label}
+      </div>
+      <p className={`text-lg font-bold leading-tight ${color}`}>{value}</p>
+      {sub && <p className="text-[11px] text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
+/* ─── section title ──────────────────────────────────────────── */
+function SectionTitle({ icon: Icon, children, color = 'text-foreground' }) {
+  return (
+    <div className={`flex items-center gap-2 text-sm font-semibold ${color} mb-2`}>
+      {Icon && <Icon className="h-4 w-4" />}{children}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════ */
 export default function CashRegisterDetail({ register, onClose }) {
   if (!register) return null;
   const { formatCurrency, settings } = useAppSettings();
-
   const regDate = register.date || format(new Date(), 'yyyy-MM-dd');
 
-  // Fetch sales for this specific date using sale_date field (server-side filter)
-  const { data: allSales = [], isLoading } = useQuery({
+  /* ── 1. Queries ─────────────────────────────────────────────── */
+  const { data: allSales = [], isLoading: loadSales } = useQuery({
     queryKey: ['sales-by-date', regDate],
     queryFn: async () => {
-      // Try filtering by sale_date first (new field); fallback: fetch recent and filter by created_date prefix
       const bySaleDate = await fixit.entities.Sale.filter({ sale_date: regDate }, '-created_date', 1000);
       if (bySaleDate.length > 0) return bySaleDate;
-      // Fallback: for old sales (before sale_date was added), fetch recent and filter by created_date
       const recent = await fixit.entities.Sale.list('-created_date', 2000);
       return recent.filter(s => s && String(s.created_date || '').slice(0, 10) === regDate);
     },
@@ -64,108 +106,43 @@ export default function CashRegisterDetail({ register, onClose }) {
     staleTime: 0,
   });
 
-  const { sales, expenses, totalCash, totalCard, totalSales, totalExp } = useMemo(() => {
+  const { data: allRepairs = [] } = useQuery({
+    queryKey: ['repairs-by-date', regDate],
+    queryFn: async () => {
+      const all = await fixit.entities.Repair.list('-created_date', 500);
+      return all.filter(r => {
+        const d = r.completed_date || r.created_date || '';
+        return String(d).slice(0, 10) === regDate;
+      });
+    },
+    staleTime: 0,
+  });
+
+  const { data: allServiceSales = [] } = useQuery({
+    queryKey: ['service-sales-by-date', regDate],
+    queryFn: async () => {
+      const all = await fixit.entities.ServiceSale.list('-created_date', 500);
+      return all.filter(s => String(s.created_date || '').slice(0, 10) === regDate);
+    },
+    staleTime: 0,
+  });
+
+  /* ── 2. Computed metrics ────────────────────────────────────── */
+  const metrics = useMemo(() => {
     try {
-      // allSales already filtered by date from the query above
-      const filteredSales = allSales || [];
-
-      const filteredExpenses = (allExpenses || []).filter(e => {
-        if (!e) return false;
-        return e.date === regDate || String(e.created_date || '').slice(0, 10) === regDate;
-      });
-
-      const cash = filteredSales.reduce((sum, s) => {
-        if (s.payment_method === 'especes') return sum + (Number(s.total) || 0);
-        const cp = (s.payments || []).find(p => p.method === 'especes');
-        return sum + (Number(cp?.amount) || 0);
-      }, 0);
-
-      const card = filteredSales.reduce((sum, s) => {
-        if (s.payment_method === 'carte') return sum + (Number(s.total) || 0);
-        const cp = (s.payments || []).find(p => p.method === 'carte');
-        return sum + (Number(cp?.amount) || 0);
-      }, 0);
-
-      const tSales = filteredSales.reduce((s, v) => s + (Number(v.total) || 0), 0);
-      const tExp = filteredExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
-
-      return {
-        sales: filteredSales, expenses: filteredExpenses,
-        totalCash: cash, totalCard: card, totalSales: tSales, totalExp: tExp,
-      };
-    } catch (e) {
-      console.error('Crash in CashRegisterDetail logic:', e);
-      return { sales: [], expenses: [], totalCash: 0, totalCard: 0, totalSales: 0, totalExp: 0 };
-    }
-  }, [regDate, allSales, allExpenses]);
-
-
-
-
-  const handleGeneratePDF = () => {
-    try {
-      const doc = new jsPDF('p', 'mm', 'a4');
-      const bName = settings.shop_name || settings.business_name || 'FIXIT PRO';
-      const DARK  = [30, 41, 59];
-      const GRAY  = [100, 116, 139];
-      const BLUE  = [37, 99, 235];
-      const RED   = [185, 28, 28];
-
-      // ── Header band ──
-      doc.setFillColor(...DARK);
-      doc.rect(0, 0, 210, 30, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
-      doc.text(bName.toUpperCase(), 15, 12);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
-      doc.text('RAPPORT DE CAISSE DÉTAILLÉ', 15, 19);
-      doc.text(`Session du ${register.date}  —  Généré le ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 15, 24);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(20);
-      doc.text(`#${(register.id || '').toString().slice(-6).padStart(6,'0')}`, 195, 20, { align: 'right' });
-
-      // ── Summary 2 columns ──
-      const summaryData = [
-        ['Fond de caisse initial', formatCurrency(register.opening_balance || 0)],
-        ['Total ventes brutes', formatCurrency(totalSales)],
-        ['Dépenses totales', `-${formatCurrency(totalExp)}`],
-        ['Solde attendu', formatCurrency((Number(register.opening_balance) || 0) + totalCash - totalExp)],
-        ['Solde réel (clôture)', register.closing_balance != null ? formatCurrency(register.closing_balance) : 'N/A'],
-        ['Écart', formatCurrency(register.difference || 0)],
-      ];
-      const paymentData = [
-        ['Espèces encaissées', formatCurrency(totalCash)],
-        ['Carte bancaire', formatCurrency(totalCard)],
-        ['Nombre de tickets', String(sales.length)],
-        ['Statut session', (register.status || 'ouverte').toUpperCase()],
-        ['Caissier ouverture', register.opened_by || '—'],
-        ['Caissier clôture', register.closed_by || '—'],
-      ];
-
-      doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...DARK);
-      doc.text('RÉSUMÉ FINANCIER', 15, 38);
-      doc.text('ENCAISSEMENTS', 115, 38);
-
-      autoTable(doc, {
-        startY: 41, body: summaryData, theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 2 },
-        columnStyles: { 0: { cellWidth: 45 }, 1: { fontStyle: 'bold', halign: 'right' } },
-        margin: { left: 15, right: 105 },
-      });
-      const yA = doc.lastAutoTable?.finalY || 41;
-
-      autoTable(doc, {
-        startY: 41, body: paymentData, theme: 'plain',
-        styles: { fontSize: 8, cellPadding: 2 },
-        columnStyles: { 0: { cellWidth: 45 }, 1: { fontStyle: 'bold', halign: 'right' } },
-        margin: { left: 115 },
-      });
-      const yB = doc.lastAutoTable?.finalY || 41;
-      let y = Math.max(yA, yB) + 8;
-
-      // ── Product summary table ──
+      /* --- Ventes produits --- */
+      const sales = allSales || [];
+      let salesCash = 0, salesCard = 0, salesTotal = 0, salesDiscounts = 0;
       const productMap = {};
+
       sales.forEach(s => {
-        const items = Array.isArray(s.items) ? s.items : (() => { try { return JSON.parse(s.items || '[]'); } catch { return []; } })();
+        const { cash, card } = extractPayments(s, 'total');
+        salesCash  += cash;
+        salesCard  += card;
+        salesTotal += Number(s.total) || 0;
+        salesDiscounts += Number(s.discount_total) || 0;
+
+        const items = parseItems(s.items);
         items.forEach(it => {
           const key = it.product_name || 'Inconnu';
           if (!productMap[key]) productMap[key] = { qty: 0, total: 0 };
@@ -173,431 +150,824 @@ export default function CashRegisterDetail({ register, onClose }) {
           productMap[key].total += Number(it.total)    || 0;
         });
       });
-      const productRows = Object.entries(productMap)
-        .sort((a, b) => b[1].total - a[1].total)
-        .map(([name, v]) => [name, String(v.qty), formatCurrency(v.total)]);
 
-      if (productRows.length > 0) {
+      /* --- Dépenses --- */
+      const expenses = (allExpenses || []).filter(e => {
+        if (!e) return false;
+        return e.date === regDate || String(e.created_date || '').slice(0, 10) === regDate;
+      });
+      const totalExpenses = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
+      /* --- Réparations payées --- */
+      const repairs = (allRepairs || []).filter(r => (Number(r.final_cost) || 0) > 0);
+      let repairCash = 0, repairCard = 0, repairTotal = 0;
+      repairs.forEach(r => {
+        const { cash, card } = extractPayments(r, 'final_cost');
+        repairCash  += cash;
+        repairCard  += card;
+        repairTotal += Number(r.final_cost) || 0;
+      });
+
+      /* --- Services --- */
+      const serviceSales = allServiceSales || [];
+      let serviceCash = 0, serviceCard = 0, serviceTotal = 0;
+      serviceSales.forEach(ss => {
+        const { cash, card } = extractPayments(ss, 'total');
+        serviceCash  += cash;
+        serviceCard  += card;
+        serviceTotal += Number(ss.total) || 0;
+      });
+
+      /* --- Totaux consolidés --- */
+      const totalRevenue   = salesTotal + repairTotal + serviceTotal;
+      const allCash        = salesCash + repairCash + serviceCash;
+      const allCard        = salesCard + repairCard + serviceCard;
+      const nbTransactions = sales.length + repairs.length + serviceSales.length;
+      const avgTicket      = nbTransactions > 0 ? totalRevenue / nbTransactions : 0;
+
+      /* Solde physique caisse = fond ouverture + encaissements espèces - dépenses */
+      const openingBalance  = Number(register.opening_balance) || 0;
+      const expectedCashBalance = openingBalance + allCash - totalExpenses;
+
+      const productRows = Object.entries(productMap)
+        .sort((a, b) => b[1].total - a[1].total);
+
+      return {
+        sales, expenses, repairs, serviceSales,
+        salesCash, salesCard, salesTotal, salesDiscounts,
+        repairCash, repairCard, repairTotal,
+        serviceCash, serviceCard, serviceTotal,
+        totalRevenue, allCash, allCard,
+        totalExpenses, nbTransactions, avgTicket,
+        expectedCashBalance, openingBalance,
+        productMap, productRows,
+      };
+    } catch (e) {
+      console.error('CashRegisterDetail metrics error:', e);
+      return {
+        sales: [], expenses: [], repairs: [], serviceSales: [],
+        salesCash: 0, salesCard: 0, salesTotal: 0, salesDiscounts: 0,
+        repairCash: 0, repairCard: 0, repairTotal: 0,
+        serviceCash: 0, serviceCard: 0, serviceTotal: 0,
+        totalRevenue: 0, allCash: 0, allCard: 0,
+        totalExpenses: 0, nbTransactions: 0, avgTicket: 0,
+        expectedCashBalance: 0, openingBalance: 0,
+        productMap: {}, productRows: [],
+      };
+    }
+  }, [regDate, allSales, allExpenses, allRepairs, allServiceSales, register]);
+
+  /* ── 3. PDF generation ──────────────────────────────────────── */
+  const handleGeneratePDF = () => {
+    try {
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const bName = settings.shop_name || settings.business_name || 'FIXIT PRO';
+      const DARK  = [30, 41, 59];
+      const GRAY  = [100, 116, 139];
+      const BLUE  = [37, 99, 235];
+      const GREEN = [22, 163, 74];
+      const RED   = [185, 28, 28];
+      const AMBER = [180, 83, 9];
+
+      const {
+        sales, expenses, repairs, serviceSales,
+        salesTotal, salesDiscounts,
+        repairTotal, serviceTotal,
+        totalRevenue, allCash, allCard,
+        totalExpenses, nbTransactions, avgTicket,
+        expectedCashBalance, openingBalance,
+        productRows,
+      } = metrics;
+
+      /* ── En-tête ── */
+      doc.setFillColor(...DARK);
+      doc.rect(0, 0, 210, 32, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+      doc.text(bName.toUpperCase(), 14, 11);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+      doc.text('RAPPORT DE SESSION CAISSE', 14, 18);
+      doc.text(`Session du ${register.date}  ·  Généré le ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, 24);
+      doc.text(`Caissier: ${register.opened_by || '—'}  ·  Statut: ${(register.status || 'ouverte').toUpperCase()}`, 14, 29);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(18);
+      doc.text(`#${(register.id || '').toString().slice(-6).padStart(6, '0')}`, 196, 20, { align: 'right' });
+
+      let y = 38;
+
+      /* ── Section 1 : Synthèse financière (2 colonnes) ── */
+      doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...DARK);
+      doc.text('SYNTHÈSE FINANCIÈRE', 14, y);
+      doc.text('BILAN DE CAISSE ESPÈCES', 112, y);
+      y += 3;
+
+      autoTable(doc, {
+        startY: y,
+        body: [
+          ['CA Ventes produits',  formatCurrency(salesTotal)],
+          ['CA Réparations',      formatCurrency(repairTotal)],
+          ['CA Services',         formatCurrency(serviceTotal)],
+          ['──────────────────', '──────────'],
+          ['CHIFFRE D\'AFFAIRES TOTAL', formatCurrency(totalRevenue)],
+          ['Remises accordées',   salesDiscounts > 0 ? `-${formatCurrency(salesDiscounts)}` : formatCurrency(0)],
+          ['Dépenses',            `-${formatCurrency(totalExpenses)}`],
+          ['RÉSULTAT NET', formatCurrency(totalRevenue - totalExpenses)],
+        ],
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2.2 },
+        columnStyles: { 0: { cellWidth: 52 }, 1: { fontStyle: 'bold', halign: 'right', cellWidth: 30 } },
+        bodyStyles: {},
+        didParseCell(data) {
+          if (data.row.index === 4 || data.row.index === 7) {
+            data.cell.styles.fillColor = data.row.index === 4 ? BLUE : GREEN;
+            data.cell.styles.textColor = [255, 255, 255];
+            data.cell.styles.fontStyle = 'bold';
+          }
+          if (data.row.index === 6) data.cell.styles.textColor = RED;
+        },
+        margin: { left: 14, right: 112 },
+      });
+      const yA = doc.lastAutoTable?.finalY || y;
+
+      autoTable(doc, {
+        startY: y,
+        body: [
+          ['Fond d\'ouverture',    formatCurrency(openingBalance)],
+          ['Espèces ventes',       formatCurrency(metrics.salesCash)],
+          ['Espèces réparations',  formatCurrency(metrics.repairCash)],
+          ['Espèces services',     formatCurrency(metrics.serviceCash)],
+          ['──────────────────', '──────────'],
+          ['TOTAL ESPÈCES ENTRANTS', formatCurrency(allCash)],
+          ['Dépenses espèces',    `-${formatCurrency(totalExpenses)}`],
+          ['SOLDE ESPÈCES ATTENDU', formatCurrency(expectedCashBalance)],
+        ],
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2.2 },
+        columnStyles: { 0: { cellWidth: 52 }, 1: { fontStyle: 'bold', halign: 'right', cellWidth: 30 } },
+        didParseCell(data) {
+          if (data.row.index === 5 || data.row.index === 7) {
+            data.cell.styles.fillColor = data.row.index === 5 ? [71, 85, 105] : BLUE;
+            data.cell.styles.textColor = [255, 255, 255];
+            data.cell.styles.fontStyle = 'bold';
+          }
+          if (data.row.index === 6) data.cell.styles.textColor = RED;
+        },
+        margin: { left: 112 },
+      });
+      const yB = doc.lastAutoTable?.finalY || y;
+      y = Math.max(yA, yB) + 5;
+
+      /* ── Section 2 : Indicateurs clés ── */
+      doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...DARK);
+      doc.text('INDICATEURS CLÉS', 14, y); y += 3;
+
+      autoTable(doc, {
+        startY: y,
+        body: [
+          ['Nb total transactions', String(nbTransactions),
+           'Dont ventes', String(sales.length),
+           'Dont réparations', String(repairs.length),
+           'Dont services', String(serviceSales.length)],
+          ['Panier moyen', formatCurrency(avgTicket),
+           'Total carte', formatCurrency(allCard),
+           'Total espèces', formatCurrency(allCash),
+           'Remises', salesDiscounts > 0 ? `-${formatCurrency(salesDiscounts)}` : '—'],
+        ],
+        theme: 'plain',
+        styles: { fontSize: 8, cellPadding: 2 },
+        columnStyles: {
+          0: { textColor: GRAY }, 1: { fontStyle: 'bold' },
+          2: { textColor: GRAY }, 3: { fontStyle: 'bold' },
+          4: { textColor: GRAY }, 5: { fontStyle: 'bold' },
+          6: { textColor: GRAY }, 7: { fontStyle: 'bold' },
+        },
+        margin: { left: 14, right: 14 },
+      });
+      y = (doc.lastAutoTable?.finalY || y) + 5;
+
+      /* ── Section 3 : Ventilation par mode de paiement ── */
+      doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...DARK);
+      doc.text('VENTILATION PAR MODE DE PAIEMENT', 14, y); y += 3;
+
+      autoTable(doc, {
+        startY: y,
+        head: [['Mode', 'Ventes', 'Réparations', 'Services', 'TOTAL', '% CA']],
+        body: [
+          ['Espèces 💵',
+           formatCurrency(metrics.salesCash), formatCurrency(metrics.repairCash), formatCurrency(metrics.serviceCash),
+           formatCurrency(allCash),
+           totalRevenue > 0 ? `${((allCash / totalRevenue) * 100).toFixed(1)}%` : '0%'],
+          ['Carte bancaire 💳',
+           formatCurrency(metrics.salesCard), formatCurrency(metrics.repairCard), formatCurrency(metrics.serviceCard),
+           formatCurrency(allCard),
+           totalRevenue > 0 ? `${((allCard / totalRevenue) * 100).toFixed(1)}%` : '0%'],
+          ['TOTAL',
+           formatCurrency(salesTotal), formatCurrency(repairTotal), formatCurrency(serviceTotal),
+           formatCurrency(totalRevenue), '100%'],
+        ],
+        styles: { fontSize: 8, cellPadding: 2.5 },
+        headStyles: { fillColor: DARK, textColor: 255, fontStyle: 'bold' },
+        columnStyles: { 4: { fontStyle: 'bold', textColor: BLUE }, 5: { halign: 'right' } },
+        didParseCell(data) {
+          if (data.row.index === 2) {
+            data.cell.styles.fillColor = [241, 245, 249];
+            data.cell.styles.fontStyle = 'bold';
+          }
+        },
+        margin: { left: 14, right: 14 },
+      });
+      y = (doc.lastAutoTable?.finalY || y) + 5;
+
+      /* ── Section 4 : Top articles vendus ── */
+      if (metrics.productRows.length > 0) {
         doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...DARK);
-        doc.text('RÉSUMÉ PAR ARTICLE', 15, y);
+        doc.text('TOP ARTICLES VENDUS', 14, y); y += 3;
+
         autoTable(doc, {
-          startY: y + 3,
-          head: [['Article', 'Qté vendue', 'Total']],
-          body: productRows,
+          startY: y,
+          head: [['Article', 'Qté', 'CA', '% CA ventes']],
+          body: metrics.productRows.slice(0, 15).map(([name, v]) => [
+            name,
+            String(v.qty),
+            formatCurrency(v.total),
+            salesTotal > 0 ? `${((v.total / salesTotal) * 100).toFixed(1)}%` : '0%',
+          ]),
           styles: { fontSize: 8, cellPadding: 2.5 },
           headStyles: { fillColor: BLUE, textColor: 255, fontStyle: 'bold' },
           alternateRowStyles: { fillColor: [241, 245, 249] },
-          columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right', fontStyle: 'bold' } },
-          margin: { left: 15, right: 15 },
+          columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right', fontStyle: 'bold' }, 3: { halign: 'right' } },
+          margin: { left: 14, right: 14 },
         });
-        y = (doc.lastAutoTable?.finalY || y) + 8;
+        y = (doc.lastAutoTable?.finalY || y) + 5;
       }
 
-      // ── Detailed sales journal ──
-      doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...DARK);
-      doc.text(`JOURNAL DES VENTES (${sales.length} ticket${sales.length !== 1 ? 's' : ''})`, 15, y);
+      /* ── Section 5 : Journal des ventes ── */
+      if (sales.length > 0) {
+        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...DARK);
+        doc.text(`JOURNAL DES VENTES PRODUITS (${sales.length} ticket${sales.length > 1 ? 's' : ''})`, 14, y); y += 3;
 
-      const salesRows = [];
-      sales.forEach(s => {
-        const items = Array.isArray(s.items) ? s.items : (() => { try { return JSON.parse(s.items || '[]'); } catch { return []; } })();
-        // Ticket header row
-        salesRows.push([
-          { content: fmtTime(s.created_date), styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
-          { content: s.sale_number || '—', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
-          { content: s.client_name || 'Client passager', styles: { fillColor: [241, 245, 249] } },
-          { content: s.payment_method === 'especes' ? 'Espèces' : s.payment_method === 'carte' ? 'Carte' : (s.payment_method || '—'), styles: { fillColor: [241, 245, 249] } },
-          { content: '', styles: { fillColor: [241, 245, 249] } },
-          { content: formatCurrency(s.total || 0), styles: { fontStyle: 'bold', halign: 'right', textColor: BLUE, fillColor: [241, 245, 249] } },
-        ]);
-        // Item rows
-        items.forEach(it => {
+        const salesRows = [];
+        sales.forEach(s => {
+          const items = parseItems(s.items);
+          const { cash, card } = extractPayments(s, 'total');
           salesRows.push([
-            '',
-            { content: '↳ ' + (it.product_name || '—'), colSpan: 2, styles: { fontSize: 7, textColor: GRAY } },
-            '',
-            { content: `×${it.quantity}`, styles: { fontSize: 7, halign: 'center', textColor: GRAY } },
-            { content: formatCurrency(it.unit_price || 0), styles: { fontSize: 7, halign: 'right', textColor: GRAY } },
-            { content: formatCurrency(it.total || 0), styles: { fontSize: 7, halign: 'right', textColor: GRAY } },
+            { content: fmtTime(s.created_date), styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+            { content: s.sale_number || '—', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+            { content: s.client_name || 'Passager', styles: { fillColor: [241, 245, 249] } },
+            { content: cash > 0 && card > 0 ? 'Mixte' : cash > 0 ? 'Espèces' : 'Carte', styles: { fillColor: [241, 245, 249] } },
+            { content: s.discount_total > 0 ? `-${formatCurrency(s.discount_total)}` : '—', styles: { fillColor: [241, 245, 249], textColor: AMBER } },
+            { content: formatCurrency(s.total || 0), styles: { fontStyle: 'bold', halign: 'right', textColor: BLUE, fillColor: [241, 245, 249] } },
           ]);
+          items.forEach(it => {
+            salesRows.push([
+              '',
+              { content: '  ↳ ' + (it.product_name || '—'), colSpan: 2, styles: { fontSize: 7, textColor: GRAY } },
+              '',
+              { content: `×${it.quantity}`, styles: { fontSize: 7, halign: 'center', textColor: GRAY } },
+              { content: `@${formatCurrency(it.unit_price || 0)}`, styles: { fontSize: 7, halign: 'right', textColor: GRAY } },
+              { content: formatCurrency(it.total || 0), styles: { fontSize: 7, halign: 'right', textColor: GRAY } },
+            ]);
+          });
         });
-      });
+
+        autoTable(doc, {
+          startY: y,
+          head: [['Heure', 'Ticket #', 'Client', 'Mode', 'Remise', 'Montant']],
+          body: salesRows,
+          styles: { fontSize: 8, cellPadding: 2.2 },
+          headStyles: { fillColor: DARK, textColor: 255, fontStyle: 'bold' },
+          columnStyles: {
+            0: { cellWidth: 12 }, 1: { cellWidth: 22 }, 2: { cellWidth: 'auto' },
+            3: { cellWidth: 16 }, 4: { halign: 'right', cellWidth: 20 }, 5: { halign: 'right', fontStyle: 'bold', cellWidth: 24 },
+          },
+          foot: [['', '', '', '', 'TOTAL VENTES', formatCurrency(salesTotal)]],
+          footStyles: { fillColor: [241, 245, 249], fontStyle: 'bold', textColor: DARK },
+          margin: { left: 14, right: 14 },
+        });
+        y = (doc.lastAutoTable?.finalY || y) + 5;
+      }
+
+      /* ── Section 6 : Réparations ── */
+      if (repairs.length > 0) {
+        if (y > 240) { doc.addPage(); y = 15; }
+        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...DARK);
+        doc.text(`RÉPARATIONS ENCAISSÉES (${repairs.length})`, 14, y); y += 3;
+
+        autoTable(doc, {
+          startY: y,
+          head: [['Ticket', 'Client', 'Appareil', 'Technicien', 'Mode', 'Montant']],
+          body: repairs.map(r => {
+            const { cash, card } = extractPayments(r, 'final_cost');
+            return [
+              r.ticket_number || '—',
+              r.client_name || '—',
+              `${r.device_brand || ''} ${r.device_model || ''}`.trim() || '—',
+              r.assigned_to || '—',
+              cash > 0 && card > 0 ? 'Mixte' : cash > 0 ? 'Espèces' : 'Carte',
+              formatCurrency(r.final_cost || 0),
+            ];
+          }),
+          styles: { fontSize: 8, cellPadding: 2.2 },
+          headStyles: { fillColor: [71, 85, 105], textColor: 255, fontStyle: 'bold' },
+          alternateRowStyles: { fillColor: [248, 250, 252] },
+          columnStyles: { 5: { halign: 'right', fontStyle: 'bold', textColor: BLUE } },
+          foot: [['', '', '', '', 'TOTAL RÉPARATIONS', formatCurrency(repairTotal)]],
+          footStyles: { fillColor: [241, 245, 249], fontStyle: 'bold', textColor: DARK },
+          margin: { left: 14, right: 14 },
+        });
+        y = (doc.lastAutoTable?.finalY || y) + 5;
+      }
+
+      /* ── Section 7 : Services ── */
+      if (serviceSales.length > 0) {
+        if (y > 240) { doc.addPage(); y = 15; }
+        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...DARK);
+        doc.text(`SERVICES VENDUS (${serviceSales.length})`, 14, y); y += 3;
+
+        autoTable(doc, {
+          startY: y,
+          head: [['Service', 'Client', 'Qté', 'Mode', 'Montant']],
+          body: serviceSales.map(ss => {
+            const { cash, card } = extractPayments(ss, 'total');
+            return [
+              ss.service_name || '—',
+              ss.client_name || '—',
+              String(ss.quantity || 1),
+              cash > 0 && card > 0 ? 'Mixte' : cash > 0 ? 'Espèces' : 'Carte',
+              formatCurrency(ss.total || 0),
+            ];
+          }),
+          styles: { fontSize: 8, cellPadding: 2.2 },
+          headStyles: { fillColor: [109, 40, 217], textColor: 255, fontStyle: 'bold' },
+          alternateRowStyles: { fillColor: [250, 248, 255] },
+          columnStyles: { 2: { halign: 'center' }, 4: { halign: 'right', fontStyle: 'bold', textColor: BLUE } },
+          foot: [['', '', '', 'TOTAL SERVICES', formatCurrency(serviceTotal)]],
+          footStyles: { fillColor: [241, 245, 249], fontStyle: 'bold', textColor: DARK },
+          margin: { left: 14, right: 14 },
+        });
+        y = (doc.lastAutoTable?.finalY || y) + 5;
+      }
+
+      /* ── Section 8 : Dépenses ── */
+      if (expenses.length > 0) {
+        if (y > 240) { doc.addPage(); y = 15; }
+        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...RED);
+        doc.text('DÉPENSES / SORTIES DE CAISSE', 14, y); y += 3;
+
+        autoTable(doc, {
+          startY: y,
+          head: [['Description', 'Date', 'Montant']],
+          body: metrics.expenses.map(e => [
+            e.description || '—',
+            fmtDate(e.date || e.created_date),
+            `-${formatCurrency(e.amount || 0)}`,
+          ]),
+          styles: { fontSize: 8, cellPadding: 2.2 },
+          headStyles: { fillColor: RED, textColor: 255 },
+          columnStyles: { 2: { halign: 'right', fontStyle: 'bold', textColor: RED } },
+          foot: [['', 'TOTAL DÉPENSES', `-${formatCurrency(metrics.totalExpenses)}`]],
+          footStyles: { fillColor: [255, 241, 242], fontStyle: 'bold', textColor: RED },
+          margin: { left: 14, right: 14 },
+        });
+        y = (doc.lastAutoTable?.finalY || y) + 5;
+      }
+
+      /* ── Section 9 : Récapitulatif clôture ── */
+      if (y > 230) { doc.addPage(); y = 15; }
+      doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...DARK);
+      doc.text('RÉCAPITULATIF DE CLÔTURE', 14, y); y += 3;
 
       autoTable(doc, {
-        startY: y + 3,
-        head: [['Heure', 'Ticket #', 'Client', 'Mode', 'P.U.', 'Montant']],
-        body: salesRows,
-        styles: { fontSize: 8, cellPadding: 2.5 },
-        headStyles: { fillColor: DARK, textColor: 255, fontStyle: 'bold' },
-        columnStyles: {
-          0: { cellWidth: 14 }, 1: { cellWidth: 22 }, 2: { cellWidth: 'auto' },
-          3: { cellWidth: 18 }, 4: { halign: 'right', cellWidth: 24 }, 5: { halign: 'right', fontStyle: 'bold', cellWidth: 26 },
+        startY: y,
+        body: [
+          ['Fond d\'ouverture',          formatCurrency(openingBalance)],
+          ['+ Total espèces encaissées', formatCurrency(allCash)],
+          ['- Dépenses en espèces',      `-${formatCurrency(metrics.totalExpenses)}`],
+          ['= SOLDE ESPÈCES ATTENDU',    formatCurrency(expectedCashBalance)],
+          ['Solde réel (clôture)',        register.closing_balance != null ? formatCurrency(register.closing_balance) : 'Non renseigné'],
+          ['Écart de caisse',             register.difference != null ? formatCurrency(register.difference) : '—'],
+        ],
+        theme: 'grid',
+        styles: { fontSize: 9, cellPadding: 3 },
+        columnStyles: { 0: { cellWidth: 80 }, 1: { fontStyle: 'bold', halign: 'right', cellWidth: 40 } },
+        didParseCell(data) {
+          if (data.row.index === 3) {
+            data.cell.styles.fillColor = BLUE;
+            data.cell.styles.textColor = [255, 255, 255];
+            data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.fontSize = 10;
+          }
+          if (data.row.index === 2 || data.row.index === 5) data.cell.styles.textColor = RED;
         },
-        margin: { left: 15, right: 15 },
+        margin: { left: 14, right: 14 },
       });
-      y = (doc.lastAutoTable?.finalY || y) + 8;
+      y = (doc.lastAutoTable?.finalY || y) + 15;
 
-      // ── Expenses ──
-      if (expenses.length > 0) {
-        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...RED);
-        doc.text('DÉPENSES', 15, y);
-        autoTable(doc, {
-          startY: y + 3,
-          head: [['Description', 'Montant']],
-          body: expenses.map(e => [e.description || '—', `-${formatCurrency(e.amount || 0)}`]),
-          styles: { fontSize: 8, cellPadding: 2.5 },
-          headStyles: { fillColor: RED, textColor: 255 },
-          columnStyles: { 1: { halign: 'right', fontStyle: 'bold', textColor: RED } },
-          margin: { left: 15, right: 15 },
-        });
-        y = (doc.lastAutoTable?.finalY || y) + 8;
-      }
-
-      // ── Signature zone ──
-      if (y > 250) doc.addPage();
-      const ySign = Math.max(y + 15, 250);
+      /* ── Zone signature ── */
+      if (y > 260) { doc.addPage(); y = 15; }
       doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(...GRAY);
-      doc.text('SIGNATURE DU RESPONSABLE', 15, ySign);
-      doc.text("CACHET DE L'ÉTABLISSEMENT", 155, ySign);
+      doc.text('SIGNATURE DU RESPONSABLE', 14, y);
+      doc.text("CACHET DE L'ÉTABLISSEMENT", 152, y);
       doc.setDrawColor(203, 213, 225);
-      doc.line(15, ySign + 12, 70, ySign + 12);
-      doc.rect(155, ySign + 4, 30, 18);
+      doc.line(14, y + 14, 70, y + 14);
+      doc.rect(152, y + 4, 32, 18);
 
-      doc.save(`RapportCaisse_${register.date}.pdf`);
-      toast.success('PDF généré');
+      doc.save(`Session_Caisse_${register.date}.pdf`);
+      toast.success('Rapport PDF généré avec succès');
     } catch (err) {
-      console.error('PDF generator error:', err);
-      toast.error('Erreur lors de la création du PDF.');
+      console.error('PDF error:', err);
+      toast.error('Erreur lors de la génération du PDF');
     }
   };
 
+  /* ── 4. Render ──────────────────────────────────────────────── */
+  const {
+    sales, expenses, repairs, serviceSales,
+    salesTotal, salesDiscounts, repairTotal, serviceTotal,
+    totalRevenue, allCash, allCard, totalExpenses,
+    nbTransactions, avgTicket, expectedCashBalance,
+    productRows,
+  } = metrics;
 
+  const isLoading = loadSales;
 
   return (
     <Dialog open onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        {/* --- Reporting Page for Print --- */}
-        <div className="hidden print:block font-serif text-slate-900 print-content">
+      <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
 
-          {/* Header */}
-          <div className="flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-8">
-            <div className="space-y-1">
-              <h1 className="text-3xl font-black tracking-tight uppercase">{settings.business_name || 'FIXIT PRO'}</h1>
-              <p className="text-sm">Système de Gestion de Stock & POS</p>
-              <p className="text-xs text-slate-500">Document généré le {format(new Date(), 'dd/MM/yyyy HH:mm')}</p>
+        {/* ─── Titre ─────────────────────────────────────────── */}
+        <DialogHeader>
+          <DialogTitle className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <Receipt className="h-5 w-5 text-primary" />
+              <div>
+                <p className="text-base">Rapport de session — {register.date}</p>
+                <p className="text-sm font-normal text-muted-foreground flex items-center gap-2">
+                  Ouverture : {formatCurrency(register.opening_balance || 0)}
+                  &nbsp;·&nbsp;<StatusBadge status={register.status} />
+                  {register.opened_by && <>&nbsp;·&nbsp;{register.opened_by}</>}
+                </p>
+              </div>
             </div>
-            <div className="text-right">
-              <div className="bg-slate-900 text-white px-4 py-2 font-bold text-lg mb-2">RAPPORT DE CAISSE</div>
-              <p className="font-mono font-bold text-xl">SESSION : {register.date}</p>
+            <Button variant="outline" size="sm" onClick={handleGeneratePDF} className="gap-2 shrink-0">
+              <FileText className="h-4 w-4" /> Générer PDF
+            </Button>
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-5">
+
+          {/* ─── KPIs chiffre d'affaires ────────────────────── */}
+          <div>
+            <SectionTitle icon={BarChart3}>Chiffre d'affaires — toutes sources</SectionTitle>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <KpiCard label="Ventes produits" value={formatCurrency(salesTotal)}
+                sub={`${sales.length} ticket${sales.length > 1 ? 's' : ''}`}
+                icon={ShoppingCart} color="text-blue-600" />
+              <KpiCard label="Réparations" value={formatCurrency(repairTotal)}
+                sub={`${repairs.length} dossier${repairs.length > 1 ? 's' : ''}`}
+                icon={Wrench} color="text-slate-600" />
+              <KpiCard label="Services" value={formatCurrency(serviceTotal)}
+                sub={`${serviceSales.length} vente${serviceSales.length > 1 ? 's' : ''}`}
+                icon={Zap} color="text-violet-600" />
+              <KpiCard label="CA TOTAL" value={formatCurrency(totalRevenue)}
+                sub={`${nbTransactions} transactions`}
+                icon={TrendingUp} color="text-primary" bg="bg-primary/5 border-primary/20" />
             </div>
           </div>
 
-          {/* Session Overview */}
-          <div className="grid grid-cols-2 gap-8 mb-10">
-            <div className="space-y-4">
-              <h3 className="font-bold border-b pb-1 text-slate-700 uppercase text-xs tracking-wider">Résumé Financier</h3>
+          {/* ─── Modes de paiement ──────────────────────────── */}
+          <div>
+            <SectionTitle icon={CreditCard}>Ventilation par mode de paiement</SectionTitle>
+            <div className="rounded-xl border border-border overflow-hidden">
               <table className="w-full text-sm">
-                <tbody>
-                  <tr className="border-b"><td className="py-2 text-slate-600">Fond de caisse initial</td><td className="py-2 text-right font-bold">{formatCurrency(register.opening_balance || 0)}</td></tr>
-                  <tr className="border-b"><td className="py-2 text-slate-600">Total Ventes Nettes</td><td className="py-2 text-right font-bold">{formatCurrency(totalSales)}</td></tr>
-                  <tr className="border-b"><td className="py-2 text-slate-600">Dépenses Sortantes</td><td className="py-2 text-right font-bold text-destructive">-{formatCurrency(totalExp)}</td></tr>
-                  <tr className="bg-slate-50 font-black text-lg"><td className="py-3 px-2">SOLDE ATTENDU</td><td className="py-3 px-2 text-right">{formatCurrency(register.expected_balance || (register.opening_balance || 0) + totalSales - totalExp)}</td></tr>
-                </tbody>
-              </table>
-            </div>
-            <div className="space-y-4">
-              <h3 className="font-bold border-b pb-1 text-slate-700 uppercase text-xs tracking-wider">Détail des Encaissements</h3>
-              <table className="w-full text-sm">
-                <tbody>
-                  <tr className="border-b"><td className="py-2 text-slate-600">Total Espèces</td><td className="py-2 text-right font-bold">{formatCurrency(totalCash)}</td></tr>
-                  <tr className="border-b"><td className="py-2 text-slate-600">Total Carte Bancaire</td><td className="py-2 text-right font-bold">{formatCurrency(totalCard)}</td></tr>
-                  <tr className="border-b"><td className="py-2 text-slate-500 italic">Nombre de tickets</td><td className="py-2 text-right italic">{sales.length}</td></tr>
-                  <tr className="bg-slate-50 font-bold"><td className="py-3 px-2 text-slate-600">Statut Session</td><td className="py-3 px-2 text-right uppercase">{register.status || 'ouverte'}</td></tr>
-
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Sales Table */}
-          <div className="space-y-4 mb-10">
-            <h3 className="font-bold border-b pb-1 text-slate-700 uppercase text-xs tracking-wider">Journal des Ventes</h3>
-            <table className="w-full text-[11px] border-collapse">
-              <thead>
-                <tr className="bg-slate-100 border-b-2 border-slate-300">
-                  <th className="py-3 px-2 text-left font-bold uppercase">Heure</th>
-                  <th className="py-3 px-2 text-left font-bold uppercase">Ticket #</th>
-                  <th className="py-3 px-2 text-left font-bold uppercase">Client</th>
-                  <th className="py-3 px-2 text-left font-bold uppercase">Paiement</th>
-                  <th className="py-3 px-2 text-right font-bold uppercase text-primary">Montant</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sales.map(sale => (
-                  <tr key={sale.id} className="border-b border-slate-200 hover:bg-slate-50">
-                    <td className="py-2.5 px-2">{fmtTime(sale.created_date)}</td>
-
-                    <td className="py-2.5 px-2 font-mono font-bold">{sale.sale_number || '-'}</td>
-                    <td className="py-2.5 px-2">{sale.client_name || 'Client passager'}</td>
-                    <td className="py-2.5 px-2 capitalize">{sale.payment_method}</td>
-                    <td className="py-2.5 px-2 text-right font-bold">{formatCurrency(sale.total || 0)}</td>
-                  </tr>
-                ))}
-                {sales.length === 0 && <tr><td colSpan={5} className="py-8 text-center text-slate-400 italic font-serif">Aucune vente enregistrée sur cette session.</td></tr>}
-              </tbody>
-              <tfoot className="bg-slate-50 font-bold">
-                <tr>
-                  <td colSpan={4} className="py-3 px-2 text-right uppercase text-xs">TOTAL GÉNÉRAL VENTES</td>
-                  <td className="py-3 px-2 text-right text-base text-primary">{formatCurrency(totalSales)}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-
-          {/* Expenses Table */}
-          {expenses.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="font-bold border-b pb-1 text-slate-700 uppercase text-xs tracking-wider text-destructive">Bilan des Dépenses</h3>
-              <table className="w-full text-xs border-collapse">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="py-2 px-2 text-left">Description</th>
-                    <th className="py-2 px-2 text-right">Montant</th>
+                  <tr className="bg-muted/60 text-xs text-muted-foreground border-b border-border">
+                    <th className="text-left px-3 py-2">Mode</th>
+                    <th className="text-right px-3 py-2">Ventes</th>
+                    <th className="text-right px-3 py-2">Réparations</th>
+                    <th className="text-right px-3 py-2">Services</th>
+                    <th className="text-right px-3 py-2 font-semibold text-foreground">Total</th>
+                    <th className="text-right px-3 py-2">%</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {expenses.map(e => (
-                    <tr key={e.id} className="border-b border-slate-100">
-                      <td className="py-2 px-2">{e.description}</td>
-                      <td className="py-2 px-2 text-right font-bold text-destructive">-{formatCurrency(e.amount || 0)}</td>
-                    </tr>
-                  ))}
+                  <tr className="border-b border-border/30">
+                    <td className="px-3 py-2 flex items-center gap-2"><Banknote className="h-3.5 w-3.5 text-green-600" />Espèces</td>
+                    <td className="px-3 py-2 text-right">{formatCurrency(metrics.salesCash)}</td>
+                    <td className="px-3 py-2 text-right">{formatCurrency(metrics.repairCash)}</td>
+                    <td className="px-3 py-2 text-right">{formatCurrency(metrics.serviceCash)}</td>
+                    <td className="px-3 py-2 text-right font-bold">{formatCurrency(allCash)}</td>
+                    <td className="px-3 py-2 text-right text-muted-foreground text-xs">
+                      {totalRevenue > 0 ? `${((allCash / totalRevenue) * 100).toFixed(0)}%` : '—'}
+                    </td>
+                  </tr>
+                  <tr className="border-b border-border/30">
+                    <td className="px-3 py-2 flex items-center gap-2"><CreditCard className="h-3.5 w-3.5 text-blue-600" />Carte</td>
+                    <td className="px-3 py-2 text-right">{formatCurrency(metrics.salesCard)}</td>
+                    <td className="px-3 py-2 text-right">{formatCurrency(metrics.repairCard)}</td>
+                    <td className="px-3 py-2 text-right">{formatCurrency(metrics.serviceCard)}</td>
+                    <td className="px-3 py-2 text-right font-bold">{formatCurrency(allCard)}</td>
+                    <td className="px-3 py-2 text-right text-muted-foreground text-xs">
+                      {totalRevenue > 0 ? `${((allCard / totalRevenue) * 100).toFixed(0)}%` : '—'}
+                    </td>
+                  </tr>
                 </tbody>
+                <tfoot>
+                  <tr className="bg-muted/40 border-t border-border font-bold">
+                    <td className="px-3 py-2 text-xs uppercase tracking-wide">Total</td>
+                    <td className="px-3 py-2 text-right text-sm">{formatCurrency(salesTotal)}</td>
+                    <td className="px-3 py-2 text-right text-sm">{formatCurrency(repairTotal)}</td>
+                    <td className="px-3 py-2 text-right text-sm">{formatCurrency(serviceTotal)}</td>
+                    <td className="px-3 py-2 text-right text-primary">{formatCurrency(totalRevenue)}</td>
+                    <td className="px-3 py-2 text-right text-xs">100%</td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
-          )}
-
-          {/* Footer */}
-          <div className="mt-20 flex justify-between border-t border-dotted border-slate-400 pt-8">
-            <div className="text-center space-y-8">
-              <p className="text-xs uppercase font-bold text-slate-500">Signature Responsable</p>
-              <div className="h-16 w-48 border-b border-slate-300"></div>
-            </div>
-            <div className="text-center space-y-8">
-              <p className="text-xs uppercase font-bold text-slate-500">Cachet Établissement</p>
-              <div className="h-20 w-20 border-2 border-slate-200 rounded-full flex items-center justify-center text-[8px] italic text-slate-300">CACHET ICI</div>
-            </div>
           </div>
-        </div>
 
-        {/* --- Standard UI View --- */}
-        <div className="print:hidden space-y-6">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <Receipt className="h-5 w-5 text-primary" />
-                <div>
-                  <p>Journal de caisse — {register.date}</p>
-                  <p className="text-sm font-normal text-muted-foreground">
-                    Ouverture: {formatCurrency(register.opening_balance || 0)} &nbsp;·&nbsp;
-                    <StatusBadge status={register.status} />
-                  </p>
+          {/* ─── Indicateurs statistiques ───────────────────── */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <KpiCard label="Panier moyen" value={formatCurrency(avgTicket)} icon={Users} />
+            <KpiCard label="Remises accordées"
+              value={salesDiscounts > 0 ? `-${formatCurrency(salesDiscounts)}` : '—'}
+              icon={Tag}
+              color={salesDiscounts > 0 ? 'text-amber-600' : 'text-muted-foreground'} />
+            <KpiCard label="Dépenses" value={formatCurrency(totalExpenses)}
+              icon={ArrowDownCircle} color="text-destructive" />
+            <KpiCard label="Résultat net" value={formatCurrency(totalRevenue - totalExpenses)}
+              icon={TrendingUp}
+              color={(totalRevenue - totalExpenses) >= 0 ? 'text-green-600' : 'text-destructive'} />
+          </div>
+
+          {/* ─── Bilan caisse espèces ────────────────────────── */}
+          <div className="rounded-xl border border-border bg-muted/20 p-4">
+            <SectionTitle icon={Banknote}>Bilan caisse espèces (physique)</SectionTitle>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-1 text-sm">
+              <div className="text-muted-foreground">Fond d'ouverture</div>
+              <div className="font-semibold">{formatCurrency(register.opening_balance || 0)}</div>
+              <div className="text-muted-foreground">Espèces encaissées</div>
+              <div className="font-semibold text-green-600">+ {formatCurrency(allCash)}</div>
+              <div className="text-muted-foreground">Dépenses espèces</div>
+              <div className="font-semibold text-destructive">- {formatCurrency(totalExpenses)}</div>
+              <div className="text-muted-foreground font-semibold">Solde attendu</div>
+              <div className="font-bold text-primary">{formatCurrency(expectedCashBalance)}</div>
+            </div>
+            {register.status === 'fermee' && (
+              <>
+                <Separator className="my-3" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1 text-sm">
+                  <div className="text-muted-foreground">Solde réel (clôture)</div>
+                  <div className="font-semibold">{register.closing_balance != null ? formatCurrency(register.closing_balance) : 'N/A'}</div>
+                  <div />
+                  <div className="text-muted-foreground">Écart de caisse</div>
+                  <div className={`font-bold ${(register.difference || 0) !== 0 ? 'text-destructive' : 'text-green-600'}`}>
+                    {formatCurrency(register.difference || 0)}
+                    {(register.difference || 0) === 0 && ' ✓'}
+                  </div>
+                  {register.difference_reason && (
+                    <div className="text-xs text-amber-600 italic col-span-3">
+                      Raison : {register.difference_reason}
+                    </div>
+                  )}
                 </div>
-              </div>
-              <Button variant="outline" size="sm" onClick={handleGeneratePDF} className="gap-2">
-                <FileText className="h-4 w-4" /> Générer PDF
-              </Button>
-
-            </DialogTitle>
-          </DialogHeader>
-
-
-
-        {/* Résumé */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          <div className="bg-muted/30 rounded-xl p-3 border border-border/50 text-center">
-            <p className="text-xs text-muted-foreground mb-1">Ventes totales</p>
-            <p className="text-lg font-bold text-primary">{formatCurrency(totalSales)}</p>
-            <p className="text-xs text-muted-foreground">{sales.length} ticket(s)</p>
-          </div>
-          <div className="bg-muted/30 rounded-xl p-3 border border-border/50 text-center">
-            <p className="text-xs text-muted-foreground mb-1">Caissier</p>
-            <p className="text-sm font-bold truncate" title={register.opened_by || 'Non défini'}>{register.opened_by || 'Non défini'}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">Responsable Ouverture</p>
+              </>
+            )}
           </div>
 
-          <div className="bg-muted/30 rounded-xl p-3 border border-border/50 text-center">
-            <p className="text-xs text-muted-foreground mb-1 flex items-center justify-center gap-1"><Banknote className="h-3 w-3" />Espèces</p>
-            <p className="text-lg font-bold">{formatCurrency(totalCash)}</p>
-          </div>
-          <div className="bg-muted/30 rounded-xl p-3 border border-border/50 text-center">
-            <p className="text-xs text-muted-foreground mb-1 flex items-center justify-center gap-1"><CreditCard className="h-3 w-3" />Carte</p>
-            <p className="text-lg font-bold">{formatCurrency(totalCard)}</p>
-          </div>
-          <div className="bg-muted/30 rounded-xl p-3 border border-border/50 text-center">
-            <p className="text-xs text-muted-foreground mb-1">Dépenses</p>
-            <p className="text-lg font-bold text-destructive">{formatCurrency(totalExp)}</p>
-          </div>
-        </div>
-
-        {register.status === 'fermee' && (
-          <div className="p-3 rounded-xl border border-border/50 bg-muted/20 text-sm flex items-center justify-between">
-            <span className="text-muted-foreground">Solde attendu: <span className="font-bold text-foreground">{formatCurrency(register.expected_balance || 0)}</span></span>
-            <span className="text-muted-foreground">Solde réel: <span className="font-bold text-foreground">{formatCurrency(register.closing_balance || 0)}</span></span>
-            <span className="text-muted-foreground">Écart: <span className={`font-bold ${(register.difference || 0) !== 0 ? 'text-destructive' : 'text-foreground'}`}>{formatCurrency(register.difference || 0)}</span></span>
-          </div>
-        )}
-
-        {/* Résumé par article */}
-        {(() => {
-          const productMap = {};
-          sales.forEach(s => {
-            const items = Array.isArray(s.items) ? s.items : (() => { try { return JSON.parse(s.items || '[]'); } catch { return []; } })();
-            items.forEach(it => {
-              const key = it.product_name || 'Inconnu';
-              if (!productMap[key]) productMap[key] = { qty: 0, total: 0 };
-              productMap[key].qty   += Number(it.quantity) || 0;
-              productMap[key].total += Number(it.total)    || 0;
-            });
-          });
-          const rows = Object.entries(productMap).sort((a, b) => b[1].total - a[1].total);
-          if (!rows.length) return null;
-          return (
+          {/* ─── Top articles ────────────────────────────────── */}
+          {productRows.length > 0 && (
             <div>
-              <p className="text-sm font-semibold mb-2 flex items-center gap-2">
-                <Package className="h-4 w-4 text-primary" />Articles vendus — résumé
-              </p>
+              <SectionTitle icon={ShoppingCart}>Articles vendus</SectionTitle>
               <div className="rounded-xl border border-border overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-muted/50 border-b border-border text-xs text-muted-foreground">
-                      <th className="text-left px-3 py-2 font-medium">Article</th>
-                      <th className="text-center px-3 py-2 font-medium">Qté</th>
-                      <th className="text-right px-3 py-2 font-medium">Total</th>
+                    <tr className="bg-muted/50 text-xs text-muted-foreground border-b border-border">
+                      <th className="text-left px-3 py-2">Article</th>
+                      <th className="text-center px-3 py-2">Qté</th>
+                      <th className="text-right px-3 py-2">CA</th>
+                      <th className="text-right px-3 py-2">% CA</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map(([name, v], i) => (
+                    {productRows.map(([name, v], i) => (
                       <tr key={i} className="border-b border-border/30 last:border-0 hover:bg-muted/20">
                         <td className="px-3 py-2">{name}</td>
                         <td className="px-3 py-2 text-center text-muted-foreground">×{v.qty}</td>
                         <td className="px-3 py-2 text-right font-semibold text-primary">{formatCurrency(v.total)}</td>
+                        <td className="px-3 py-2 text-right text-xs text-muted-foreground">
+                          {salesTotal > 0 ? `${((v.total / salesTotal) * 100).toFixed(1)}%` : '—'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
                     <tr className="bg-muted/30 border-t border-border">
-                      <td className="px-3 py-2 text-xs text-muted-foreground font-semibold">{rows.length} article{rows.length > 1 ? 's' : ''} différent{rows.length > 1 ? 's' : ''}</td>
-                      <td className="px-3 py-2 text-center text-xs font-semibold">{rows.reduce((s, [,v]) => s + v.qty, 0)}</td>
-                      <td className="px-3 py-2 text-right text-sm font-bold text-primary">{formatCurrency(totalSales)}</td>
+                      <td className="px-3 py-2 text-xs font-semibold text-muted-foreground">
+                        {productRows.length} article{productRows.length > 1 ? 's' : ''}
+                      </td>
+                      <td className="px-3 py-2 text-center text-xs font-semibold">
+                        {productRows.reduce((s, [, v]) => s + v.qty, 0)}
+                      </td>
+                      <td className="px-3 py-2 text-right font-bold text-primary">{formatCurrency(salesTotal)}</td>
+                      <td className="px-3 py-2 text-right text-xs">100%</td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
             </div>
-          );
-        })()}
+          )}
 
-        {/* Liste des ventes */}
-        <div>
-          <p className="text-sm font-semibold mb-2 flex items-center gap-2"><ShoppingCart className="h-4 w-4" />Ventes de la session ({sales.length})</p>
-          {isLoading ? (
-            <p className="text-sm text-muted-foreground text-center py-6">Chargement...</p>
-          ) : sales.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6 border border-dashed border-border rounded-xl">Aucune vente sur cette session</p>
-          ) : (
-            <div className="space-y-2">
-              {sales.map(sale => (
-                <div key={sale.id} className="rounded-xl border border-border/50 bg-card overflow-hidden">
-                  {/* Header ticket */}
-                  <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border/50">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-mono font-bold text-primary">{sale.sale_number || '-'}</span>
-                      <span className="text-sm text-muted-foreground">{sale.client_name || 'Client passager'}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        {sale.payment_method === 'especes' ? '💵 Espèces' : sale.payment_method === 'carte' ? '💳 Carte' : sale.payment_method === 'mixte' ? '🔀 Mixte' : sale.payment_method}
-                      </Badge>
-                      <span className="text-sm font-bold">{formatCurrency(sale.total || 0)}</span>
-                    </div>
-                  </div>
-                  {/* Produits */}
-                  {sale.items?.length > 0 && (
-                    <div className="px-4 py-2">
-                      {sale.items.map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between py-1 text-sm border-b last:border-0 border-border/30">
-                          <div className="flex items-center gap-2">
-                            <Package className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                            <span>{item.product_name}</span>
-                            <span className="text-muted-foreground">× {item.quantity}</span>
-                          </div>
-                          <div className="flex items-center gap-3 text-right">
-                            {item.discount > 0 && <span className="text-xs text-muted-foreground line-through">{formatCurrency((item.unit_price || 0) * item.quantity)}</span>}
-                            <span className="font-medium">{formatCurrency(item.total || 0)}</span>
-                          </div>
+          {/* ─── Journal des ventes ──────────────────────────── */}
+          <div>
+            <SectionTitle icon={ShoppingCart}>
+              Journal des ventes ({sales.length})
+            </SectionTitle>
+            {isLoading ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Chargement...</p>
+            ) : sales.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4 border border-dashed border-border rounded-xl">
+                Aucune vente produit sur cette session
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {sales.map(sale => {
+                  const items = parseItems(sale.items);
+                  const { cash, card } = extractPayments(sale, 'total');
+                  const modeLabel = cash > 0 && card > 0 ? '🔀 Mixte' : cash > 0 ? '💵 Espèces' : '💳 Carte';
+                  return (
+                    <div key={sale.id} className="rounded-xl border border-border/50 bg-card overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border/50">
+                        <div className="flex items-center gap-3">
+                          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">{fmtTime(sale.created_date)}</span>
+                          <span className="text-sm font-mono font-bold text-primary">{sale.sale_number || '-'}</span>
+                          <span className="text-sm text-muted-foreground">{sale.client_name || 'Passager'}</span>
                         </div>
-                      ))}
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">{modeLabel}</Badge>
+                          {sale.discount_total > 0 && (
+                            <Badge variant="secondary" className="text-xs text-amber-600">
+                              -{formatCurrency(sale.discount_total)}
+                            </Badge>
+                          )}
+                          <span className="text-sm font-bold">{formatCurrency(sale.total || 0)}</span>
+                        </div>
+                      </div>
+                      {items.length > 0 && (
+                        <div className="px-4 py-2">
+                          {items.map((item, idx) => (
+                            <div key={idx} className="flex items-center justify-between py-1 text-sm border-b last:border-0 border-border/30">
+                              <span className="text-muted-foreground">{item.product_name} × {item.quantity}</span>
+                              <span className="font-medium">{formatCurrency(item.total || 0)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                  <div className="px-4 py-1.5 flex items-center justify-between text-xs text-muted-foreground bg-muted/10">
-                    <span>{fmtDate(sale.created_date)}</span>
-                    {sale.discount_total > 0 && <span className="text-orange-500">Remise: -{formatCurrency(sale.discount_total)}</span>}
-                  </div>
-                </div>
-              ))}
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* ─── Réparations ────────────────────────────────── */}
+          {repairs.length > 0 && (
+            <div>
+              <SectionTitle icon={Wrench} color="text-slate-700">
+                Réparations encaissées ({repairs.length})
+              </SectionTitle>
+              <div className="rounded-xl border border-border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-100 dark:bg-slate-800 text-xs text-muted-foreground border-b border-border">
+                      <th className="text-left px-3 py-2">Ticket</th>
+                      <th className="text-left px-3 py-2">Client</th>
+                      <th className="text-left px-3 py-2">Appareil</th>
+                      <th className="text-left px-3 py-2">Technicien</th>
+                      <th className="text-center px-3 py-2">Mode</th>
+                      <th className="text-right px-3 py-2">Montant</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {repairs.map(r => {
+                      const { cash, card } = extractPayments(r, 'final_cost');
+                      const modeLabel = cash > 0 && card > 0 ? '🔀 Mixte' : cash > 0 ? '💵 Espèces' : '💳 Carte';
+                      return (
+                        <tr key={r.id} className="border-b border-border/30 last:border-0 hover:bg-muted/20">
+                          <td className="px-3 py-2 font-mono font-bold text-xs">{r.ticket_number || '—'}</td>
+                          <td className="px-3 py-2">{r.client_name || '—'}</td>
+                          <td className="px-3 py-2 text-muted-foreground text-xs">
+                            {`${r.device_brand || ''} ${r.device_model || ''}`.trim() || '—'}
+                          </td>
+                          <td className="px-3 py-2 text-xs">{r.assigned_to || '—'}</td>
+                          <td className="px-3 py-2 text-center text-xs">{modeLabel}</td>
+                          <td className="px-3 py-2 text-right font-bold">{formatCurrency(r.final_cost || 0)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-muted/30 border-t border-border">
+                      <td colSpan={5} className="px-3 py-2 text-right text-xs font-semibold uppercase">Total Réparations</td>
+                      <td className="px-3 py-2 text-right font-bold text-primary">{formatCurrency(repairTotal)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </div>
           )}
-        </div>
 
-        {/* Dépenses */}
-        {expenses.length > 0 && (
-          <div>
-            <p className="text-sm font-semibold mb-2">Dépenses de la journée ({expenses.length})</p>
-            <div className="space-y-1.5">
-              {expenses.map(e => (
-                <div key={e.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border/50 bg-muted/20 text-sm">
-                  <span>{e.description}</span>
-                  <span className="font-medium text-destructive">-{formatCurrency(e.amount || 0)}</span>
-                </div>
-              ))}
+          {/* ─── Services ───────────────────────────────────── */}
+          {serviceSales.length > 0 && (
+            <div>
+              <SectionTitle icon={Zap} color="text-violet-700">
+                Services vendus ({serviceSales.length})
+              </SectionTitle>
+              <div className="rounded-xl border border-border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-violet-50 dark:bg-violet-950/30 text-xs text-muted-foreground border-b border-border">
+                      <th className="text-left px-3 py-2">Service</th>
+                      <th className="text-left px-3 py-2">Client</th>
+                      <th className="text-center px-3 py-2">Qté</th>
+                      <th className="text-center px-3 py-2">Mode</th>
+                      <th className="text-right px-3 py-2">Montant</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {serviceSales.map(ss => {
+                      const { cash, card } = extractPayments(ss, 'total');
+                      const modeLabel = cash > 0 && card > 0 ? '🔀 Mixte' : cash > 0 ? '💵 Espèces' : '💳 Carte';
+                      return (
+                        <tr key={ss.id} className="border-b border-border/30 last:border-0 hover:bg-muted/20">
+                          <td className="px-3 py-2 font-medium">{ss.service_name || '—'}</td>
+                          <td className="px-3 py-2">{ss.client_name || '—'}</td>
+                          <td className="px-3 py-2 text-center">×{ss.quantity || 1}</td>
+                          <td className="px-3 py-2 text-center text-xs">{modeLabel}</td>
+                          <td className="px-3 py-2 text-right font-bold">{formatCurrency(ss.total || 0)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-muted/30 border-t border-border">
+                      <td colSpan={4} className="px-3 py-2 text-right text-xs font-semibold uppercase">Total Services</td>
+                      <td className="px-3 py-2 text-right font-bold text-primary">{formatCurrency(serviceTotal)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
-        </div>
+          )}
+
+          {/* ─── Dépenses ────────────────────────────────────── */}
+          {expenses.length > 0 && (
+            <div>
+              <SectionTitle icon={ArrowDownCircle} color="text-destructive">
+                Dépenses / Sorties de caisse ({expenses.length})
+              </SectionTitle>
+              <div className="space-y-1.5">
+                {expenses.map(e => (
+                  <div key={e.id} className="flex items-center justify-between p-2.5 rounded-lg border border-destructive/20 bg-destructive/5 text-sm">
+                    <div>
+                      <span>{e.description}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{fmtDate(e.date || e.created_date)}</span>
+                    </div>
+                    <span className="font-medium text-destructive">-{formatCurrency(e.amount || 0)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-end pt-1">
+                  <span className="text-sm font-bold text-destructive">Total : -{formatCurrency(totalExpenses)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>{/* end space-y-5 */}
+
+        {/* ─── Print styles ────────────────────────────────── */}
+        <style>{`
+          @media print {
+            @page { size: portrait; margin: 0.5in; }
+            body { margin:0; padding:0; background:white !important; visibility:hidden !important; }
+            #root { display:none !important; }
+            [role="dialog"] {
+              visibility:visible !important; position:absolute !important;
+              left:0 !important; top:0 !important; width:100% !important;
+              margin:0 !important; padding:0 !important;
+              border:none !important; box-shadow:none !important; background:white !important;
+            }
+            .print-content, .print-content * { visibility:visible !important; display:block !important; }
+            table { display:table !important; width:100% !important; }
+            thead { display:table-header-group !important; }
+            tr { display:table-row !important; }
+            th, td { display:table-cell !important; }
+            .print\\:hidden { display:none !important; }
+            button { display:none !important; }
+          }
+        `}</style>
       </DialogContent>
-      <style>{`
-        @media print {
-          @page { size: portrait; margin: 0.5in; }
-          body { margin: 0; padding: 0; background-color: white !important; visibility: hidden !important; }
-          #root { display: none !important; } 
-          [role="dialog"] { 
-            visibility: visible !important;
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
-            box-shadow: none !important;
-            background: white !important;
-          }
-          .print-content, .print-content * { 
-            visibility: visible !important; 
-            display: block !important; 
-          }
-          table { display: table !important; width: 100% !important; }
-          thead { display: table-header-group !important; }
-          tr { display: table-row !important; }
-          th, td { display: table-cell !important; }
-          .print\\:hidden { display: none !important; }
-          button { display: none !important; }
-        }
-
-
-      `}</style>
     </Dialog>
-
-
   );
 }

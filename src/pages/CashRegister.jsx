@@ -14,7 +14,7 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import DataTable from "@/components/ui/DataTable";
 import StatCard from "@/components/ui/StatCard";
 import CashRegisterDetail from "@/components/cashregister/CashRegisterDetail";
-import { DollarSign, Lock, Unlock, AlertTriangle, Receipt, FileText } from 'lucide-react';
+import { DollarSign, Lock, Unlock, AlertTriangle, Receipt, FileText, Wrench, Zap, TrendingUp, Banknote } from 'lucide-react';
 
 import { format } from 'date-fns';
 import { useAppSettings } from "@/components/settings/SettingsContext";
@@ -36,14 +36,40 @@ export default function CashRegister() {
   const { data: registers = [], isLoading } = useQuery({ queryKey: ['cashRegisters'], queryFn: () => fixit.entities.CashRegister.list('-created_date') });
   const { data: sales = [] } = useQuery({ queryKey: ['salesToday'], queryFn: () => fixit.entities.Sale.filter({ status: 'completee' }, '-created_date', 200) });
   const { data: expenses = [] } = useQuery({ queryKey: ['expensesToday'], queryFn: () => fixit.entities.Expense.list('-created_date', 100) });
+  const { data: repairs = [] } = useQuery({ queryKey: ['repairsToday'], queryFn: () => fixit.entities.Repair.list('-created_date', 200) });
+  const { data: serviceSales = [] } = useQuery({ queryKey: ['serviceSalesToday'], queryFn: () => fixit.entities.ServiceSale.list('-created_date', 200) });
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const todayRegister = registers.find(r => r.date === todayStr);
+
+  // Ventes produits du jour
   const todaySales = sales.filter(s => s.created_date?.startsWith(todayStr));
-  const todayCash = todaySales.filter(s => s.payment_method === 'especes').reduce((s, v) => s + (v.total || 0), 0);
-  const todayCard = todaySales.filter(s => s.payment_method === 'carte').reduce((s, v) => s + (v.total || 0), 0);
+  const todayCash  = todaySales.filter(s => s.payment_method === 'especes').reduce((s, v) => s + (v.total || 0), 0);
+  const todayCard  = todaySales.filter(s => s.payment_method === 'carte').reduce((s, v) => s + (v.total || 0), 0);
+  const todaySalesTotal = todaySales.reduce((s, v) => s + (v.total || 0), 0);
+
+  // Réparations encaissées du jour
+  const todayRepairs = repairs.filter(r => {
+    const d = r.completed_date || r.created_date || '';
+    return String(d).slice(0, 10) === todayStr && (Number(r.final_cost) || 0) > 0;
+  });
+  const todayRepairsTotal = todayRepairs.reduce((s, r) => s + (Number(r.final_cost) || 0), 0);
+  const todayRepairCash   = todayRepairs.filter(r => r.payment_method === 'especes').reduce((s, r) => s + (Number(r.final_cost) || 0), 0);
+
+  // Services du jour
+  const todayServices = serviceSales.filter(ss => ss.created_date?.startsWith(todayStr));
+  const todayServicesTotal = todayServices.reduce((s, ss) => s + (Number(ss.total) || 0), 0);
+  const todayServiceCash   = todayServices.filter(ss => ss.payment_method === 'especes').reduce((s, ss) => s + (Number(ss.total) || 0), 0);
+
+  // Dépenses du jour
   const todayExpenses = expenses.filter(e => e.date === todayStr || e.created_date?.startsWith(todayStr)).reduce((s, e) => s + (e.amount || 0), 0);
-  const expectedBalance = (todayRegister?.opening_balance || 0) + todayCash - todayExpenses;
+
+  // CA total toutes sources
+  const todayTotalRevenue = todaySalesTotal + todayRepairsTotal + todayServicesTotal;
+  const todayAllCash      = todayCash + todayRepairCash + todayServiceCash;
+
+  // Solde espèces attendu (physique caisse)
+  const expectedBalance = (todayRegister?.opening_balance || 0) + todayAllCash - todayExpenses;
 
   const openMutation = useMutation({
     mutationFn: () => fixit.entities.CashRegister.create({ 
@@ -60,47 +86,106 @@ export default function CashRegister() {
 
   const closeMutation = useMutation({
     mutationFn: () => fixit.entities.CashRegister.update(todayRegister.id, {
-      closing_balance: closingBalance, expected_balance: expectedBalance,
-      difference: closingBalance - expectedBalance, difference_reason: differenceReason,
-      total_cash_sales: todayCash, total_card_sales: todayCard, total_expenses: todayExpenses, status: 'fermee',
+      closing_balance: closingBalance,
+      expected_balance: expectedBalance,
+      difference: closingBalance - expectedBalance,
+      difference_reason: differenceReason,
+      total_cash_sales: todayAllCash,
+      total_card_sales: todayCard,
+      total_expenses: todayExpenses,
+      status: 'fermee',
       closed_by: user?.full_name || 'Haj',
-      closing_date: new Date().toISOString()
+      closing_date: new Date().toISOString(),
     }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['cashRegisters'] }); setCloseDialogOpen(false); },
   });
 
-  // Quick-close any session directly from the list (force close without balance check)
+  // Quick-close: save computed totals if it's today's register
   const quickCloseMutation = useMutation({
-    mutationFn: (registerId) => fixit.entities.CashRegister.update(registerId, {
-      status: 'fermee',
-      closed_by: user?.full_name || 'Admin',
-      closing_date: new Date().toISOString(),
-    }),
+    mutationFn: (registerId) => {
+      const reg = registers.find(r => r.id === registerId);
+      const isToday = reg?.date === todayStr;
+      return fixit.entities.CashRegister.update(registerId, {
+        status: 'fermee',
+        closed_by: user?.full_name || 'Admin',
+        closing_date: new Date().toISOString(),
+        ...(isToday ? {
+          total_cash_sales: todayAllCash,
+          total_card_sales: todayCard + (todayRepairsTotal - todayRepairCash) + (todayServicesTotal - todayServiceCash),
+          total_expenses: todayExpenses,
+          expected_balance: expectedBalance,
+        } : {}),
+      });
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['cashRegisters'] }); },
   });
 
+  // Helper: get live or stored totals for a register row
+  const getRowTotals = (r) => {
+    if (r.date === todayStr) {
+      // Always use live-computed values for today
+      return {
+        caTotal: todayTotalRevenue,
+        especes: todayAllCash,
+        carte: todayCard + (todayRepairsTotal - todayRepairCash) + (todayServicesTotal - todayServiceCash),
+        isLive: true,
+      };
+    }
+    const storedCash  = Number(r.total_cash_sales) || 0;
+    const storedCard  = Number(r.total_card_sales)  || 0;
+    return {
+      caTotal: storedCash + storedCard,
+      especes: storedCash,
+      carte:   storedCard,
+      isLive: false,
+    };
+  };
+
   const columns = [
-    { header: "Date", render: r => <span className="text-sm font-medium">{r.date}</span> },
+    { header: "Date", render: r => (
+      <span className="text-sm font-medium">
+        {r.date}
+        {r.date === todayStr && <span className="ml-1 text-xs text-primary font-normal">(aujourd'hui)</span>}
+      </span>
+    )},
     { header: "Statut", render: r => <StatusBadge status={r.status} /> },
-    { header: "Ouverture", render: r => <span className="text-sm">{formatCurrency(r.opening_balance || 0)}</span> },
-    { header: "Clôture", render: r => <span className="text-sm">{r.closing_balance != null ? formatCurrency(r.closing_balance) : '-'}</span> },
-    { header: "Espèces", render: r => <span className="text-sm">{formatCurrency(r.total_cash_sales || 0)}</span> },
-    { header: "Carte", render: r => <span className="text-sm">{formatCurrency(r.total_card_sales || 0)}</span> },
+    { header: "Fond ouv.", render: r => <span className="text-sm">{formatCurrency(r.opening_balance || 0)}</span> },
+    { header: "CA Total", render: r => {
+      const { caTotal, isLive } = getRowTotals(r);
+      return (
+        <span className={`text-sm font-bold ${isLive ? 'text-primary' : ''}`}>
+          {caTotal > 0 ? formatCurrency(caTotal) : <span className="text-muted-foreground font-normal text-xs">Voir détails</span>}
+        </span>
+      );
+    }},
+    { header: "Espèces", render: r => {
+      const { especes } = getRowTotals(r);
+      return <span className="text-sm">{especes > 0 ? formatCurrency(especes) : <span className="text-muted-foreground">—</span>}</span>;
+    }},
+    { header: "Carte", render: r => {
+      const { carte } = getRowTotals(r);
+      return <span className="text-sm">{carte > 0 ? formatCurrency(carte) : <span className="text-muted-foreground">—</span>}</span>;
+    }},
+    { header: "Solde clôture", render: r => (
+      <span className="text-sm">{r.closing_balance != null ? formatCurrency(r.closing_balance) : <span className="text-muted-foreground">—</span>}</span>
+    )},
     { header: "Écart", render: r => {
       const diff = r.difference || 0;
-      return <span className={`text-sm font-bold ${diff !== 0 ? 'text-destructive' : 'text-foreground'}`}>{formatCurrency(diff)}</span>;
+      return <span className={`text-sm font-bold ${diff !== 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+        {r.closing_balance != null ? formatCurrency(diff) : '—'}
+      </span>;
     }},
     { header: "Actions", render: r => (
-      <div className="flex gap-2">
+      <div className="flex gap-1">
         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedRegister(r); }}>
-          <Receipt className="h-4 w-4 mr-2" /> Détails
+          <Receipt className="h-4 w-4 mr-1" /> Détails
         </Button>
         <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/10" onClick={(e) => { e.stopPropagation(); setSelectedRegister(r); }}>
-          <FileText className="h-4 w-4 mr-2" /> PDF
+          <FileText className="h-4 w-4 mr-1" /> PDF
         </Button>
         {r.status === 'ouverte' && (
           <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); quickCloseMutation.mutate(r.id); }}>
-            <Lock className="h-4 w-4 mr-2" /> Fermer
+            <Lock className="h-4 w-4 mr-1" /> Fermer
           </Button>
         )}
       </div>
@@ -118,12 +203,20 @@ export default function CashRegister() {
         ) : null}
       </PageHeader>
 
-      {/* Today stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard title="Solde ouverture" value={formatCurrency(todayRegister?.opening_balance || 0)} icon={DollarSign} />
-        <StatCard title="Ventes espèces" value={formatCurrency(todayCash)} icon={DollarSign} />
-        <StatCard title="Ventes carte" value={formatCurrency(todayCard)} icon={DollarSign} />
-        <StatCard title="Solde attendu" value={formatCurrency(expectedBalance)} icon={DollarSign} />
+      {/* Today stats — toutes sources */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <StatCard title="CA Ventes" value={formatCurrency(todaySalesTotal)}
+          icon={DollarSign} description={`${todaySales.length} ticket${todaySales.length > 1 ? 's' : ''}`} />
+        <StatCard title="CA Réparations" value={formatCurrency(todayRepairsTotal)}
+          icon={Wrench} description={`${todayRepairs.length} dossier${todayRepairs.length > 1 ? 's' : ''}`} />
+        <StatCard title="CA Services" value={formatCurrency(todayServicesTotal)}
+          icon={Zap} description={`${todayServices.length} vente${todayServices.length > 1 ? 's' : ''}`} />
+        <StatCard title="CA Total jour" value={formatCurrency(todayTotalRevenue)}
+          icon={TrendingUp} description="Toutes sources" />
+        <StatCard title="Espèces caisse" value={formatCurrency(todayAllCash)}
+          icon={Banknote} description="Toutes sources" />
+        <StatCard title="Solde attendu" value={formatCurrency(expectedBalance)}
+          icon={DollarSign} description={`Fond + espèces - dép.`} />
       </div>
 
       <DataTable columns={columns} data={registers} isLoading={isLoading} emptyMessage="Aucune caisse enregistrée" onRowClick={setSelectedRegister} />
