@@ -92,10 +92,19 @@ export default function CashRegisterDetail({ register, onClose }) {
   const { data: allSales = [], isLoading: loadSales } = useQuery({
     queryKey: ['sales-by-date', regDate],
     queryFn: async () => {
-      const bySaleDate = await fixit.entities.Sale.filter({ sale_date: regDate }, '-created_date', 1000);
-      if (bySaleDate.length > 0) return bySaleDate;
+      // Stratégie 1 : filtre par sale_date (nouveau champ)
+      try {
+        const bySaleDate = await fixit.entities.Sale.filter({ sale_date: regDate }, '-created_date', 1000);
+        if (Array.isArray(bySaleDate) && bySaleDate.length > 0) return bySaleDate;
+      } catch (_) { /* colonne peut ne pas exister en DB */ }
+
+      // Stratégie 2 : liste récente + filtre client-side par created_date
       const recent = await fixit.entities.Sale.list('-created_date', 2000);
-      return recent.filter(s => s && String(s.created_date || '').slice(0, 10) === regDate);
+      const byCreated = recent.filter(s => s && String(s.created_date || '').slice(0, 10) === regDate);
+      if (byCreated.length > 0) return byCreated;
+
+      // Stratégie 3 : filtre par sale_date dans les données reçues (compatibilité)
+      return recent.filter(s => s && (s.sale_date === regDate));
     },
     staleTime: 0,
   });
