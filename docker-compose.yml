@@ -41,8 +41,6 @@ services:
     container_name: fixit_frontend
     depends_on:
       - backend
-    ports:
-      - "80:80"
 
 volumes:
   fixit_pgdata:
