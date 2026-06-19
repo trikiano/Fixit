@@ -43,7 +43,6 @@ services:
       - backend
     ports:
       - "80:80"
-    volumes: []
 
 volumes:
   fixit_pgdata:
