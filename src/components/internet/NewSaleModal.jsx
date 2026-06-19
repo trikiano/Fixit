@@ -7,8 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Wifi, CreditCard } from 'lucide-react';
 import ClientSelector from "@/components/ui/ClientSelector";
+import { useAppSettings } from '@/components/settings/SettingsContext';
+import { toast } from "@/components/ui/use-toast";
 
 export default function NewSaleModal({ open, onClose, packages, accounts, onSave }) {
+  const { settings, formatCurrency } = useAppSettings();
   const empty = {
     client_name: '', client_phone: '', package_id: '', package_name: '',
     data_amount: '', validity_days: '', sell_price: '', cost_price: '',
@@ -38,10 +41,15 @@ export default function NewSaleModal({ open, onClose, packages, accounts, onSave
   const handleSave = async () => {
     if (!form.client_name || !form.client_phone || !form.package_name || !form.sell_price) return;
     setSaving(true);
-    await onSave({ ...form, sell_price: Number(form.sell_price), cost_price: Number(form.cost_price) || 0 });
-    setSaving(false);
-    setForm(empty);
-    onClose();
+    try {
+      await onSave({ ...form, sell_price: Number(form.sell_price), cost_price: Number(form.cost_price) || 0 });
+      setForm(empty);
+      onClose();
+    } catch (err) {
+      toast({ title: "Erreur", description: "La vente n'a pas pu être enregistrée. Réessayez.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -77,7 +85,7 @@ export default function NewSaleModal({ open, onClose, packages, accounts, onSave
                 <SelectContent>
                   {packages.filter(p => p.is_active !== false).map(p => (
                     <SelectItem key={p.id} value={p.id}>
-                      {p.name} — {p.data_amount} — {p.sell_price} €
+                      {p.name} — {p.data_amount} — {formatCurrency(p.sell_price)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -98,14 +106,14 @@ export default function NewSaleModal({ open, onClose, packages, accounts, onSave
               <Input type="number" value={form.validity_days} onChange={e => set('validity_days', e.target.value)} placeholder="30" />
             </div>
             <div className="space-y-1.5">
-              <Label>Prix vendu (€) *</Label>
+              <Label>Prix vendu ({settings.currency_symbol}) *</Label>
               <Input type="number" value={form.sell_price} onChange={e => set('sell_price', e.target.value)} placeholder="0.00" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Prix coûtant (€)</Label>
+              <Label>Prix coûtant ({settings.currency_symbol})</Label>
               <Input type="number" value={form.cost_price} onChange={e => set('cost_price', e.target.value)} placeholder="0.00" />
             </div>
             <div className="space-y-1.5">

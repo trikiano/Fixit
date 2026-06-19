@@ -12,10 +12,12 @@ import PageHeader from "@/components/ui/PageHeader";
 import DataTable from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
 import { Tag, Plus, Search } from 'lucide-react';
+import { useAppSettings } from '@/components/settings/SettingsContext';
 
 const emptyForm = { name: '', code: '', type: 'pourcentage', value: 0, min_purchase: 0, applicable_to: 'tous', start_date: '', end_date: '', max_uses: 0, is_active: true };
 
 export default function Promotions() {
+  const { formatCurrency, settings } = useAppSettings();
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -46,7 +48,7 @@ export default function Promotions() {
       </div>
     )},
     { header: "Type", render: r => <span className="text-sm capitalize">{r.type?.replace('_', ' ')}</span> },
-    { header: "Valeur", render: r => <span className="text-sm font-bold">{r.type === 'pourcentage' ? `${r.value}%` : `${r.value} €`}</span> },
+    { header: "Valeur", render: r => <span className="text-sm font-bold">{r.type === 'pourcentage' ? `${r.value}%` : formatCurrency(r.value)}</span> },
     { header: "Applicable", render: r => <span className="text-xs capitalize">{r.applicable_to?.replace('_', ' ')}</span> },
     { header: "Utilisation", render: r => <span className="text-sm">{r.current_uses || 0}/{r.max_uses || '∞'}</span> },
     { header: "Actif", render: r => <Badge variant={r.is_active ? "default" : "secondary"} className="text-xs">{r.is_active ? 'Actif' : 'Inactif'}</Badge> },
@@ -88,10 +90,10 @@ export default function Promotions() {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>Valeur {form.type === 'pourcentage' ? '(%)' : '(€)'}</Label><Input type="number" value={form.value} onChange={e => setForm({...form, value: parseFloat(e.target.value) || 0})} /></div>
+              <div><Label>Valeur {form.type === 'pourcentage' ? '(%)' : `(${settings.currency_symbol})`}</Label><Input type="number" value={form.value} onChange={e => setForm({...form, value: parseFloat(e.target.value) || 0})} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Achat minimum (€)</Label><Input type="number" value={form.min_purchase} onChange={e => setForm({...form, min_purchase: parseFloat(e.target.value) || 0})} /></div>
+              <div><Label>Achat minimum ({settings.currency_symbol})</Label><Input type="number" value={form.min_purchase} onChange={e => setForm({...form, min_purchase: parseFloat(e.target.value) || 0})} /></div>
               <div><Label>Utilisations max</Label><Input type="number" value={form.max_uses} onChange={e => setForm({...form, max_uses: parseInt(e.target.value) || 0})} placeholder="0 = illimité" /></div>
             </div>
             <div><Label>Applicable à</Label>

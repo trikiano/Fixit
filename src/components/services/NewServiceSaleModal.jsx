@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ShoppingBag, AlertTriangle } from 'lucide-react';
 import { useAppSettings } from "@/components/settings/SettingsContext";
+import { toast } from "@/components/ui/use-toast";
 
 const paymentMethods = [
   { value: 'especes', label: 'Espèces' },
@@ -16,7 +17,7 @@ const paymentMethods = [
 
 export default function NewServiceSaleModal({ open, onClose, services, cards, onSave }) {
   const { formatCurrency, settings } = useAppSettings();
-  const sym = settings.currency_symbol || 'DA';
+  const sym = settings.currency_symbol || 'DT';
   const [form, setForm] = useState({
     client_name: '', client_phone: '',
     service_id: '', card_id: '',
@@ -45,19 +46,24 @@ export default function NewServiceSaleModal({ open, onClose, services, cards, on
   const handleSave = async () => {
     if (!form.client_name || !form.service_id || !form.card_id || !form.sell_price) return;
     setSaving(true);
-    await onSave({
-      ...form,
-      service_name: selectedService?.name,
-      category_id: selectedService?.category_id,
-      category_name: selectedService?.category_name,
-      card_name: selectedCard?.name,
-      cost_price: parseFloat(form.cost_price) || 0,
-      sell_price: parseFloat(form.sell_price) || 0,
-      sale_date: new Date().toISOString(),
-    });
-    setForm({ client_name: '', client_phone: '', service_id: '', card_id: '', cost_price: '', sell_price: '', payment_method: 'especes', activation_code: '', notes: '' });
-    setSaving(false);
-    onClose();
+    try {
+      await onSave({
+        ...form,
+        service_name: selectedService?.name,
+        category_id: selectedService?.category_id,
+        category_name: selectedService?.category_name,
+        card_name: selectedCard?.name,
+        cost_price: parseFloat(form.cost_price) || 0,
+        sell_price: parseFloat(form.sell_price) || 0,
+        sale_date: new Date().toISOString(),
+      });
+      setForm({ client_name: '', client_phone: '', service_id: '', card_id: '', cost_price: '', sell_price: '', payment_method: 'especes', activation_code: '', notes: '' });
+      onClose();
+    } catch (err) {
+      toast({ title: "Erreur", description: "La vente n'a pas pu être enregistrée. Réessayez.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

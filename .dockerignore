@@ -1,0 +1,15 @@
+node_modules
+backend
+dist
+dist-ssr
+.git
+.gitignore
+*.md
+.env
+.env.*
+!.env.example
+*.local
+.vscode
+.idea
+start-dev.sh
+start-prod.sh

@@ -17,7 +17,6 @@ import { format } from 'date-fns';
 
 export default function Sales() {
   const { formatCurrency, generateTicketNumber, settings } = useAppSettings();
-  const sym = settings.currency_symbol || '€';
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);

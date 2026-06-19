@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
 import { CreditCard, FileText, ShoppingCart, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { format } from 'date-fns';
+import { useAppSettings } from '@/components/settings/SettingsContext';
 
 const statusConfig = {
   en_attente: { label: 'En attente', class: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
@@ -16,6 +17,7 @@ const statusConfig = {
 };
 
 export default function SupplierDetailPanel({ supplier, open, onClose }) {
+  const { formatCurrency } = useAppSettings();
   const { data: invoices = [] } = useQuery({
     queryKey: ['supplierInvoices', supplier?.id],
     queryFn: () => base44.entities.SupplierInvoice.filter({ supplier_id: supplier.id }),
@@ -62,13 +64,13 @@ export default function SupplierDetailPanel({ supplier, open, onClose }) {
           <Card className="border-red-500/20">
             <CardContent className="p-3 text-center">
               <p className="text-xs text-muted-foreground mb-1">Dette totale</p>
-              <p className="text-xl font-bold text-red-400">{totalDebt.toFixed(2)} €</p>
+              <p className="text-xl font-bold text-red-400">{formatCurrency(totalDebt)}</p>
             </CardContent>
           </Card>
           <Card className="border-green-500/20">
             <CardContent className="p-3 text-center">
               <p className="text-xs text-muted-foreground mb-1">Total payé</p>
-              <p className="text-xl font-bold text-green-400">{totalPaid.toFixed(2)} €</p>
+              <p className="text-xl font-bold text-green-400">{formatCurrency(totalPaid)}</p>
             </CardContent>
           </Card>
           <Card>
@@ -95,8 +97,8 @@ export default function SupplierDetailPanel({ supplier, open, onClose }) {
                   </div>
                   <div className="text-right">
                     <Badge variant="outline" className={statusConfig[inv.status]?.class}>{statusConfig[inv.status]?.label}</Badge>
-                    <p className="text-xs text-muted-foreground mt-1">Total: {(inv.total_amount || 0).toFixed(2)} €</p>
-                    <p className="font-bold text-red-400">{(inv.remaining_debt || 0).toFixed(2)} € restant</p>
+                    <p className="text-xs text-muted-foreground mt-1">Total: {formatCurrency(inv.total_amount || 0)}</p>
+                    <p className="font-bold text-red-400">{formatCurrency(inv.remaining_debt || 0)} restant</p>
                   </div>
                 </div>
               ))}
@@ -118,7 +120,7 @@ export default function SupplierDetailPanel({ supplier, open, onClose }) {
               {allPayments.map((p, i) => (
                 <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 text-sm">
                   <div>
-                    <p className="font-medium text-green-400">+{(p.amount || 0).toFixed(2)} €</p>
+                    <p className="font-medium text-green-400">+{formatCurrency(p.amount || 0)}</p>
                     <p className="text-xs text-muted-foreground">{p.method} — Facture {p.invoice_number}</p>
                     {p.notes && <p className="text-xs text-muted-foreground">{p.notes}</p>}
                   </div>
@@ -145,7 +147,7 @@ export default function SupplierDetailPanel({ supplier, open, onClose }) {
                   <div key={o.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 text-sm">
                     <span className="font-mono text-primary">{o.order_number}</span>
                     <span className="text-muted-foreground">{o.status}</span>
-                    <span className="font-medium">{(o.total_amount || 0).toFixed(2)} €</span>
+                    <span className="font-medium">{formatCurrency(o.total_amount || 0)}</span>
                   </div>
                 ))}
               </div>

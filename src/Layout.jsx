@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, Package, Wrench, ShoppingCart,
   Truck, Shield, DollarSign, Receipt, Tag, Bell,
   ClipboardList, Settings, Menu, X, ChevronDown,
-  LogOut, Warehouse, ScrollText, ShoppingBag, FileText
+  LogOut, Warehouse, ScrollText, ShoppingBag, FileText, Wifi
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -25,6 +25,7 @@ const navGroups = [
       { name: "Clients", icon: Users, page: "Clients" },
       { name: "Ventes", icon: ShoppingCart, page: "Sales" },
       { name: "Achat Services", icon: ShoppingBag, page: "Services" },
+      { name: "Forfaits Internet", icon: Wifi, page: "InternetSales" },
       { name: "Caisse", icon: DollarSign, page: "CashRegister" },
       { name: "Promotions", icon: Tag, page: "Promotions" },
     ]
@@ -78,7 +79,7 @@ function LayoutInner({ children, currentPageName }) {
       )}
 
       <aside className={cn(
-        "fixed lg:static inset-y-0 left-0 z-50 w-64 bg-card border-r border-border flex flex-col transition-transform duration-300",
+        "fixed lg:static inset-y-0 left-0 z-50 lg:z-0 w-64 bg-card border-r border-border flex flex-col transition-transform duration-300",
         sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         <div className="h-16 flex items-center px-5 border-b border-border gap-3">

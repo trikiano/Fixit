@@ -13,6 +13,7 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import DataTable from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
 import ClientDetailPanel from "@/components/clients/ClientDetailPanel";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { Users, Plus, Search, Phone, Mail, Ban, Star, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import PhoneInput from '@/components/ui/PhoneInput';
@@ -22,6 +23,7 @@ export default function Clients() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
   const [selectedClient, setSelectedClient] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [form, setForm] = useState({ full_name: '', phone: '', email: '', address: '', segment: 'particulier', notes: '', credit_balance: 0 });
   const qc = useQueryClient();
 
@@ -70,7 +72,7 @@ export default function Clients() {
     { header: "Actions", render: (r) => (
       <div className="flex gap-1" onClick={e => e.stopPropagation()}>
         <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(r)}><Pencil className="h-3.5 w-3.5" /></Button>
-        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => { if(confirm('Supprimer ce client ?')) deleteMutation.mutate(r.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(r.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
       </div>
     )},
   ];
@@ -125,7 +127,7 @@ export default function Clients() {
             <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} /></div>
             {editingClient && (
               <div className="flex items-center gap-3">
-                <Switch checked={editingClient.is_blacklisted} onCheckedChange={val => toggleBlacklistMutation.mutate({ id: editingClient.id, val })} />
+                <Switch checked={editingClient.is_blacklisted} onCheckedChange={val => { setEditingClient(prev => ({ ...prev, is_blacklisted: val })); toggleBlacklistMutation.mutate({ id: editingClient.id, val }); }} />
                 <Label className="text-destructive">Blacklisté</Label>
               </div>
             )}
@@ -138,6 +140,14 @@ export default function Clients() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={v => !v && setDeleteTarget(null)}
+        title="Supprimer ce client ?"
+        description="Cette action est irréversible."
+        onConfirm={() => { deleteMutation.mutate(deleteTarget); setDeleteTarget(null); }}
+      />
     </div>
   );
 }

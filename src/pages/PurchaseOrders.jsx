@@ -14,8 +14,10 @@ import DataTable from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
 import { Receipt, Plus, Search, Trash2, Sparkles, PackageCheck, AlertTriangle, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
+import { useAppSettings } from '@/components/settings/SettingsContext';
 
 export default function PurchaseOrders() {
+  const { formatCurrency } = useAppSettings();
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [receptionOpen, setReceptionOpen] = useState(false);
@@ -167,7 +169,7 @@ export default function PurchaseOrders() {
     { header: "Fournisseur", render: r => <span className="text-sm">{r.supplier_name}</span> },
     { header: "Statut", render: r => <StatusBadge status={r.status} /> },
     { header: "Articles", render: r => <span className="text-sm text-muted-foreground">{(r.items || []).length} article(s)</span> },
-    { header: "Montant", render: r => <span className="text-sm font-medium">{(r.total_amount || 0).toFixed(2)} €</span> },
+    { header: "Montant", render: r => <span className="text-sm font-medium">{formatCurrency(r.total_amount || 0)}</span> },
     { header: "Date prévue", render: r => <span className="text-xs text-muted-foreground">{r.expected_date || '-'}</span> },
     {
       header: "Actions", render: r => (
@@ -277,7 +279,7 @@ export default function PurchaseOrders() {
                   </div>
                   <div className="col-span-2"><Label className="text-xs">Qté commandée</Label><Input type="number" min={1} value={item.quantity_ordered} onChange={e => updateItem(idx, 'quantity_ordered', parseInt(e.target.value) || 1)} /></div>
                   <div className="col-span-2"><Label className="text-xs">Prix unit.</Label><Input type="number" value={item.unit_price} onChange={e => updateItem(idx, 'unit_price', parseFloat(e.target.value) || 0)} /></div>
-                  <div className="col-span-2 text-right font-bold text-sm pt-5">{(item.quantity_ordered * item.unit_price).toFixed(2)}€</div>
+                  <div className="col-span-2 text-right font-bold text-sm pt-5">{formatCurrency(item.quantity_ordered * item.unit_price)}</div>
                   <div className="col-span-1 pt-5"><Button variant="ghost" size="icon" onClick={() => setItems(items.filter((_, i) => i !== idx))}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>
                 </div>
               ))}
@@ -285,7 +287,7 @@ export default function PurchaseOrders() {
 
             <div className="flex items-center justify-between">
               <div><Label>Notes</Label><Input value={notes} onChange={e => setNotes(e.target.value)} className="w-64" /></div>
-              <div className="text-right"><p className="text-sm text-muted-foreground">Total</p><p className="text-2xl font-bold text-primary">{total.toFixed(2)} €</p></div>
+              <div className="text-right"><p className="text-sm text-muted-foreground">Total</p><p className="text-2xl font-bold text-primary">{formatCurrency(total)}</p></div>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={closeDialog}>Annuler</Button>

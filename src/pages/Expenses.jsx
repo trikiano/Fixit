@@ -12,6 +12,7 @@ import DataTable from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
 import { ClipboardList, Plus, Search, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 
 const categories = [
   { value: 'loyer', label: 'Loyer' },
@@ -30,11 +31,11 @@ import { useAppSettings } from "@/components/settings/SettingsContext";
 
 export default function Expenses() {
   const { formatCurrency, settings } = useAppSettings();
-  const sym = settings.currency_symbol || '€';
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const qc = useQueryClient();
 
   const { data: expenses = [], isLoading } = useQuery({ queryKey: ['expenses'], queryFn: () => base44.entities.Expense.list('-created_date') });
@@ -63,7 +64,7 @@ export default function Expenses() {
     { header: "Actions", render: r => (
       <div className="flex gap-1" onClick={e => e.stopPropagation()}>
         <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(r)}><Pencil className="h-3.5 w-3.5" /></Button>
-        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => { if(confirm('Supprimer cette dépense ?')) deleteMutation.mutate(r.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(r.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
       </div>
     )},
   ];
@@ -119,6 +120,14 @@ export default function Expenses() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={v => !v && setDeleteTarget(null)}
+        title="Supprimer cette dépense ?"
+        description="Cette action est irréversible."
+        onConfirm={() => { deleteMutation.mutate(deleteTarget); setDeleteTarget(null); }}
+      />
     </div>
   );
 }

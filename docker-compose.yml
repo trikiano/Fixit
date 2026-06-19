@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: fixit_postgres
+    environment:
+      POSTGRES_DB: fixit_db
+      POSTGRES_USER: fixit
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fixit_password}
+    volumes:
+      - fixit_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fixit -d fixit_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fixit_backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://fixit:${POSTGRES_PASSWORD:-fixit_password}@postgres:5432/fixit_db
+      JWT_SECRET: ${JWT_SECRET:-fixit-local-dev-secret-change-in-prod}
+      PORT: 3001
+      NODE_ENV: production
+      CORS_ORIGIN: ${FRONTEND_URL:-http://localhost:5173}
+      PUBLIC_URL: ${BACKEND_URL:-http://localhost:3001}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@fixit.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin1234!}
+    volumes:
+      - fixit_uploads:/app/uploads
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: fixit_frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    volumes: []
+
+volumes:
+  fixit_pgdata:
+  fixit_uploads:

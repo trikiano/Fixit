@@ -13,6 +13,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import { Package, Plus, Search, AlertTriangle, Upload, X, Pencil, Trash2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useAppSettings } from "@/components/settings/SettingsContext";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 
 const categories = [
   { value: 'telephone', label: 'Téléphone' },
@@ -36,13 +37,13 @@ const emptyForm = { name: '', sku: '', category: 'telephone', brand: '', model: 
 
 export default function Products() {
   const { formatCurrency, settings } = useAppSettings();
-  const sym = settings.currency_symbol || '€';
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const qc = useQueryClient();
 
   const handleImageUpload = async (e) => {
@@ -57,8 +58,32 @@ export default function Products() {
   const { data: products = [], isLoading } = useQuery({ queryKey: ['products'], queryFn: () => base44.entities.Product.list('-created_date') });
 
   const saveMutation = useMutation({
-    mutationFn: (data) => editing ? base44.entities.Product.update(editing.id, data) : base44.entities.Product.create(data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['products'] }); closeDialog(); },
+    mutationFn: async (data) => {
+      if (editing) {
+        const previousStock = editing.quantity || 0;
+        const newStock = data.quantity || 0;
+        const updated = await base44.entities.Product.update(editing.id, data);
+        if (newStock !== previousStock) {
+          await base44.entities.StockMovement.create({
+            product_id: editing.id,
+            product_name: data.name || editing.name,
+            type: 'ajustement',
+            quantity: Math.abs(newStock - previousStock),
+            previous_stock: previousStock,
+            new_stock: newStock,
+            reason: 'Modification depuis la fiche produit',
+            reference_type: 'inventaire',
+          });
+        }
+        return updated;
+      }
+      return base44.entities.Product.create(data);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['stockMovements'] });
+      closeDialog();
+    },
   });
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Product.delete(id),
@@ -107,7 +132,7 @@ export default function Products() {
     { header: "Actions", render: r => (
       <div className="flex gap-1" onClick={e => e.stopPropagation()}>
         <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(r)}><Pencil className="h-3.5 w-3.5" /></Button>
-        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => { if(confirm('Supprimer ce produit ?')) deleteMutation.mutate(r.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(r.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
       </div>
     )},
   ];
@@ -213,6 +238,14 @@ export default function Products() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={v => !v && setDeleteTarget(null)}
+        title="Supprimer ce produit ?"
+        description="Cette action est irréversible."
+        onConfirm={() => { deleteMutation.mutate(deleteTarget); setDeleteTarget(null); }}
+      />
     </div>
   );
 }

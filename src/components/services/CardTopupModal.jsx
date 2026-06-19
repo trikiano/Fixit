@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreditCard, Plus } from 'lucide-react';
 import { useAppSettings } from "@/components/settings/SettingsContext";
+import { toast } from "@/components/ui/use-toast";
 
 export default function CardTopupModal({ open, onClose, cards, onSave }) {
   const { settings } = useAppSettings();
-  const sym = settings.currency_symbol || 'DA';
+  const sym = settings.currency_symbol || 'DT';
   const [cardId, setCardId] = useState('');
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
@@ -20,16 +21,21 @@ export default function CardTopupModal({ open, onClose, cards, onSave }) {
   const handleSave = async () => {
     if (!cardId || !amount || parseFloat(amount) <= 0) return;
     setSaving(true);
-    await onSave({
-      card_id: cardId,
-      card_name: selectedCard?.name,
-      amount: parseFloat(amount),
-      date: new Date().toISOString(),
-      notes,
-    });
-    setCardId(''); setAmount(''); setNotes('');
-    setSaving(false);
-    onClose();
+    try {
+      await onSave({
+        card_id: cardId,
+        card_name: selectedCard?.name,
+        amount: parseFloat(amount),
+        date: new Date().toISOString(),
+        notes,
+      });
+      setCardId(''); setAmount(''); setNotes('');
+      onClose();
+    } catch (err) {
+      toast({ title: "Erreur", description: "La recharge n'a pas pu être enregistrée. Réessayez.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

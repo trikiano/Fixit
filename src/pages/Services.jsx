@@ -16,6 +16,7 @@ import NewServiceSaleModal from "@/components/services/NewServiceSaleModal";
 import CardTopupModal from "@/components/services/CardTopupModal";
 import ManageCardsModal from "@/components/services/ManageCardsModal";
 import ManageServicesModal from "@/components/services/ManageServicesModal";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { useAppSettings } from "@/components/settings/SettingsContext";
 
 const paymentLabel = { especes: 'Espèces', carte: 'Carte', virement: 'Virement', credit_client: 'Crédit' };
@@ -24,7 +25,7 @@ const paymentColor = { especes: 'bg-green-500/10 text-green-700', carte: 'bg-blu
 export default function ServicesPage() {
   const qc = useQueryClient();
   const { formatCurrency, settings } = useAppSettings();
-  const sym = settings.currency_symbol || 'DA';
+  const sym = settings.currency_symbol || 'DT';
   const [showNewSale, setShowNewSale] = useState(false);
   const [showTopup, setShowTopup] = useState(false);
   const [showCards, setShowCards] = useState(false);
@@ -35,6 +36,7 @@ export default function ServicesPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [activeTab, setActiveTab] = useState('ventes');
+  const [deleteSaleTarget, setDeleteSaleTarget] = useState(null);
 
   const { data: sales = [], isLoading } = useQuery({
     queryKey: ['service-sales'],
@@ -396,7 +398,7 @@ export default function ServicesPage() {
                                 </Button>
                               </Link>
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
-                                onClick={() => { if (window.confirm('Supprimer cette vente ? Le solde de la carte sera rétabli.')) deleteSaleMutation.mutate(s); }}>
+                                onClick={() => setDeleteSaleTarget(s)}>
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </td>
@@ -416,6 +418,13 @@ export default function ServicesPage() {
       <CardTopupModal open={showTopup} onClose={() => setShowTopup(false)} cards={cards} onSave={topupMutation.mutateAsync} />
       <ManageCardsModal open={showCards} onClose={() => setShowCards(false)} cards={cards} />
       <ManageServicesModal open={showServices} onClose={() => setShowServices(false)} services={services} categories={categories} />
+      <ConfirmDialog
+        open={!!deleteSaleTarget}
+        onOpenChange={v => !v && setDeleteSaleTarget(null)}
+        title="Supprimer cette vente ?"
+        description="Le solde de la carte sera rétabli. Cette action est irréversible."
+        onConfirm={() => { deleteSaleMutation.mutate(deleteSaleTarget); setDeleteSaleTarget(null); }}
+      />
     </div>
   );
 }

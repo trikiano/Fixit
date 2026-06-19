@@ -97,7 +97,7 @@ export function SettingsProvider({ children }) {
   };
 
   const formatCurrency = (amount) => {
-    const sym = settings.currency_symbol || 'DA';
+    const sym = settings.currency_symbol || 'DT';
     const decimals = parseInt(settings.currency_decimals ?? '2');
     const position = settings.currency_symbol_position || 'right';
     const num = (typeof amount === 'number' ? amount : 0).toFixed(decimals);

@@ -18,7 +18,7 @@ import { useAppSettings } from "@/components/settings/SettingsContext";
 
 export default function CashRegister() {
   const { formatCurrency, settings } = useAppSettings();
-  const sym = settings.currency_symbol || '€';
+  const sym = settings.currency_symbol || 'DT';
   const [openDialog, setOpenDialog] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [openingBalance, setOpeningBalance] = useState(0);

@@ -8,6 +8,7 @@ import { Settings, Plus, Trash2, Tag } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 
 const emptyService = { name: '', category_id: '', category_name: '', cost_price: '', sell_price: '', description: '' };
 const emptyCategory = { name: '', color: 'blue' };
@@ -19,6 +20,8 @@ export default function ManageServicesModal({ open, onClose, services, categorie
   const [showCatForm, setShowCatForm] = useState(false);
   const [serviceForm, setServiceForm] = useState(emptyService);
   const [catForm, setCatForm] = useState(emptyCategory);
+  const [deleteServiceTarget, setDeleteServiceTarget] = useState(null);
+  const [deleteCatTarget, setDeleteCatTarget] = useState(null);
 
   const createServiceMutation = useMutation({
     mutationFn: (data) => base44.entities.ServiceItem.create(data),
@@ -80,7 +83,7 @@ export default function ManageServicesModal({ open, onClose, services, categorie
                     <p className="text-xs text-muted-foreground">Coût: {(s.cost_price || 0).toFixed(2)} | Vente: <span className="text-green-600 font-semibold">{(s.sell_price || 0).toFixed(2)}</span></p>
                   </div>
                   <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
-                    onClick={() => { if (window.confirm('Supprimer ce service ?')) deleteServiceMutation.mutate(s.id); }}>
+                    onClick={() => setDeleteServiceTarget(s.id)}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -139,7 +142,7 @@ export default function ManageServicesModal({ open, onClose, services, categorie
                   <p className="font-semibold text-sm">{c.name}</p>
                 </div>
                 <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
-                  onClick={() => { if (window.confirm('Supprimer cette catégorie ?')) deleteCatMutation.mutate(c.id); }}>
+                  onClick={() => setDeleteCatTarget(c.id)}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -166,6 +169,21 @@ export default function ManageServicesModal({ open, onClose, services, categorie
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      <ConfirmDialog
+        open={!!deleteServiceTarget}
+        onOpenChange={v => !v && setDeleteServiceTarget(null)}
+        title="Supprimer ce service ?"
+        description="Cette action est irréversible."
+        onConfirm={() => { deleteServiceMutation.mutate(deleteServiceTarget); setDeleteServiceTarget(null); }}
+      />
+      <ConfirmDialog
+        open={!!deleteCatTarget}
+        onOpenChange={v => !v && setDeleteCatTarget(null)}
+        title="Supprimer cette catégorie ?"
+        description="Cette action est irréversible."
+        onConfirm={() => { deleteCatMutation.mutate(deleteCatTarget); setDeleteCatTarget(null); }}
+      />
     </Dialog>
   );
 }

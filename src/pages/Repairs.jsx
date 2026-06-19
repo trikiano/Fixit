@@ -13,13 +13,14 @@ import PageHeader from "@/components/ui/PageHeader";
 import StatusBadge from "@/components/ui/StatusBadge";
 import DataTable from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
-import { Wrench, Plus, Search, ShoppingCart } from 'lucide-react';
+import { Wrench, Plus, Search, ShoppingCart, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import ClientSelector from "@/components/ui/ClientSelector";
 import PhoneInput from '@/components/ui/PhoneInput';
 import PartsManager from "@/components/repairs/PartsManager";
 import RepairPayments from "@/components/repairs/RepairPayments";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { format } from 'date-fns';
 
 const deviceTypes = [
@@ -63,6 +64,7 @@ export default function Repairs() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [form, setForm] = useState(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const clientName = urlParams.get('client_name') || '';
@@ -109,6 +111,11 @@ export default function Repairs() {
       return result;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['repairs'] }); closeDialog(); },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Repair.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['repairs'] }),
   });
 
   const closeDialog = () => { setDialogOpen(false); setEditing(null); setForm(emptyForm); };
@@ -167,6 +174,13 @@ export default function Repairs() {
         </Link>
       );
     }},
+    { header: "Actions", render: r => (
+      <div onClick={e => e.stopPropagation()}>
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(r.id)}>
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    )},
   ];
 
   return (
@@ -273,6 +287,14 @@ export default function Repairs() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={v => !v && setDeleteTarget(null)}
+        title="Supprimer cette réparation ?"
+        description="Cette action est irréversible."
+        onConfirm={() => { deleteMutation.mutate(deleteTarget); setDeleteTarget(null); }}
+      />
     </div>
   );
 }

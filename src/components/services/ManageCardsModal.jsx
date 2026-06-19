@@ -6,13 +6,15 @@ import { Label } from "@/components/ui/label";
 import { CreditCard, Plus, Trash2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 
-const emptyCard = { name: '', card_number: '', provider: '', currency: 'DZD', current_balance: '', notes: '' };
+const emptyCard = { name: '', card_number: '', provider: '', currency: 'TND', current_balance: '', notes: '' };
 
 export default function ManageCardsModal({ open, onClose, cards }) {
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyCard);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.PrepaidCard.create(data),
@@ -50,10 +52,10 @@ export default function ManageCardsModal({ open, onClose, cards }) {
               <div className="text-right flex items-center gap-3">
                 <div>
                   <p className="font-bold text-primary">{(c.current_balance || 0).toFixed(2)}</p>
-                  <p className="text-xs text-muted-foreground">{c.currency || 'DZD'}</p>
+                  <p className="text-xs text-muted-foreground">{c.currency || 'TND'}</p>
                 </div>
                 <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
-                  onClick={() => { if (window.confirm('Supprimer cette carte ?')) deleteMutation.mutate(c.id); }}>
+                  onClick={() => setDeleteTarget(c.id)}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -72,7 +74,7 @@ export default function ManageCardsModal({ open, onClose, cards }) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Nom *</Label>
-                <Input className="mt-1" placeholder="Carte Ooredoo 1" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                <Input className="mt-1" placeholder="Carte Ooredoo Tunisie 1" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
               </div>
               <div>
                 <Label>N° carte</Label>
@@ -80,11 +82,11 @@ export default function ManageCardsModal({ open, onClose, cards }) {
               </div>
               <div>
                 <Label>Opérateur</Label>
-                <Input className="mt-1" placeholder="Ooredoo, Djezzy..." value={form.provider} onChange={e => setForm(f => ({ ...f, provider: e.target.value }))} />
+                <Input className="mt-1" placeholder="Ooredoo, Orange, Tunisie Telecom..." value={form.provider} onChange={e => setForm(f => ({ ...f, provider: e.target.value }))} />
               </div>
               <div>
                 <Label>Devise</Label>
-                <Input className="mt-1" placeholder="DZD" value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))} />
+                <Input className="mt-1" placeholder="TND" value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))} />
               </div>
               <div className="col-span-2">
                 <Label>Solde initial</Label>
@@ -98,6 +100,14 @@ export default function ManageCardsModal({ open, onClose, cards }) {
           </div>
         )}
       </DialogContent>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={v => !v && setDeleteTarget(null)}
+        title="Supprimer cette carte ?"
+        description="Cette action est irréversible."
+        onConfirm={() => { deleteMutation.mutate(deleteTarget); setDeleteTarget(null); }}
+      />
     </Dialog>
   );
 }

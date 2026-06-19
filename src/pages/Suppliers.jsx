@@ -12,18 +12,32 @@ import DataTable from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
 import { Truck, Plus, Search, Eye, Pencil, Trash2 } from 'lucide-react';
 import SupplierDetailPanel from '@/components/suppliers/SupplierDetailPanel';
+import ConfirmDialog from "@/components/ui/confirm-dialog";
+import { useAppSettings } from '@/components/settings/SettingsContext';
 
 const emptyForm = { name: '', contact_name: '', phone: '', email: '', address: '', payment_terms: 'comptant', notes: '' };
 
 export default function Suppliers() {
+  const { formatCurrency } = useAppSettings();
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailSupplier, setDetailSupplier] = useState(null);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const qc = useQueryClient();
 
   const { data: suppliers = [], isLoading } = useQuery({ queryKey: ['suppliers'], queryFn: () => base44.entities.Supplier.list('-created_date') });
+  const { data: purchaseOrders = [] } = useQuery({ queryKey: ['purchaseOrders'], queryFn: () => base44.entities.PurchaseOrder.list('-created_date', 500) });
+
+  const orderStatsBySupplier = purchaseOrders.reduce((acc, o) => {
+    if (!o.supplier_id) return acc;
+    const s = acc[o.supplier_id] || { count: 0, total: 0 };
+    s.count += 1;
+    s.total += o.total_amount || 0;
+    acc[o.supplier_id] = s;
+    return acc;
+  }, {});
 
   const saveMutation = useMutation({
     mutationFn: (data) => editing ? base44.entities.Supplier.update(editing.id, data) : base44.entities.Supplier.create(data),
@@ -49,13 +63,13 @@ export default function Suppliers() {
     { header: "Téléphone", render: r => <span className="text-sm">{r.phone}</span> },
     { header: "Email", render: r => <span className="text-sm text-muted-foreground">{r.email || '-'}</span> },
     { header: "Conditions", render: r => <span className="text-xs capitalize">{r.payment_terms?.replace('_', ' ')}</span> },
-    { header: "Commandes", render: r => <span className="text-sm">{r.total_orders || 0}</span> },
-    { header: "Total", render: r => <span className="text-sm font-medium">{(r.total_amount || 0).toFixed(2)} €</span> },
+    { header: "Commandes", render: r => <span className="text-sm">{orderStatsBySupplier[r.id]?.count || 0}</span> },
+    { header: "Total", render: r => <span className="text-sm font-medium">{formatCurrency(orderStatsBySupplier[r.id]?.total || 0)}</span> },
     { header: "Actions", render: r => (
       <div className="flex gap-1" onClick={e => e.stopPropagation()}>
         <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(r)}><Pencil className="h-3.5 w-3.5" /></Button>
         <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setDetailSupplier(r)}><Eye className="h-3.5 w-3.5" /></Button>
-        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => { if(confirm('Supprimer ce fournisseur ?')) deleteMutation.mutate(r.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(r.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
       </div>
     )},
   ];
@@ -110,6 +124,14 @@ export default function Suppliers() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={v => !v && setDeleteTarget(null)}
+        title="Supprimer ce fournisseur ?"
+        description="Cette action est irréversible."
+        onConfirm={() => { deleteMutation.mutate(deleteTarget); setDeleteTarget(null); }}
+      />
     </div>
   );
 }

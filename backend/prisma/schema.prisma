@@ -1,0 +1,395 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password_hash String
+  name          String
+  role          String   @default("admin")
+  created_date  DateTime @default(now())
+  updated_date  DateTime @updatedAt
+}
+
+model Client {
+  id              String   @id @default(uuid())
+  full_name       String
+  phone           String
+  email           String?
+  address         String?
+  segment         String?
+  credit_balance  Float    @default(0)
+  is_blacklisted  Boolean  @default(false)
+  loyalty_points  Int      @default(0)
+  notes           String?
+  created_date    DateTime @default(now())
+  updated_date    DateTime @updatedAt
+}
+
+model Product {
+  id            String   @id @default(uuid())
+  name          String
+  sku           String?
+  category      String?
+  brand         String?
+  model         String?
+  buy_price     Float    @default(0)
+  sell_price    Float    @default(0)
+  quantity      Int      @default(0)
+  min_stock     Int      @default(2)
+  location      String?
+  imei          String?
+  serial_number String?
+  condition     String   @default("neuf")
+  barcode       String?
+  image_url     String?
+  is_active     Boolean  @default(true)
+  created_date  DateTime @default(now())
+  updated_date  DateTime @updatedAt
+}
+
+model Repair {
+  id                  String   @id @default(uuid())
+  ticket_number       String?
+  client_name         String
+  client_phone        String
+  device_type         String?
+  device_brand        String?
+  device_model        String?
+  device_imei         String?
+  device_password     String?
+  problem_description String?
+  diagnosis           String?
+  status              String   @default("reception")
+  priority            String   @default("normale")
+  technician          String?
+  estimated_cost      Float    @default(0)
+  final_cost          Float    @default(0)
+  deposit_amount      Float    @default(0)
+  warranty_days       Int      @default(90)
+  notes               String?
+  parts_used          Json     @default("[]")
+  payments            Json     @default("[]")
+  created_date        DateTime @default(now())
+  updated_date        DateTime @updatedAt
+}
+
+model Sale {
+  id             String   @id @default(uuid())
+  sale_number    String?
+  ticket_number  String?
+  type           String   @default("vente")
+  client_name    String?
+  items          Json     @default("[]")
+  total          Float    @default(0)
+  subtotal       Float    @default(0)
+  tax_amount     Float    @default(0)
+  discount       Float    @default(0)
+  discount_total Float    @default(0)
+  payments       Json     @default("[]")
+  payment_method String   @default("especes")
+  status         String   @default("completee")
+  notes          String?
+  promo_code     String?
+  created_date   DateTime @default(now())
+  updated_date   DateTime @updatedAt
+}
+
+model Supplier {
+  id            String   @id @default(uuid())
+  name          String
+  contact_name  String?
+  phone         String?
+  email         String?
+  address       String?
+  payment_terms String   @default("comptant")
+  notes         String?
+  created_date  DateTime @default(now())
+  updated_date  DateTime @updatedAt
+}
+
+model Expense {
+  id             String   @id @default(uuid())
+  description    String
+  amount         Float    @default(0)
+  category       String   @default("autre")
+  payment_method String   @default("especes")
+  date           String?
+  notes          String?
+  created_date   DateTime @default(now())
+  updated_date   DateTime @updatedAt
+}
+
+model PurchaseOrder {
+  id            String   @id @default(uuid())
+  order_number  String?
+  supplier_id   String?
+  supplier_name String?
+  items         Json     @default("[]")
+  total_amount  Float    @default(0)
+  status        String   @default("brouillon")
+  expected_date String?
+  notes         String?
+  created_date  DateTime @default(now())
+  updated_date  DateTime @updatedAt
+}
+
+model SupplierInvoice {
+  id                String   @id @default(uuid())
+  invoice_number    String?
+  supplier_id       String?
+  supplier_name     String?
+  description       String?
+  invoice_date      String?
+  due_date          String?
+  total_amount      Float    @default(0)
+  amount_paid       Float    @default(0)
+  remaining_debt    Float    @default(0)
+  status            String   @default("en_attente")
+  payments          Json     @default("[]")
+  purchase_order_id String?
+  notes             String?
+  created_date      DateTime @default(now())
+  updated_date      DateTime @updatedAt
+}
+
+model SupplierPayment {
+  id                 String   @id @default(uuid())
+  supplier_id        String?
+  supplier_name      String?
+  invoice_id         String?
+  amount             Float    @default(0)
+  account_name       String?
+  amount_given       Float    @default(0)
+  sales_count        Int      @default(0)
+  total_sales_amount Float    @default(0)
+  payment_method     String   @default("especes")
+  payment_date       String?
+  notes              String?
+  created_date       DateTime @default(now())
+  updated_date       DateTime @updatedAt
+}
+
+model StockMovement {
+  id             String   @id @default(uuid())
+  product_id     String?
+  product_name   String?
+  type           String?
+  quantity       Int      @default(0)
+  previous_stock Int      @default(0)
+  new_stock      Int      @default(0)
+  reason         String?
+  reference_type String?
+  reference_id   String?
+  created_date   DateTime @default(now())
+  updated_date   DateTime @updatedAt
+}
+
+model CashRegister {
+  id                String   @id @default(uuid())
+  date              String?
+  opening_balance   Float    @default(0)
+  closing_balance   Float?
+  expected_balance  Float?
+  difference        Float?
+  difference_reason String?
+  total_cash_sales  Float    @default(0)
+  total_card_sales  Float    @default(0)
+  total_expenses    Float    @default(0)
+  notes             String?
+  status            String   @default("ouverte")
+  created_date      DateTime @default(now())
+  updated_date      DateTime @updatedAt
+}
+
+model Warranty {
+  id               String   @id @default(uuid())
+  type             String   @default("vente")
+  reference_number String?
+  client_name      String?
+  product_name     String?
+  start_date       String?
+  end_date         String?
+  status           String   @default("active")
+  claim_description String?
+  resolution       String?
+  resolution_notes String?
+  notes            String?
+  created_date     DateTime @default(now())
+  updated_date     DateTime @updatedAt
+}
+
+model Promotion {
+  id            String   @id @default(uuid())
+  name          String
+  code          String?  @unique
+  type          String   @default("pourcentage")
+  value         Float    @default(0)
+  min_purchase  Float    @default(0)
+  applicable_to String   @default("tous")
+  max_uses      Int?
+  current_uses  Int      @default(0)
+  start_date    String?
+  end_date      String?
+  is_active     Boolean  @default(true)
+  created_date  DateTime @default(now())
+  updated_date  DateTime @updatedAt
+}
+
+model ServiceCategory {
+  id           String   @id @default(uuid())
+  name         String
+  description  String?
+  color        String?
+  icon         String?
+  is_active    Boolean  @default(true)
+  created_date DateTime @default(now())
+  updated_date DateTime @updatedAt
+}
+
+model ServiceItem {
+  id            String   @id @default(uuid())
+  name          String
+  category_id   String?
+  category_name String?
+  price         Float    @default(0)
+  cost_price    Float    @default(0)
+  sell_price    Float    @default(0)
+  description   String?
+  duration      Int?
+  is_active     Boolean  @default(true)
+  created_date  DateTime @default(now())
+  updated_date  DateTime @updatedAt
+}
+
+model ServiceSale {
+  id              String   @id @default(uuid())
+  service_id      String?
+  service_name    String?
+  category_id     String?
+  category_name   String?
+  client_name     String?
+  client_phone    String?
+  card_id         String?
+  card_code       String?
+  card_name       String?
+  cost_price      Float    @default(0)
+  sell_price      Float    @default(0)
+  activation_code String?
+  amount          Float    @default(0)
+  payment_method  String   @default("especes")
+  sale_date       String?
+  notes           String?
+  created_date    DateTime @default(now())
+  updated_date    DateTime @updatedAt
+}
+
+model PrepaidCard {
+  id              String   @id @default(uuid())
+  code            String?  @unique
+  name            String?
+  card_number     String?
+  provider        String?
+  currency        String?  @default("DZD")
+  current_balance Float    @default(0)
+  total_loaded    Float    @default(0)
+  total_spent     Float    @default(0)
+  is_active       Boolean  @default(true)
+  client_name     String?
+  client_phone    String?
+  balance         Float    @default(0)
+  category_id     String?
+  category_name   String?
+  status          String   @default("active")
+  expiry_date     String?
+  notes           String?
+  created_date    DateTime @default(now())
+  updated_date    DateTime @updatedAt
+}
+
+model CardTopup {
+  id             String   @id @default(uuid())
+  card_id        String?
+  card_code      String?
+  card_name      String?
+  amount         Float    @default(0)
+  old_balance    Float    @default(0)
+  new_balance    Float    @default(0)
+  payment_method String   @default("especes")
+  date           String?
+  notes          String?
+  created_date   DateTime @default(now())
+  updated_date   DateTime @updatedAt
+}
+
+model InternetPackage {
+  id             String   @id @default(uuid())
+  name           String
+  price          Float    @default(0)
+  duration       String?
+  data_amount    String?
+  validity_days  Int?
+  sell_price     Float    @default(0)
+  cost_price     Float    @default(0)
+  description    String?
+  supplier_id    String?
+  supplier_name  String?
+  is_active      Boolean  @default(true)
+  created_date   DateTime @default(now())
+  updated_date   DateTime @updatedAt
+}
+
+model InternetSale {
+  id              String   @id @default(uuid())
+  package_id      String?
+  package_name    String?
+  client_name     String?
+  client_phone    String?
+  sell_price      Float    @default(0)
+  cost_price      Float    @default(0)
+  account_used    String?
+  data_amount     String?
+  validity_days   Int?
+  activation_code String?
+  amount          Float    @default(0)
+  supplier_cost   Float    @default(0)
+  profit          Float    @default(0)
+  payment_method  String   @default("especes")
+  sale_date       String?
+  supplier_id     String?
+  notes           String?
+  created_date    DateTime @default(now())
+  updated_date    DateTime @updatedAt
+}
+
+model NotificationLog {
+  id             String   @id @default(uuid())
+  type           String?
+  recipient      String?
+  message        String?
+  status         String?
+  error          String?
+  reference_type String?
+  reference_id   String?
+  created_date   DateTime @default(now())
+  updated_date   DateTime @updatedAt
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  user_name   String?
+  action      String?
+  entity_type String?
+  entity_id   String?
+  old_data    Json?
+  new_data    Json?
+  ip_address  String?
+  created_date DateTime @default(now())
+  updated_date DateTime @updatedAt
+}

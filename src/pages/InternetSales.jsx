@@ -14,6 +14,9 @@ import { fr } from 'date-fns/locale';
 import NewSaleModal from "@/components/internet/NewSaleModal";
 import AccountReportModal from "@/components/internet/AccountReportModal";
 import SupplierPaymentModal from "@/components/internet/SupplierPaymentModal";
+import ManagePackagesModal from "@/components/internet/ManagePackagesModal";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
+import { useAppSettings } from '@/components/settings/SettingsContext';
 
 const ACCOUNTS = ['Compte Principal', 'Compte 2', 'Application A', 'Application B'];
 
@@ -23,10 +26,12 @@ const statusColor = { vendu: 'bg-blue-500/10 text-blue-400', active: 'bg-green-5
 const statusLabel = { vendu: 'Vendu', active: 'Actif', expire: 'Expiré', annule: 'Annulé' };
 
 export default function InternetSalesPage() {
+  const { formatCurrency } = useAppSettings();
   const qc = useQueryClient();
   const [showNew, setShowNew] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+  const [showPackages, setShowPackages] = useState(false);
   const [search, setSearch] = useState('');
   const [filterAccount, setFilterAccount] = useState('tous');
   const [filterPayment, setFilterPayment] = useState('tous');
@@ -34,6 +39,7 @@ export default function InternetSalesPage() {
   const [dateTo, setDateTo] = useState('');
   const [reportAccount, setReportAccount] = useState('');
   const [activeTab, setActiveTab] = useState('ventes'); // 'ventes' | 'caisse' | 'paiements'
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: sales = [], isLoading } = useQuery({
     queryKey: ['internet-sales'],
@@ -123,6 +129,9 @@ export default function InternetSalesPage() {
         <Button onClick={() => setShowPayment(true)} className="gap-2 bg-orange-500 hover:bg-orange-600 text-white">
           <HandCoins className="h-4 w-4" />Payer fournisseur
         </Button>
+        <Button variant="outline" onClick={() => setShowPackages(true)} className="gap-2">
+          <Wifi className="h-4 w-4" />Gérer les forfaits
+        </Button>
       </PageHeader>
 
       {/* Résumé caisse global */}
@@ -136,14 +145,14 @@ export default function InternetSalesPage() {
         <Card className="border-border/50">
           <CardContent className="p-4 flex items-center gap-3">
             <div className="h-9 w-9 rounded-lg bg-green-500/10 flex items-center justify-center"><DollarSign className="h-4 w-4 text-green-400" /></div>
-            <div><p className="text-xl font-bold text-green-400">{totalRevenue.toFixed(2)} €</p><p className="text-xs text-muted-foreground">Total encaissé</p></div>
+            <div><p className="text-xl font-bold text-green-400">{formatCurrency(totalRevenue)}</p><p className="text-xs text-muted-foreground">Total encaissé</p></div>
           </CardContent>
         </Card>
         <Card className="border-2 border-orange-500/40 bg-orange-500/5">
           <CardContent className="p-4 flex items-center gap-3">
             <div className="h-9 w-9 rounded-lg bg-orange-500/20 flex items-center justify-center"><HandCoins className="h-4 w-4 text-orange-400" /></div>
             <div>
-              <p className="text-xl font-bold text-orange-400">{totalDueToSupplier.toFixed(2)} €</p>
+              <p className="text-xl font-bold text-orange-400">{formatCurrency(totalDueToSupplier)}</p>
               <p className="text-xs text-muted-foreground">À donner fournisseur</p>
             </div>
           </CardContent>
@@ -152,7 +161,7 @@ export default function InternetSalesPage() {
           <CardContent className="p-4 flex items-center gap-3">
             <div className="h-9 w-9 rounded-lg bg-blue-500/20 flex items-center justify-center"><Wallet className="h-4 w-4 text-blue-400" /></div>
             <div>
-              <p className="text-xl font-bold text-blue-400">{totalProfit.toFixed(2)} €</p>
+              <p className="text-xl font-bold text-blue-400">{formatCurrency(totalProfit)}</p>
               <p className="text-xs text-muted-foreground">Votre bénéfice</p>
             </div>
           </CardContent>
@@ -190,16 +199,16 @@ export default function InternetSalesPage() {
                   <div className="space-y-1.5 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Total vendu</span>
-                      <span className="font-semibold">{data.revenue.toFixed(2)} €</span>
+                      <span className="font-semibold">{formatCurrency(data.revenue)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Déjà payé fournisseur</span>
-                      <span className="font-semibold text-green-400">-{data.paid.toFixed(2)} €</span>
+                      <span className="font-semibold text-green-400">-{formatCurrency(data.paid)}</span>
                     </div>
                     <Separator />
                     <div className="flex justify-between font-bold text-base">
                       <span>Reste à donner</span>
-                      <span className={data.unpaid > 0 ? 'text-orange-400' : 'text-green-400'}>{data.unpaid.toFixed(2)} €</span>
+                      <span className={data.unpaid > 0 ? 'text-orange-400' : 'text-green-400'}>{formatCurrency(data.unpaid)}</span>
                     </div>
                   </div>
                   <div className="flex gap-2 mt-3">
@@ -256,9 +265,9 @@ export default function InternetSalesPage() {
                           {p.payment_date ? format(new Date(p.payment_date), 'dd/MM/yyyy HH:mm') : format(new Date(p.created_date), 'dd/MM/yyyy HH:mm')}
                         </td>
                         <td className="p-3 font-medium">{p.account_name}</td>
-                        <td className="p-3 text-right text-muted-foreground">{p.total_sales_amount ? `${p.total_sales_amount.toFixed(2)} €` : '—'}</td>
+                        <td className="p-3 text-right text-muted-foreground">{p.total_sales_amount ? formatCurrency(p.total_sales_amount) : '—'}</td>
                         <td className="p-3 text-right">
-                          <span className="font-bold text-orange-400 text-base">{p.amount_given.toFixed(2)} €</span>
+                          <span className="font-bold text-orange-400 text-base">{formatCurrency(p.amount_given)}</span>
                         </td>
                         <td className="p-3 text-xs text-muted-foreground">{p.notes || '—'}</td>
                       </tr>
@@ -267,7 +276,7 @@ export default function InternetSalesPage() {
                   <tfoot>
                     <tr className="border-t-2 border-border bg-muted/20">
                       <td colSpan={3} className="p-3 font-semibold text-sm">Total payé au fournisseur</td>
-                      <td className="p-3 text-right font-bold text-orange-400 text-base">{totalPaidToSupplier.toFixed(2)} €</td>
+                      <td className="p-3 text-right font-bold text-orange-400 text-base">{formatCurrency(totalPaidToSupplier)}</td>
                       <td></td>
                     </tr>
                   </tfoot>
@@ -370,11 +379,11 @@ export default function InternetSalesPage() {
                                 {paymentLabel[s.payment_method] || s.payment_method}
                               </span>
                             </td>
-                            <td className="p-3 text-right font-bold text-green-400">{(s.sell_price || 0).toFixed(2)} €</td>
-                            <td className="p-3 text-right font-semibold text-blue-400">{profit.toFixed(2)} €</td>
+                            <td className="p-3 text-right font-bold text-green-400">{formatCurrency(s.sell_price || 0)}</td>
+                            <td className="p-3 text-right font-semibold text-blue-400">{formatCurrency(profit)}</td>
                             <td className="p-3">
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
-                                onClick={() => { if (window.confirm('Supprimer cette vente ?')) deleteMutation.mutate(s.id); }}>
+                                onClick={() => setDeleteTarget(s.id)}>
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </td>
@@ -393,6 +402,14 @@ export default function InternetSalesPage() {
       <NewSaleModal open={showNew} onClose={() => setShowNew(false)} packages={packages} accounts={ACCOUNTS} onSave={createMutation.mutateAsync} />
       <AccountReportModal open={showReport} onClose={() => setShowReport(false)} sales={sales} accountName={reportAccount} dateFrom={dateFrom} dateTo={dateTo} />
       <SupplierPaymentModal open={showPayment} onClose={() => setShowPayment(false)} accounts={ACCOUNTS} salesByAccount={accountStats} onSave={paymentMutation.mutateAsync} />
+      <ManagePackagesModal open={showPackages} onClose={() => setShowPackages(false)} packages={packages} />
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={v => !v && setDeleteTarget(null)}
+        title="Supprimer cette vente ?"
+        description="Cette action est irréversible."
+        onConfirm={() => { deleteMutation.mutate(deleteTarget); setDeleteTarget(null); }}
+      />
     </div>
   );
 }

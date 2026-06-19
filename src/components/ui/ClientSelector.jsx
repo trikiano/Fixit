@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { User, Plus, Search, Phone, X } from 'lucide-react';
+import { toast } from "@/components/ui/use-toast";
 
 /**
  * ClientSelector — Composant réutilisable pour sélectionner ou créer un client
@@ -82,8 +83,13 @@ export default function ClientSelector({ clientName, clientPhone, onSelect, requ
   const handleCreate = async () => {
     if (!newName || !newPhone) return;
     setSaving(true);
-    await createMutation.mutateAsync({ full_name: newName, phone: newPhone });
-    setSaving(false);
+    try {
+      await createMutation.mutateAsync({ full_name: newName, phone: newPhone });
+    } catch (err) {
+      toast({ title: "Erreur", description: "Le client n'a pas pu être créé. Réessayez.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const isPassager = !clientName || clientName === 'Client passager';
