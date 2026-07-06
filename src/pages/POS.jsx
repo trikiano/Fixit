@@ -314,7 +314,10 @@ export default function POS() {
     if (p.is_active === false || p.quantity <= 0) return false;
     const ms = p.name?.toLowerCase().includes(search.toLowerCase()) ||
       p.brand?.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku?.toLowerCase().includes(search.toLowerCase());
+      p.sku?.toLowerCase().includes(search.toLowerCase()) ||
+      p.barcode?.toLowerCase().includes(search.toLowerCase()) ||
+      p.imei?.toLowerCase().includes(search.toLowerCase()) ||
+      p.serial_number?.toLowerCase().includes(search.toLowerCase());
     const mc = activeCategory === 'all' || p.category === activeCategory;
     return ms && mc;
   });
