@@ -86,6 +86,7 @@ export default function POS() {
   const [showAddClientDialog, setShowAddClientDialog] = useState(false);
   const [newClientForm, setNewClientForm] = useState({ full_name: '', phone: '' });
   const clientInputRef = useRef(null);
+  const searchInputRef = useRef(null);
   const qc = useQueryClient();
 
   const { formatCurrency, generateTicketNumber, settings } = useAppSettings();
@@ -310,6 +311,31 @@ export default function POS() {
     updateTicket({ cart: newCart, selectedCartIdx: null, numpadBuffer: '' });
   };
 
+  const removeFromCart = (idx) => {
+    const newCart = cart.filter((_, i) => i !== idx);
+    updateTicket({ cart: newCart, selectedCartIdx: null, numpadBuffer: '' });
+  };
+
+  // Barcode scanner : sur Enter dans le champ recherche, ajouter le produit si match unique ou exact
+  const handleSearchKeyDown = (e) => {
+    if (e.key !== 'Enter' || !search.trim()) return;
+    const q = search.trim().toLowerCase();
+    // Priorité : match exact sur barcode, IMEI ou serial_number
+    const exact = products.find(
+      p => p.is_active !== false && p.quantity > 0 && (
+        p.barcode?.toLowerCase() === q ||
+        p.imei?.toLowerCase() === q ||
+        p.serial_number?.toLowerCase() === q
+      )
+    );
+    const toAdd = exact ?? (filtered.length === 1 ? filtered[0] : null);
+    if (toAdd) {
+      addToCart(toAdd);
+      setSearch('');
+      setActiveCategory('all');
+    }
+  };
+
   const filtered = products.filter(p => {
     if (p.is_active === false || p.quantity <= 0) return false;
     const ms = p.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -406,9 +432,12 @@ export default function POS() {
           <div className="relative w-44">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <input
+              ref={searchInputRef}
+              autoFocus
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Rechercher..."
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Rechercher / scanner..."
               className="w-full h-8 pl-8 pr-3 text-xs rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-ring text-foreground placeholder:text-muted-foreground"
             />
           </div>
@@ -446,15 +475,24 @@ export default function POS() {
                     key={item.id + idx}
                     onClick={() => updateTicket({ selectedCartIdx: idx, numpadBuffer: '' })}
                     className={cn(
-                      "px-3 py-2.5 border-b border-border/50 cursor-pointer transition-colors",
+                      "px-3 py-2.5 border-b border-border/50 cursor-pointer transition-colors group",
                       isSelected ? "bg-primary/10 border-l-4 border-l-primary" : "hover:bg-muted/30"
                     )}
                   >
                     <div className="flex justify-between items-start">
-                      <p className={cn("text-sm font-medium leading-tight", isSelected ? "text-primary" : "text-foreground")}>
+                      <p className={cn("text-sm font-medium leading-tight flex-1 min-w-0 truncate", isSelected ? "text-primary" : "text-foreground")}>
                         {item.name}
                       </p>
-                      <p className="text-sm font-bold ml-2 flex-shrink-0">{formatCurrency(lineTotal)}</p>
+                      <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                        <p className="text-sm font-bold">{formatCurrency(lineTotal)}</p>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeFromCart(idx); }}
+                          className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground/0 group-hover:text-muted-foreground hover:!text-destructive hover:bg-destructive/10 transition-all flex-shrink-0"
+                          title="Supprimer"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {item.qty} × {formatCurrency(item.unit_price)}
