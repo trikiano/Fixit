@@ -8,9 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import PageHeader from "@/components/ui/PageHeader";
-import { Settings, Store, Palette, Globe, Bell, Shield, Receipt, CheckCircle, MessageSquare, Eye, EyeOff } from 'lucide-react';
+import { Settings, Store, Palette, Globe, Bell, Shield, Receipt, CheckCircle, MessageSquare, Eye, EyeOff, Trash2, AlertTriangle } from 'lucide-react';
 import { useAppSettings, applyTheme } from "@/components/settings/SettingsContext";
 import SmsSettingsTab from "@/components/settings/SmsSettingsTab";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { base44 } from '@/api/base44Client';
 
 const CURRENCIES = [
   { code: 'EUR', symbol: '€', label: 'Euro (€)' },
@@ -40,6 +42,10 @@ export default function SettingsPage() {
   const { settings, saveSettings } = useAppSettings();
   const [local, setLocal] = useState(settings);
   const [saved, setSaved] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [resetPhrase, setResetPhrase] = useState('');
+  const [resetState, setResetState] = useState('idle'); // idle | loading | success | error
+  const [resetMessage, setResetMessage] = useState('');
 
   // Keep local in sync if settings change externally
   useEffect(() => { setLocal(settings); }, [settings]);
@@ -73,6 +79,7 @@ export default function SettingsPage() {
           <TabsTrigger value="caisse" className="gap-2 text-xs"><Store className="h-3.5 w-3.5" />Caisse</TabsTrigger>
           <TabsTrigger value="sms" className="gap-2 text-xs"><MessageSquare className="h-3.5 w-3.5" />SMS</TabsTrigger>
           <TabsTrigger value="securite" className="gap-2 text-xs"><Shield className="h-3.5 w-3.5" />Sécurité</TabsTrigger>
+          <TabsTrigger value="reinitialisation" className="gap-2 text-xs text-destructive data-[state=active]:text-destructive"><Trash2 className="h-3.5 w-3.5" />Réinitialisation</TabsTrigger>
         </TabsList>
 
         {/* Boutique */}
@@ -444,7 +451,115 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+        {/* Réinitialisation */}
+        <TabsContent value="reinitialisation">
+          <Card className="border-destructive/40">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-4 w-4" />Zone de danger — Nouvelle boutique
+              </CardTitle>
+              <CardDescription>
+                Efface toutes les données métier pour démarrer une activité vierge. Irréversible.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-2">
+                  <p className="text-sm font-semibold text-destructive flex items-center gap-2"><Trash2 className="h-4 w-4" />Sera supprimé</p>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    {['Clients (CRM)', 'Produits & stock', 'Mouvements de stock', 'Ventes & tickets', 'Réparations', 'Garanties', 'Registres de caisse', 'Dépenses & charges', 'Commandes & factures fournisseurs', 'Services vendus', 'Cartes prépayées', 'Ventes de forfaits', 'Promotions', 'Journal d\'audit', 'Notifications'].map(item => (
+                      <li key={item} className="flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-destructive/60 flex-shrink-0" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-2">
+                  <p className="text-sm font-semibold text-emerald-600 flex items-center gap-2"><CheckCircle className="h-4 w-4" />Sera conservé</p>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    {['Compte administrateur', 'Paramètres boutique', 'Devise & configuration', 'Fournisseurs', 'Catégories de services', 'Prestations (catalogue)', 'Forfaits internet (catalogue)'].map(item => (
+                      <li key={item} className="flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  Cette opération est <strong>irréversible</strong>. Pensez à exporter vos données (ventes, clients) avant de procéder si vous en avez besoin.
+                </p>
+              </div>
+
+              <Button
+                variant="destructive"
+                className="gap-2"
+                onClick={() => { setShowResetDialog(true); setResetPhrase(''); setResetState('idle'); setResetMessage(''); }}
+              >
+                <Trash2 className="h-4 w-4" />
+                Réinitialiser pour une nouvelle boutique
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* Dialog confirmation reset */}
+      <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />Confirmer la réinitialisation
+            </DialogTitle>
+            <DialogDescription>
+              Tapez <strong className="text-foreground font-mono">SUPPRIMER</strong> pour confirmer l'effacement de toutes les données métier.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="Tapez SUPPRIMER"
+              value={resetPhrase}
+              onChange={e => setResetPhrase(e.target.value)}
+              className="font-mono border-destructive/50 focus:border-destructive"
+              autoFocus
+            />
+            {resetState === 'success' && (
+              <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 p-3 text-sm text-emerald-600 flex items-center gap-2">
+                <CheckCircle className="h-4 w-4" />{resetMessage}
+              </div>
+            )}
+            {resetState === 'error' && (
+              <div className="rounded-lg bg-destructive/10 border border-destructive/30 p-3 text-sm text-destructive flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />{resetMessage}
+              </div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setShowResetDialog(false)}>Annuler</Button>
+              <Button
+                variant="destructive"
+                disabled={resetPhrase !== 'SUPPRIMER' || resetState === 'loading' || resetState === 'success'}
+                onClick={async () => {
+                  setResetState('loading');
+                  try {
+                    const res = await base44.functions.invoke('resetDatabase', { confirmPhrase: resetPhrase });
+                    setResetState('success');
+                    setResetMessage(res.message || 'Base de données réinitialisée avec succès.');
+                  } catch (err) {
+                    setResetState('error');
+                    setResetMessage(err.message || 'Erreur lors de la réinitialisation.');
+                  }
+                }}
+              >
+                {resetState === 'loading' ? 'Suppression en cours...' : 'Confirmer et supprimer'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

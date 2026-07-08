@@ -1,5 +1,7 @@
 const router = require('express').Router();
 const { requireAuth } = require('../middleware/auth');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 // POST /api/functions/:name - invoke a serverless function
 router.post('/:name', requireAuth, async (req, res) => {
@@ -7,6 +9,10 @@ router.post('/:name', requireAuth, async (req, res) => {
 
   if (name === 'sendSms') {
     return handleSendSms(req, res);
+  }
+
+  if (name === 'resetDatabase') {
+    return handleResetDatabase(req, res);
   }
 
   res.status(404).json({ error: `Fonction inconnue: ${name}` });
@@ -72,6 +78,42 @@ async function handleSendSms(req, res) {
     }
 
     res.json({ success: true, result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function handleResetDatabase(req, res) {
+  const { confirmPhrase } = req.body;
+  if (confirmPhrase !== 'SUPPRIMER') {
+    return res.status(400).json({ error: 'Phrase de confirmation incorrecte' });
+  }
+
+  try {
+    // Suppression des données métier — on garde : User, Supplier, ServiceCategory, ServiceItem, InternetPackage
+    const results = await prisma.$transaction([
+      prisma.auditLog.deleteMany({}),
+      prisma.notificationLog.deleteMany({}),
+      prisma.stockMovement.deleteMany({}),
+      prisma.cardTopup.deleteMany({}),
+      prisma.serviceSale.deleteMany({}),
+      prisma.internetSale.deleteMany({}),
+      prisma.supplierPayment.deleteMany({}),
+      prisma.supplierInvoice.deleteMany({}),
+      prisma.purchaseOrder.deleteMany({}),
+      prisma.warranty.deleteMany({}),
+      prisma.sale.deleteMany({}),
+      prisma.repair.deleteMany({}),
+      prisma.expense.deleteMany({}),
+      prisma.cashRegister.deleteMany({}),
+      prisma.promotion.deleteMany({}),
+      prisma.prepaidCard.deleteMany({}),
+      prisma.client.deleteMany({}),
+      prisma.product.deleteMany({}),
+    ]);
+
+    const total = results.reduce((s, r) => s + (r.count || 0), 0);
+    res.json({ success: true, deleted: total, message: `Base de données réinitialisée — ${total} enregistrement(s) supprimé(s)` });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
