@@ -183,6 +183,15 @@ function ShellInner() {
     <div className="flex flex-col h-screen bg-background overflow-hidden">
       {/* Tab bar */}
       <div className="flex items-center bg-card border-b border-border h-11 overflow-x-auto flex-shrink-0" style={{WebkitOverflowScrolling:'touch'}}>
+        {/* Logo — retour accueil */}
+        <div
+          onPointerDown={() => setActiveTab('home')}
+          className="flex items-center justify-center w-11 h-full border-r border-border cursor-pointer hover:bg-muted/40 transition-colors flex-shrink-0"
+          title="Accueil"
+        >
+          <Wrench className="h-4 w-4 text-primary" />
+        </div>
+
         {/* Home tab */}
         <div
           onPointerDown={() => setActiveTab('home')}
