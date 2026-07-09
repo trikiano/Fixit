@@ -7,7 +7,6 @@ import {
   Search, Package, ArrowLeft, Delete, CheckCircle, Home, Plus, X, User, Phone, Wrench, Clock, MessageSquare, AlertCircle, UserPlus,
   Smartphone, Monitor, Tablet, Zap, Cable, Headphones, Settings, Gamepad2, Box
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 import { useOfflineQueue } from '@/hooks/useOfflineQueue';
@@ -377,11 +376,12 @@ export default function POS() {
       )}
       {/* TOP BAR */}
       <div className="h-12 bg-card border-b border-border flex items-center px-3 gap-0 flex-shrink-0">
-        <Link to={createPageUrl("Dashboard")}>
-          <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mr-3">
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-        </Link>
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('shell:go-home'))}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mr-3"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
 
         {/* Home + Search — à droite des tickets */}
 
@@ -426,7 +426,7 @@ export default function POS() {
 
         {/* Home + Search */}
         <div className="flex items-center gap-2 ml-2 flex-shrink-0">
-          <button onClick={() => setActiveCategory('all')} className="h-8 w-8 flex items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" title="Toutes catégories">
+          <button onClick={() => window.dispatchEvent(new CustomEvent('shell:go-home'))} className="h-8 w-8 flex items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" title="Accueil">
             <Home className="h-4 w-4" />
           </button>
           <div className="relative w-44">

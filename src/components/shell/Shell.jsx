@@ -134,6 +134,13 @@ function ShellInner() {
   const [activeTab, setActiveTab] = useState('home');
   const [locked, setLocked] = useState(false);
 
+  // Écoute l'événement "retour accueil" émis depuis les pages internes (ex: POS)
+  useEffect(() => {
+    const handler = () => setActiveTab('home');
+    window.addEventListener('shell:go-home', handler);
+    return () => window.removeEventListener('shell:go-home', handler);
+  }, []);
+
   // Inactivity lock
   const resetTimer = useCallback(() => {
     clearTimeout(window._lockTimer);
