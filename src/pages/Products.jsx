@@ -31,7 +31,6 @@ const categories = [
 
 const ANTICASSE_TYPES = [
   { value: 'machine_sur_mesure', label: 'Machine sur mesure' },
-  { value: 'fume_transparent', label: 'Fumé / Transparent' },
   { value: 'pret_fabrique', label: 'Prêt fabriqué' },
 ];
 
