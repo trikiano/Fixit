@@ -1,0 +1,36 @@
+# ── Étape 1 : build du frontend React/Vite ─────────────────────────────────
+FROM node:20-alpine AS frontend-builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+# On exclut le dossier backend du build frontend
+RUN npm run build
+
+# ── Étape 2 : build + runtime du backend ────────────────────────────────────
+FROM node:20-alpine
+
+RUN apk add --no-cache openssl
+
+WORKDIR /app
+
+# Dépendances backend
+COPY backend/package*.json ./
+RUN npm ci --production=false
+
+# Prisma schema + génération du client
+COPY backend/prisma ./prisma
+RUN npx prisma generate
+
+# Code source backend
+COPY backend/src ./src
+
+# Assets frontend compilés → /app/frontend (chemin attendu par server.js)
+COPY --from=frontend-builder /app/dist ./frontend
+
+EXPOSE 3001
+
+CMD ["sh", "-c", "npx prisma migrate deploy && (node src/seed.js || true) && node src/server.js"]

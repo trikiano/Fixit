@@ -36,7 +36,7 @@ app.get('/api/health', (req, res) => {
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {
-  const FRONTEND_DIST = process.env.FRONTEND_DIST || path.join(__dirname, '../../dist');
+  const FRONTEND_DIST = process.env.FRONTEND_DIST || path.join(__dirname, '../frontend');
   app.use(express.static(FRONTEND_DIST));
   app.get('*', (req, res) => {
     res.sendFile(path.join(FRONTEND_DIST, 'index.html'));

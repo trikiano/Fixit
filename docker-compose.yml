@@ -14,11 +14,11 @@ services:
       timeout: 5s
       retries: 10
 
-  backend:
+  app:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: fixit_backend
+      context: .
+      dockerfile: Dockerfile.fullstack
+    container_name: fixit_app
     depends_on:
       postgres:
         condition: service_healthy
@@ -27,20 +27,12 @@ services:
       JWT_SECRET: ${JWT_SECRET:-fixit-local-dev-secret-change-in-prod}
       PORT: 3001
       NODE_ENV: production
-      CORS_ORIGIN: ${FRONTEND_URL:-http://localhost:5173}
-      PUBLIC_URL: ${BACKEND_URL:-http://localhost:3001}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@fixit.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin1234!}
+    ports:
+      - "${PORT:-3001}:3001"
     volumes:
       - fixit_uploads:/app/uploads
-
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    container_name: fixit_frontend
-    depends_on:
-      - backend
 
 volumes:
   fixit_pgdata:
