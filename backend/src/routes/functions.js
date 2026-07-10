@@ -110,6 +110,7 @@ async function handleResetDatabase(req, res) {
       prisma.prepaidCard.deleteMany({}),
       prisma.client.deleteMany({}),
       prisma.product.deleteMany({}),
+      prisma.supplier.deleteMany({}),
     ]);
 
     const total = results.reduce((s, r) => s + (r.count || 0), 0);

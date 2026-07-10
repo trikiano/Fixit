@@ -467,7 +467,7 @@ export default function SettingsPage() {
                 <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-2">
                   <p className="text-sm font-semibold text-destructive flex items-center gap-2"><Trash2 className="h-4 w-4" />Sera supprimé</p>
                   <ul className="text-xs text-muted-foreground space-y-1">
-                    {['Clients (CRM)', 'Produits & stock', 'Mouvements de stock', 'Ventes & tickets', 'Réparations', 'Garanties', 'Registres de caisse', 'Dépenses & charges', 'Commandes & factures fournisseurs', 'Services vendus', 'Cartes prépayées', 'Ventes de forfaits', 'Promotions', 'Journal d\'audit', 'Notifications'].map(item => (
+                    {['Clients (CRM)', 'Produits & stock', 'Mouvements de stock', 'Ventes & tickets', 'Réparations', 'Garanties', 'Registres de caisse', 'Dépenses & charges', 'Fournisseurs', 'Commandes & factures fournisseurs', 'Services vendus', 'Cartes prépayées', 'Ventes de forfaits', 'Promotions', 'Journal d\'audit', 'Notifications'].map(item => (
                       <li key={item} className="flex items-center gap-1.5">
                         <span className="h-1.5 w-1.5 rounded-full bg-destructive/60 flex-shrink-0" />
                         {item}
@@ -478,7 +478,7 @@ export default function SettingsPage() {
                 <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-2">
                   <p className="text-sm font-semibold text-emerald-600 flex items-center gap-2"><CheckCircle className="h-4 w-4" />Sera conservé</p>
                   <ul className="text-xs text-muted-foreground space-y-1">
-                    {['Compte administrateur', 'Paramètres boutique', 'Devise & configuration', 'Fournisseurs', 'Catégories de services', 'Prestations (catalogue)', 'Forfaits internet (catalogue)'].map(item => (
+                    {['Compte administrateur', 'Paramètres boutique', 'Devise & configuration', 'Catégories de services', 'Prestations (catalogue)', 'Forfaits internet (catalogue)'].map(item => (
                       <li key={item} className="flex items-center gap-1.5">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
                         {item}
