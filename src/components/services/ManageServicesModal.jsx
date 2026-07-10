@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,10 +22,25 @@ export default function ManageServicesModal({ open, onClose, services, categorie
   const [catForm, setCatForm] = useState(emptyCategory);
   const [deleteServiceTarget, setDeleteServiceTarget] = useState(null);
   const [deleteCatTarget, setDeleteCatTarget] = useState(null);
+  const [serviceError, setServiceError] = useState('');
+  const [catError, setCatError] = useState('');
+
+  // Réinitialise les formulaires à la fermeture
+  useEffect(() => {
+    if (!open) {
+      setShowServiceForm(false);
+      setShowCatForm(false);
+      setServiceForm(emptyService);
+      setCatForm(emptyCategory);
+      setServiceError('');
+      setCatError('');
+    }
+  }, [open]);
 
   const createServiceMutation = useMutation({
     mutationFn: (data) => base44.entities.ServiceItem.create(data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['service-items'] }); setShowServiceForm(false); setServiceForm(emptyService); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['service-items'] }); setShowServiceForm(false); setServiceForm(emptyService); setServiceError(''); },
+    onError: (err) => setServiceError(err.message || 'Erreur lors de la création'),
   });
 
   const deleteServiceMutation = useMutation({
@@ -35,7 +50,8 @@ export default function ManageServicesModal({ open, onClose, services, categorie
 
   const createCatMutation = useMutation({
     mutationFn: (data) => base44.entities.ServiceCategory.create(data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['service-categories'] }); setShowCatForm(false); setCatForm(emptyCategory); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['service-categories'] }); setShowCatForm(false); setCatForm(emptyCategory); setCatError(''); },
+    onError: (err) => setCatError(err.message || 'Erreur lors de la création'),
   });
 
   const deleteCatMutation = useMutation({
@@ -126,9 +142,12 @@ export default function ManageServicesModal({ open, onClose, services, categorie
                     <Label>Description</Label>
                     <Input className="mt-1" placeholder="Optionnel..." value={serviceForm.description} onChange={e => setServiceForm(f => ({ ...f, description: e.target.value }))} />
                   </div>
+                  {serviceError && <p className="text-xs text-destructive">{serviceError}</p>}
                   <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1" onClick={() => setShowServiceForm(false)}>Annuler</Button>
-                    <Button className="flex-1" onClick={handleCreateService} disabled={!serviceForm.name || !serviceForm.sell_price || !serviceForm.cost_price}>Créer</Button>
+                    <Button variant="outline" className="flex-1" onClick={() => { setShowServiceForm(false); setServiceError(''); }}>Annuler</Button>
+                    <Button className="flex-1" onClick={handleCreateService} disabled={!serviceForm.name || !serviceForm.sell_price || !serviceForm.cost_price || createServiceMutation.isPending}>
+                      {createServiceMutation.isPending ? 'Création…' : 'Créer'}
+                    </Button>
                   </div>
                 </div>
               )}
@@ -161,9 +180,12 @@ export default function ManageServicesModal({ open, onClose, services, categorie
                     <Label>Nom *</Label>
                     <Input className="mt-1" placeholder="Forfait Internet, Solde, Visa..." value={catForm.name} onChange={e => setCatForm(f => ({ ...f, name: e.target.value }))} />
                   </div>
+                  {catError && <p className="text-xs text-destructive">{catError}</p>}
                   <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1" onClick={() => setShowCatForm(false)}>Annuler</Button>
-                    <Button className="flex-1" onClick={() => createCatMutation.mutate(catForm)} disabled={!catForm.name}>Créer</Button>
+                    <Button variant="outline" className="flex-1" onClick={() => { setShowCatForm(false); setCatError(''); }}>Annuler</Button>
+                    <Button className="flex-1" onClick={() => createCatMutation.mutate(catForm)} disabled={!catForm.name || createCatMutation.isPending}>
+                      {createCatMutation.isPending ? 'Création…' : 'Créer'}
+                    </Button>
                   </div>
                 </div>
               )}
