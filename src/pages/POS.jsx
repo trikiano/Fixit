@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import {
   Search, Package, ArrowLeft, Delete, CheckCircle, Home, Plus, X, User, Phone, Wrench, Clock, MessageSquare, AlertCircle, UserPlus,
-  Smartphone, Monitor, Tablet, Zap, Cable, Headphones, Settings, Gamepad2, Box, Volume2
+  Smartphone, Monitor, Tablet, Zap, Cable, Headphones, Settings, Gamepad2, Box, Volume2, ShieldCheck
 } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
@@ -24,6 +24,7 @@ const CATEGORY_LABELS = {
   piece_detachee: 'Pièces',
   console: 'Consoles',
   haut_parleur: 'Haut-parleurs',
+  anticasse: 'Anticasse',
   autre: 'Autre',
 };
 
@@ -37,6 +38,7 @@ const CATEGORY_ICONS = {
   piece_detachee: Settings,
   console: Gamepad2,
   haut_parleur: Volume2,
+  anticasse: ShieldCheck,
   autre: Box,
 };
 
@@ -82,6 +84,16 @@ export default function POS() {
   const [historyTab, setHistoryTab] = useState('repairs');
   const [smsSending, setSmsSending] = useState(false);
   const [smsResult, setSmsResult] = useState(null); // null | 'ok' | 'error'
+  const [perteDialog, setPerteDialog] = useState({ open: false, cartIdx: null, motif: 'mauvaise_taille', loading: false });
+
+  const MOTIFS_PERTE = [
+    { value: 'mauvaise_taille', label: 'Mauvaise taille / format' },
+    { value: 'ne_convient_pas', label: 'Ne convient pas au modèle' },
+    { value: 'abime_pose', label: 'Abîmé lors de la pose' },
+    { value: 'retrait_client', label: 'Retrait / changement client' },
+    { value: 'defaut_fabrication', label: 'Défaut de fabrication' },
+    { value: 'autre', label: 'Autre' },
+  ];
   const [clientInputValue, setClientInputValue] = useState('');
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [showAddClientDialog, setShowAddClientDialog] = useState(false);
@@ -317,6 +329,30 @@ export default function POS() {
     updateTicket({ cart: newCart, selectedCartIdx: null, numpadBuffer: '' });
   };
 
+  const enregistrerPerteAnticasse = async () => {
+    const item = cart[perteDialog.cartIdx];
+    if (!item) return;
+    const prod = products.find(p => p.id === item.id);
+    if (!prod) return;
+    setPerteDialog(d => ({ ...d, loading: true }));
+    const prev = prod.quantity || 0;
+    const newQty = Math.max(0, prev - 1);
+    const motifLabel = MOTIFS_PERTE.find(m => m.value === perteDialog.motif)?.label || perteDialog.motif;
+    try {
+      await base44.entities.Product.update(prod.id, { quantity: newQty });
+      await base44.entities.StockMovement.create({
+        product_id: prod.id, product_name: prod.name,
+        type: 'sortie', quantity: 1,
+        previous_stock: prev, new_stock: newQty,
+        reason: `Perte anticasse — ${motifLabel}`,
+        reference_type: 'perte_anticasse',
+      });
+      qc.invalidateQueries({ queryKey: ['products'] });
+    } finally {
+      setPerteDialog({ open: false, cartIdx: null, motif: 'mauvaise_taille', loading: false });
+    }
+  };
+
   // Barcode scanner : sur Enter dans le champ recherche, ajouter le produit si match unique ou exact
   const handleSearchKeyDown = (e) => {
     if (e.key !== 'Enter' || !search.trim()) return;
@@ -496,10 +532,21 @@ export default function POS() {
                         </button>
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {item.qty} × {formatCurrency(item.unit_price)}
-                      {item.discount > 0 && <span className="text-destructive ml-1">({item.discount}% remise)</span>}
-                    </p>
+                    <div className="flex items-center justify-between mt-0.5">
+                      <p className="text-xs text-muted-foreground">
+                        {item.qty} × {formatCurrency(item.unit_price)}
+                        {item.discount > 0 && <span className="text-destructive ml-1">({item.discount}% remise)</span>}
+                      </p>
+                      {item.category === 'anticasse' && !item.isCustom && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setPerteDialog({ open: true, cartIdx: idx, motif: 'mauvaise_taille', loading: false }); }}
+                          className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors flex-shrink-0 ml-2"
+                          title="Anticasse raté — enregistrer perte"
+                        >
+                          ❌ Raté
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })
@@ -743,6 +790,36 @@ export default function POS() {
           </div>
         </div>
       </div>
+
+      {/* PERTE ANTICASSE DIALOG */}
+      <Dialog open={perteDialog.open} onOpenChange={v => !v && setPerteDialog(d => ({ ...d, open: false }))}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              ❌ Anticasse raté — enregistrer une perte
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Le stock sera décrémenté de 1 sans facturer. L'anticasse reste dans le ticket pour la 2e pose au même prix.</p>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Motif de la perte</label>
+              <select
+                value={perteDialog.motif}
+                onChange={e => setPerteDialog(d => ({ ...d, motif: e.target.value }))}
+                className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                {MOTIFS_PERTE.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+              </select>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setPerteDialog(d => ({ ...d, open: false }))}>Annuler</Button>
+              <Button variant="destructive" onClick={enregistrerPerteAnticasse} disabled={perteDialog.loading}>
+                {perteDialog.loading ? 'Enregistrement…' : 'Confirmer la perte'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* HISTORY DIALOG */}
       <Dialog open={showHistoryDialog} onOpenChange={setShowHistoryDialog}>
