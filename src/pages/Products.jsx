@@ -24,6 +24,7 @@ const categories = [
   { value: 'accessoire', label: 'Accessoire' },
   { value: 'piece_detachee', label: 'Pièce détachée' },
   { value: 'console', label: 'Console' },
+  { value: 'haut_parleur', label: 'Haut-parleur' },
   { value: 'autre', label: 'Autre' },
 ];
 

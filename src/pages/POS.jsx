@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import {
   Search, Package, ArrowLeft, Delete, CheckCircle, Home, Plus, X, User, Phone, Wrench, Clock, MessageSquare, AlertCircle, UserPlus,
-  Smartphone, Monitor, Tablet, Zap, Cable, Headphones, Settings, Gamepad2, Box
+  Smartphone, Monitor, Tablet, Zap, Cable, Headphones, Settings, Gamepad2, Box, Volume2
 } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,7 @@ const CATEGORY_LABELS = {
   accessoire: 'Accessoires',
   piece_detachee: 'Pièces',
   console: 'Consoles',
+  haut_parleur: 'Haut-parleurs',
   autre: 'Autre',
 };
 
@@ -35,6 +36,7 @@ const CATEGORY_ICONS = {
   accessoire: Headphones,
   piece_detachee: Settings,
   console: Gamepad2,
+  haut_parleur: Volume2,
   autre: Box,
 };
 
