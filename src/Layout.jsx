@@ -7,12 +7,11 @@ import {
   LayoutDashboard, Users, Package, Wrench, ShoppingCart,
   Truck, Shield, DollarSign, Receipt, Tag, Bell,
   ClipboardList, Settings, Menu, X, ChevronDown,
-  LogOut, Warehouse, ScrollText, ShoppingBag, FileText, Wifi, Lock
+  LogOut, Warehouse, ScrollText, ShoppingBag, FileText, Wifi
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
-import { useLock } from "@/lib/LockContext";
 
 // roles: undefined = visible par tous les rôles authentifiés
 // ['superadmin'] = superadmin uniquement
@@ -71,7 +70,6 @@ function LayoutInner({ children, currentPageName }) {
   const [collapsed, setCollapsed] = useState({});
   const { settings } = useAppSettings();
   const { user, effectiveRole } = useAuth();
-  const { lock } = useLock();
 
   const toggleGroup = (label) => {
     setCollapsed(p => ({ ...p, [label]: !p[label] }));
@@ -149,10 +147,7 @@ function LayoutInner({ children, currentPageName }) {
                 <p className="text-xs font-medium text-foreground truncate">{user.name || user.email}</p>
                 <p className="text-[10px] text-muted-foreground">{ROLE_LABELS[effectiveRole] || effectiveRole}</p>
               </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7" title="Verrouiller" onClick={lock}>
-                <Lock className="h-3.5 w-3.5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7" title="Déconnexion" onClick={() => { base44.auth.logout(); window.location.href = '/login'; }}>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { base44.auth.logout(); window.location.href = '/login'; }}>
                 <LogOut className="h-3.5 w-3.5" />
               </Button>
             </div>
