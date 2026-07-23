@@ -29,8 +29,6 @@ services:
       NODE_ENV: production
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@fixit.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin1234!}
-    ports:
-      - "${PORT:-3001}:3001"
     volumes:
       - fixit_uploads:/app/uploads
 
