@@ -29,6 +29,9 @@ services:
       NODE_ENV: production
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@fixit.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin1234!}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.fixit-app.loadbalancer.server.port=3001"
     volumes:
       - fixit_uploads:/app/uploads
 
