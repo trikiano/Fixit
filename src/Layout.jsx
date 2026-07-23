@@ -11,19 +11,23 @@ import {
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/AuthContext";
 
+// roles: undefined = visible par tous les rôles authentifiés
+// ['superadmin'] = superadmin uniquement
+// ['superadmin','responsable'] = pas les vendeurs
 const navGroups = [
   {
     label: "Principal",
     items: [
-      { name: "Dashboard", icon: LayoutDashboard, page: "Dashboard" },
+      { name: "Dashboard", icon: LayoutDashboard, page: "Dashboard", roles: ['superadmin', 'responsable'] },
     ]
   },
   {
     label: "Commerce",
     items: [
       { name: "Clients", icon: Users, page: "Clients" },
-      { name: "Ventes", icon: ShoppingCart, page: "Sales" },
+      { name: "Ventes", icon: ShoppingCart, page: "Sales", roles: ['superadmin', 'responsable'] },
       { name: "Achat Services", icon: ShoppingBag, page: "Services" },
       { name: "Forfaits Internet", icon: Wifi, page: "InternetSales" },
       { name: "Caisse", icon: DollarSign, page: "CashRegister" },
@@ -42,31 +46,30 @@ const navGroups = [
     items: [
       { name: "Produits", icon: Package, page: "Products" },
       { name: "Mouvements Stock", icon: Warehouse, page: "StockMovements" },
-      { name: "Fournisseurs", icon: Truck, page: "Suppliers" },
-      { name: "Commandes Achat", icon: Receipt, page: "PurchaseOrders" },
-      { name: "Factures Fournisseurs", icon: FileText, page: "SupplierInvoices" },
+      { name: "Fournisseurs", icon: Truck, page: "Suppliers", roles: ['superadmin', 'responsable'] },
+      { name: "Commandes Achat", icon: Receipt, page: "PurchaseOrders", roles: ['superadmin', 'responsable'] },
+      { name: "Factures Fournisseurs", icon: FileText, page: "SupplierInvoices", roles: ['superadmin', 'responsable'] },
     ]
   },
   {
     label: "Administration",
     items: [
-      { name: "Dépenses", icon: ClipboardList, page: "Expenses" },
-      { name: "Journal Audit", icon: ScrollText, page: "AuditLogs" },
-      { name: "Notifications", icon: Bell, page: "Notifications" },
-      { name: "Paramètres", icon: Settings, page: "Settings" },
+      { name: "Dépenses", icon: ClipboardList, page: "Expenses", roles: ['superadmin', 'responsable'] },
+      { name: "Journal Audit", icon: ScrollText, page: "AuditLogs", roles: ['superadmin'] },
+      { name: "Utilisateurs", icon: Users, page: "Users", roles: ['superadmin'] },
+      { name: "Notifications", icon: Bell, page: "Notifications", roles: ['superadmin', 'responsable'] },
+      { name: "Paramètres", icon: Settings, page: "Settings", roles: ['superadmin', 'responsable'] },
     ]
   }
 ];
 
+const ROLE_LABELS = { superadmin: 'Super Admin', responsable: 'Responsable', vendeur: 'Vendeur', admin: 'Super Admin' };
+
 function LayoutInner({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [user, setUser] = useState(null);
   const [collapsed, setCollapsed] = useState({});
   const { settings } = useAppSettings();
-
-  useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
-  }, []);
+  const { user, effectiveRole } = useAuth();
 
   const toggleGroup = (label) => {
     setCollapsed(p => ({ ...p, [label]: !p[label] }));
@@ -96,49 +99,55 @@ function LayoutInner({ children, currentPageName }) {
         </div>
 
         <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-1">
-          {navGroups.map(group => (
-            <div key={group.label} className="mb-2">
-              <button
-                onClick={() => toggleGroup(group.label)}
-                className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
-              >
-                {group.label}
-                <ChevronDown className={cn("h-3 w-3 transition-transform", collapsed[group.label] && "-rotate-90")} />
-              </button>
-              {!collapsed[group.label] && group.items.map(item => {
-                const isActive = currentPageName === item.page;
-                return (
-                  <Link
-                    key={item.page}
-                    to={createPageUrl(item.page)}
-                    onClick={() => setSidebarOpen(false)}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all",
-                      isActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    )}
-                  >
-                    <item.icon className="h-4 w-4 flex-shrink-0" />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
+          {navGroups.map(group => {
+            const visibleItems = group.items.filter(item =>
+              !item.roles || item.roles.includes(effectiveRole)
+            );
+            if (visibleItems.length === 0) return null;
+            return (
+              <div key={group.label} className="mb-2">
+                <button
+                  onClick={() => toggleGroup(group.label)}
+                  className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                >
+                  {group.label}
+                  <ChevronDown className={cn("h-3 w-3 transition-transform", collapsed[group.label] && "-rotate-90")} />
+                </button>
+                {!collapsed[group.label] && visibleItems.map(item => {
+                  const isActive = currentPageName === item.page;
+                  return (
+                    <Link
+                      key={item.page}
+                      to={createPageUrl(item.page)}
+                      onClick={() => setSidebarOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                        isActive
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      )}
+                    >
+                      <item.icon className="h-4 w-4 flex-shrink-0" />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          })}
         </nav>
 
         {user && (
           <div className="p-3 border-t border-border">
             <div className="flex items-center gap-3 px-2 py-2">
               <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
-                {user.full_name?.[0] || user.email?.[0]?.toUpperCase()}
+                {user.name?.[0] || user.email?.[0]?.toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-foreground truncate">{user.full_name || user.email}</p>
-                <p className="text-[10px] text-muted-foreground capitalize">{user.role || 'user'}</p>
+                <p className="text-xs font-medium text-foreground truncate">{user.name || user.email}</p>
+                <p className="text-[10px] text-muted-foreground">{ROLE_LABELS[effectiveRole] || effectiveRole}</p>
               </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => base44.auth.logout()}>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { base44.auth.logout(); window.location.href = '/login'; }}>
                 <LogOut className="h-3.5 w-3.5" />
               </Button>
             </div>

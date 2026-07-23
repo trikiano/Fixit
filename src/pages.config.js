@@ -64,6 +64,7 @@ import Settings from './pages/Settings';
 import StockMovements from './pages/StockMovements';
 import Suppliers from './pages/Suppliers';
 import Warranties from './pages/Warranties';
+import Users from './pages/Users';
 import __Layout from './Layout.jsx';
 
 
@@ -85,6 +86,7 @@ export const PAGES = {
     "StockMovements": StockMovements,
     "Suppliers": Suppliers,
     "Warranties": Warranties,
+    "Users": Users,
 }
 
 export const pagesConfig = {

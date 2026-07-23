@@ -24,4 +24,19 @@ function signToken(user) {
   );
 }
 
-module.exports = { requireAuth, signToken, JWT_SECRET };
+// 'admin' legacy → traité comme 'superadmin'
+function effectiveRole(role) {
+  return role === 'admin' ? 'superadmin' : role;
+}
+
+function requireRole(...roles) {
+  return (req, res, next) => {
+    const er = effectiveRole(req.user?.role);
+    if (!roles.includes(er)) {
+      return res.status(403).json({ error: 'Accès refusé — droits insuffisants' });
+    }
+    next();
+  };
+}
+
+module.exports = { requireAuth, requireRole, signToken, JWT_SECRET, effectiveRole };

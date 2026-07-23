@@ -115,6 +115,13 @@ export const base44 = {
     redirectToLogin: () => {
       window.location.href = '/login';
     },
+    lockScreenUsers: () => apiFetch('/auth/lock-screen-users'),
+    users: {
+      list: () => apiFetch('/auth/users'),
+      create: (data) => apiFetch('/auth/users', { method: 'POST', body: JSON.stringify(data) }),
+      update: (id, data) => apiFetch(`/auth/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+      delete: (id) => apiFetch(`/auth/users/${id}`, { method: 'DELETE' }),
+    },
   },
 
   functions: {

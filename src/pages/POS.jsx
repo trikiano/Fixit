@@ -5,14 +5,31 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import {
   Search, Package, ArrowLeft, Delete, CheckCircle, Home, Plus, X, User, Phone, Wrench, Clock, MessageSquare, AlertCircle, UserPlus,
-  Smartphone, Monitor, Tablet, Zap, Cable, Headphones, Settings, Gamepad2, Box, Volume2, ShieldCheck
+  Smartphone, Monitor, Tablet, Zap, Cable, Headphones, Settings, Gamepad2, Box, Volume2, ShieldCheck, Tag, ChevronLeft, Check, RotateCcw, Receipt, Gift, BookOpen
 } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 import { useOfflineQueue } from '@/hooks/useOfflineQueue';
 import { useAppSettings } from "@/components/settings/SettingsContext";
+import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import PhoneInput from '@/components/ui/PhoneInput';
+
+const STATUS_REPAIR = {
+  reception:         { label: 'Réception',      cls: 'bg-gray-500/10 text-gray-500 border-gray-200' },
+  diagnostic:        { label: 'Diagnostic',     cls: 'bg-blue-500/10 text-blue-600 border-blue-200' },
+  en_attente_pieces: { label: 'Attente pièces', cls: 'bg-amber-500/10 text-amber-600 border-amber-200' },
+  en_cours:          { label: 'En cours',       cls: 'bg-blue-500/10 text-blue-600 border-blue-200' },
+  pret:              { label: '✓ Prêt',         cls: 'bg-green-500/10 text-green-600 border-green-200' },
+};
+
+const DEVICE_TYPES = [
+  { value: 'telephone', label: 'Téléphone', icon: '📱' },
+  { value: 'ordinateur', label: 'PC', icon: '💻' },
+  { value: 'tablette', label: 'Tablette', icon: '📟' },
+  { value: 'console', label: 'Console', icon: '🎮' },
+  { value: 'autre', label: 'Autre', icon: '🔧' },
+];
 
 const CATEGORY_LABELS = {
   telephone: 'Téléphones',
@@ -85,6 +102,30 @@ export default function POS() {
   const [smsSending, setSmsSending] = useState(false);
   const [smsResult, setSmsResult] = useState(null); // null | 'ok' | 'error'
   const [perteDialog, setPerteDialog] = useState({ open: false, cartIdx: null, motif: 'mauvaise_taille', loading: false });
+  const [showServicePickerDialog, setShowServicePickerDialog] = useState(false);
+  const [serviceCatFilter, setServiceCatFilter] = useState('tous');
+  const [servicePicking, setServicePicking] = useState(null);
+  const [serviceAmount, setServiceAmount] = useState('');
+  const [newSvcCatMode, setNewSvcCatMode] = useState(false);
+  const [newSvcCatName, setNewSvcCatName] = useState('');
+  const [newServiceMode, setNewServiceMode] = useState(false);
+  const [newServiceForm, setNewServiceForm] = useState({ name: '', category_id: '', sell_price: '', cost_price: '' });
+  // Repair picker
+  const [showRepairPickerDialog, setShowRepairPickerDialog] = useState(false);
+  const [repairSearch, setRepairSearch] = useState('');
+  const [repairStatusFilter, setRepairStatusFilter] = useState('ouvertes');
+  const [repairPicking, setRepairPicking] = useState(null);
+  const [repairAmount, setRepairAmount] = useState('');
+  const [newRepairMode, setNewRepairMode] = useState(false);
+  const [newRepairForm, setNewRepairForm] = useState({ client_name: '', client_phone: '', device_type: 'telephone', description: '', amount: '' });
+  // Return flow
+  const [showReturnDialog, setShowReturnDialog] = useState(false);
+  const [returnSearchQuery, setReturnSearchQuery] = useState('');
+  const [returnStep, setReturnStep] = useState('search'); // 'search' | 'confirm' | 'done'
+  const [returnPicking, setReturnPicking] = useState(null); // { sale, item }
+  const [returnQty, setReturnQty] = useState(1);
+  const [returnMethod, setReturnMethod] = useState('especes');
+  const [lastReturnNum, setLastReturnNum] = useState('');
 
   const MOTIFS_PERTE = [
     { value: 'mauvaise_taille', label: 'Mauvaise taille / format' },
@@ -100,14 +141,21 @@ export default function POS() {
   const [newClientForm, setNewClientForm] = useState({ full_name: '', phone: '' });
   const clientInputRef = useRef(null);
   const searchInputRef = useRef(null);
+  const scanBufferRef = useRef('');
+  const scanTimerRef = useRef(null);
   const qc = useQueryClient();
 
   const { formatCurrency, generateTicketNumber, settings } = useAppSettings();
+  const { isResponsableOrAbove } = useAuth();
+  const maxDiscount = isResponsableOrAbove ? 100 : 10;
   const { isOnline, queue: offlineQueue, enqueue, syncQueue, syncing, lastSyncResult } = useOfflineQueue();
   const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: () => base44.entities.Product.list() });
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list('-created_date', 500) });
   const { data: repairs = [] } = useQuery({ queryKey: ['repairs'], queryFn: () => base44.entities.Repair.list('-created_date', 200) });
   const { data: serviceSales = [] } = useQuery({ queryKey: ['serviceSales'], queryFn: () => base44.entities.ServiceSale.list('-created_date', 200) });
+  const { data: serviceItems = [] } = useQuery({ queryKey: ['service-items'], queryFn: () => base44.entities.ServiceItem.list('-created_date', 200) });
+  const { data: serviceCategories = [] } = useQuery({ queryKey: ['service-categories'], queryFn: () => base44.entities.ServiceCategory.list('-created_date', 100) });
+  const { data: recentSales = [] } = useQuery({ queryKey: ['recent-sales'], queryFn: () => base44.entities.Sale.list('-created_date', 500) });
 
 
   useEffect(() => { base44.auth.me().then(setUser).catch(() => {}); }, []);
@@ -160,27 +208,22 @@ export default function POS() {
   // --- Sale mutation ---
   const saleMutation = useMutation({
     mutationFn: async () => {
+      const paidItems = cart.filter(i => !i.ardoise);
+      const ardoiseItems = cart.filter(i => i.ardoise);
       const saleNum = generateTicketNumber('sale');
       setLastCartSnapshot({ cart: [...cart], clientName, clientPhone, total, saleNum });
-      const saleItems = cart.map(item => ({
+
+      const toSaleItems = (items) => items.map(item => ({
         product_id: item.id, product_name: item.name,
         quantity: item.qty, unit_price: item.unit_price,
         discount: item.discount || 0,
         total: item.qty * item.unit_price * (1 - (item.discount || 0) / 100)
       }));
-      const subtotal = saleItems.reduce((s, i) => s + i.total, 0);
 
-      const saleData = {
-        sale_number: saleNum, client_name: clientName || 'Client comptoir', type: 'vente',
-        items: saleItems, subtotal, discount_total: 0, total: subtotal,
-        payment_method: paymentMethod,
-        payments: [{ method: paymentMethod, amount: subtotal }],
-        status: 'completee'
-      };
-
+      // Stock updates for ALL items — goods leave the shop regardless of payment status
       const stockUpdates = [];
       for (const item of cart) {
-        if (item.isCustom) continue;
+        if (item.isCustom || item.isService || item.isRepair) continue;
         const prod = products.find(p => p.id === item.id);
         if (prod) {
           const newQty = Math.max(0, (prod.quantity || 0) - item.qty);
@@ -197,17 +240,58 @@ export default function POS() {
       }
 
       if (!isOnline) {
-        // Save to offline queue
-        enqueue({ ...saleData, _stock_updates: stockUpdates });
+        if (paidItems.length > 0) {
+          const saleItems = toSaleItems(paidItems);
+          const subtotal = saleItems.reduce((s, i) => s + i.total, 0);
+          enqueue({
+            sale_number: saleNum, client_name: clientName || 'Client comptoir', type: 'vente',
+            items: saleItems, subtotal, discount_total: 0, total: subtotal,
+            payment_method: paymentMethod, payments: [{ method: paymentMethod, amount: subtotal }],
+            status: 'completee', _stock_updates: stockUpdates
+          });
+        }
         return saleNum;
       }
 
-      // Online: apply immediately
+      // Online: apply stock updates
       for (const upd of stockUpdates) {
         await base44.entities.Product.update(upd.id, { quantity: upd.newQty });
         await base44.entities.StockMovement.create(upd.movement);
       }
-      await base44.entities.Sale.create(saleData);
+
+      // Vente payée
+      if (paidItems.length > 0) {
+        const saleItems = toSaleItems(paidItems);
+        const subtotal = saleItems.reduce((s, i) => s + i.total, 0);
+        await base44.entities.Sale.create({
+          sale_number: saleNum, client_name: clientName || 'Client comptoir', type: 'vente',
+          items: saleItems, subtotal, discount_total: 0, total: subtotal,
+          payment_method: paymentMethod, payments: [{ method: paymentMethod, amount: subtotal }],
+          status: 'completee'
+        });
+      }
+
+      // Ardoise(s) — regroupées par personne
+      if (ardoiseItems.length > 0) {
+        const byPerson = {};
+        for (const item of ardoiseItems) {
+          const key = item.ardoise.personName?.trim() || 'Non identifié';
+          if (!byPerson[key]) byPerson[key] = { items: [], comment: item.ardoise.comment || '' };
+          byPerson[key].items.push(item);
+        }
+        for (const [personName, { items: aItems, comment }] of Object.entries(byPerson)) {
+          const ardoiseNum = paidItems.length > 0 ? generateTicketNumber('sale') : saleNum;
+          const aSaleItems = toSaleItems(aItems);
+          const aTotal = aSaleItems.reduce((s, i) => s + i.total, 0);
+          await base44.entities.Sale.create({
+            sale_number: ardoiseNum, client_name: personName, type: 'vente',
+            items: aSaleItems, subtotal: aTotal, discount_total: 0, total: aTotal,
+            payment_method: 'ardoise', payments: [{ method: 'ardoise', amount: aTotal }],
+            status: 'non_payee', notes: comment
+          });
+        }
+      }
+
       return saleNum;
     },
     onSuccess: (saleNum) => {
@@ -263,7 +347,7 @@ export default function POS() {
   };
 
   // --- Cart helpers ---
-  const addToCart = (product) => {
+  const addToCart = useCallback((product) => {
     setTickets(prev => prev.map(t => {
       if (t.id !== activeTicketId) return t;
       const idx = t.cart.findIndex(i => i.id === product.id);
@@ -276,7 +360,67 @@ export default function POS() {
       const newCart = [...t.cart, { ...product, qty: 1, unit_price: product.sell_price || 0, discount: 0 }];
       return { ...t, cart: newCart, selectedCartIdx: newCart.length - 1, numpadBuffer: '' };
     }));
-  };
+  }, [activeTicketId]);
+
+  // --- Scanner global : capture les flux QR/barcode n'importe où dans le POS ---
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      // Si un dialog/modal est ouvert → ne pas intercepter
+      if (document.querySelector('[role="dialog"]')) return;
+      // Si le focus est sur un input/textarea/select → ne pas intercepter
+      const tag = document.activeElement?.tagName?.toLowerCase();
+      if (['input', 'textarea', 'select'].includes(tag)) return;
+      // Ignorer les combinaisons avec Ctrl/Alt/Meta
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+      if (e.key === 'Enter') {
+        const code = scanBufferRef.current.trim();
+        scanBufferRef.current = '';
+        if (scanTimerRef.current) { clearTimeout(scanTimerRef.current); scanTimerRef.current = null; }
+        if (code.length < 2) return;
+
+        const q = code.toLowerCase();
+        // Priorité : match exact barcode / imei / serial
+        const exact = products.find(p =>
+          p.is_active !== false && p.quantity > 0 && (
+            p.barcode?.toLowerCase() === q ||
+            p.imei?.toLowerCase() === q ||
+            p.serial_number?.toLowerCase() === q
+          )
+        );
+        // Fallback : SKU ou nom
+        const match = exact ?? products.find(p =>
+          p.is_active !== false && p.quantity > 0 && (
+            p.sku?.toLowerCase() === q ||
+            p.name?.toLowerCase().includes(q)
+          )
+        );
+
+        if (match) {
+          addToCart(match);
+        } else {
+          // Aucun match → afficher dans la barre de recherche pour que l'utilisateur voie ce qui a été scanné
+          setSearch(code);
+          searchInputRef.current?.focus();
+        }
+        e.preventDefault();
+        return;
+      }
+
+      // Caractère imprimable → bufferiser
+      if (e.key.length !== 1) return;
+      scanBufferRef.current += e.key;
+
+      // Vider le buffer après 200ms sans activité (évite les fragments orphelins)
+      if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
+      scanTimerRef.current = setTimeout(() => { scanBufferRef.current = ''; }, 200);
+
+      e.preventDefault();
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [products, addToCart]);
 
   // --- Numpad logic ---
   const handleNumpad = useCallback((key) => {
@@ -297,7 +441,7 @@ export default function POS() {
 
       if (!isNaN(val) || buf === '' || buf === '-' || buf === '.') {
         if (t.numpadMode === 'Qté') item.qty = Math.max(1, Math.round(numVal));
-        else if (t.numpadMode === 'Remise') item.discount = Math.min(100, Math.max(0, numVal));
+        else if (t.numpadMode === 'Remise') item.discount = Math.min(maxDiscount, Math.max(0, numVal));
         else if (t.numpadMode === 'Prix') item.unit_price = Math.max(0, numVal);
         updatedCart[t.selectedCartIdx] = item;
       }
@@ -353,6 +497,92 @@ export default function POS() {
     }
   };
 
+  const createQuickRepairMutation = useMutation({
+    mutationFn: async (data) => {
+      const ticketNum = generateTicketNumber('repair');
+      return base44.entities.Repair.create({
+        ticket_number: ticketNum,
+        client_name: data.client_name,
+        client_phone: data.client_phone || '',
+        device_type: data.device_type,
+        problem_description: data.description,
+        status: 'en_cours',
+        estimated_cost: parseFloat(data.amount) || 0,
+        final_cost: parseFloat(data.amount) || 0,
+        deposit_amount: 0,
+        payments: [],
+      });
+    },
+    onSuccess: (created) => {
+      qc.invalidateQueries({ queryKey: ['repairs'] });
+      setRepairPicking(created);
+      setRepairAmount(String(created.final_cost || ''));
+      setNewRepairMode(false);
+      setNewRepairForm({ client_name: '', client_phone: '', device_type: 'telephone', description: '', amount: '' });
+    },
+  });
+
+  const createServiceCatMutation = useMutation({
+    mutationFn: (name) => base44.entities.ServiceCategory.create({ name, color: 'blue' }),
+    onSuccess: (created) => {
+      qc.invalidateQueries({ queryKey: ['service-categories'] });
+      setServiceCatFilter(created.id);
+      setNewSvcCatName(''); setNewSvcCatMode(false);
+    },
+  });
+
+  const createReturnMutation = useMutation({
+    mutationFn: async ({ sale, item, qty, method }) => {
+      const returnNum = generateTicketNumber('sale');
+      const lineTotal = qty * item.unit_price * (1 - (item.discount || 0) / 100);
+      await base44.entities.Sale.create({
+        sale_number: returnNum,
+        client_name: sale.client_name || 'Client comptoir',
+        type: 'retour',
+        items: [{ product_id: item.product_id, product_name: item.product_name, quantity: qty, unit_price: item.unit_price, discount: item.discount || 0, total: lineTotal }],
+        subtotal: lineTotal,
+        discount_total: 0,
+        total: lineTotal,
+        payment_method: method,
+        payments: [{ method, amount: lineTotal }],
+        status: 'completee',
+      });
+      // Restaurer le stock si c'est un produit physique
+      if (item.product_id) {
+        const prod = products.find(p => p.id === item.product_id);
+        if (prod) {
+          const newQty = (prod.quantity || 0) + qty;
+          await base44.entities.Product.update(prod.id, { quantity: newQty });
+          await base44.entities.StockMovement.create({
+            product_id: prod.id, product_name: prod.name,
+            type: 'entree', quantity: qty,
+            previous_stock: prod.quantity || 0, new_stock: newQty,
+            reason: `Retour client — ${returnNum} (réf. ${sale.sale_number || ''})`,
+            reference_type: 'retour',
+          });
+        }
+      }
+      return returnNum;
+    },
+    onSuccess: (returnNum) => {
+      qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['recent-sales'] });
+      setLastReturnNum(returnNum);
+      setReturnStep('done');
+    },
+  });
+
+  const createServiceItemMutation = useMutation({
+    mutationFn: (data) => base44.entities.ServiceItem.create(data),
+    onSuccess: (created) => {
+      qc.invalidateQueries({ queryKey: ['service-items'] });
+      setServicePicking(created);
+      setServiceAmount(created.sell_price ? String(created.sell_price) : '');
+      setNewServiceMode(false);
+      setNewServiceForm({ name: '', category_id: '', sell_price: '', cost_price: '' });
+    },
+  });
+
   // Barcode scanner : sur Enter dans le champ recherche, ajouter le produit si match unique ou exact
   const handleSearchKeyDown = (e) => {
     if (e.key !== 'Enter' || !search.trim()) return;
@@ -387,6 +617,12 @@ export default function POS() {
 
   const categories = ['all', ...Object.keys(CATEGORY_LABELS).filter(c => products.some(p => p.category === c && p.quantity > 0))];
   const total = cart.reduce((s, i) => s + i.qty * i.unit_price * (1 - (i.discount || 0) / 100), 0);
+  const ardoiseTotal = cart.filter(i => i.ardoise).reduce((s, i) => s + i.qty * i.unit_price * (1 - (i.discount || 0) / 100), 0);
+  const paidTotal = total - ardoiseTotal;
+  const ardoiseNames = [...new Set([
+    ...clients.map(c => c.full_name).filter(Boolean),
+    ...recentSales.filter(s => s.payment_method === 'ardoise' && s.client_name).map(s => s.client_name),
+  ])].sort();
   const selectedItem = selectedCartIdx !== null ? cart[selectedCartIdx] : null;
 
   return (
@@ -514,7 +750,9 @@ export default function POS() {
                     onClick={() => updateTicket({ selectedCartIdx: idx, numpadBuffer: '' })}
                     className={cn(
                       "px-3 py-2.5 border-b border-border/50 cursor-pointer transition-colors group",
-                      isSelected ? "bg-primary/10 border-l-4 border-l-primary" : "hover:bg-muted/30"
+                      isSelected ? "bg-primary/10 border-l-4 border-l-primary" :
+                      item.ardoise ? "bg-amber-50/60 dark:bg-amber-950/10 border-l-4 border-l-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20" :
+                      "hover:bg-muted/30"
                     )}
                   >
                     <div className="flex justify-between items-start">
@@ -535,7 +773,8 @@ export default function POS() {
                     <div className="flex items-center justify-between mt-0.5">
                       <p className="text-xs text-muted-foreground">
                         {item.qty} × {formatCurrency(item.unit_price)}
-                        {item.discount > 0 && <span className="text-destructive ml-1">({item.discount}% remise)</span>}
+                        {item.discount > 0 && <span className="text-orange-500 font-semibold ml-1">−{item.discount}%</span>}
+                        {item.ardoise && <span className="text-amber-600 font-semibold ml-1.5">👤 {item.ardoise.personName || 'Ardoise'}</span>}
                       </p>
                       {item.category === 'anticasse' && !item.isCustom && (
                         <button
@@ -547,6 +786,103 @@ export default function POS() {
                         </button>
                       )}
                     </div>
+                    {isSelected && (
+                      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-primary/20" onClick={e => e.stopPropagation()}>
+                        <span className="text-[11px] text-muted-foreground font-medium flex-shrink-0">Remise</span>
+                        <div className="flex items-center gap-1 flex-1">
+                          {[5, 10, 15, 20].filter(pct => pct <= maxDiscount).map(pct => (
+                            <button
+                              key={pct}
+                              onClick={e => {
+                                e.stopPropagation();
+                                const newCart = [...cart];
+                                newCart[idx] = { ...newCart[idx], discount: item.discount === pct ? 0 : pct };
+                                updateTicket({ cart: newCart, numpadBuffer: String(item.discount === pct ? 0 : pct) });
+                              }}
+                              className={cn(
+                                "h-7 px-2 rounded text-[11px] font-bold transition-colors flex-1",
+                                item.discount === pct
+                                  ? "bg-orange-500 text-white"
+                                  : "bg-muted/60 text-muted-foreground hover:bg-orange-500/20 hover:text-orange-600"
+                              )}
+                            >
+                              {pct}%
+                            </button>
+                          ))}
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.discount > 0 ? parseFloat((item.discount / 100 * item.unit_price * item.qty).toFixed(3)) : ''}
+                            onChange={e => {
+                              const dtVal = Math.max(0, parseFloat(e.target.value) || 0);
+                              const lineTotal = item.unit_price * item.qty;
+                              const pct = lineTotal > 0 ? Math.min(100, (dtVal / lineTotal) * 100) : 0;
+                              const newCart = [...cart];
+                              newCart[idx] = { ...newCart[idx], discount: parseFloat(pct.toFixed(4)) };
+                              updateTicket({ cart: newCart, numpadBuffer: String(dtVal) });
+                            }}
+                            placeholder="0.000"
+                            className="w-20 h-7 text-center text-xs font-bold border border-border rounded bg-background focus:outline-none focus:ring-1 focus:ring-orange-400 text-foreground"
+                            onClick={e => e.stopPropagation()}
+                          />
+                          <span className="text-[11px] text-muted-foreground font-medium">DT</span>
+                        </div>
+                      </div>
+                    )}
+                    {isSelected && (
+                      <div className="mt-1.5 pt-1.5 border-t border-primary/20" onClick={e => e.stopPropagation()}>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            const newCart = [...cart];
+                            newCart[idx] = { ...newCart[idx], ardoise: newCart[idx].ardoise ? null : { personName: '', comment: '' } };
+                            updateTicket({ cart: newCart });
+                          }}
+                          className={cn(
+                            "flex items-center justify-center gap-1.5 h-7 px-3 rounded text-[11px] font-bold transition-colors w-full",
+                            item.ardoise
+                              ? "bg-amber-500 text-white hover:bg-amber-600"
+                              : "bg-muted/60 text-muted-foreground hover:bg-amber-500/20 hover:text-amber-600"
+                          )}
+                        >
+                          <BookOpen className="h-3 w-3" />
+                          {item.ardoise ? '✓ Sur ardoise (non payé)' : 'Mettre sur ardoise'}
+                        </button>
+                        {item.ardoise && (
+                          <div className="mt-1.5 space-y-1.5">
+                            <div>
+                              <input
+                                value={item.ardoise.personName}
+                                onChange={e => {
+                                  const newCart = [...cart];
+                                  newCart[idx] = { ...newCart[idx], ardoise: { ...newCart[idx].ardoise, personName: e.target.value } };
+                                  updateTicket({ cart: newCart });
+                                }}
+                                onClick={e => e.stopPropagation()}
+                                placeholder="Nom de la personne..."
+                                list={`ardoise-names-${idx}`}
+                                autoComplete="off"
+                                className="w-full h-7 text-xs px-2 border border-amber-300 rounded bg-background focus:outline-none focus:ring-1 focus:ring-amber-400 text-foreground"
+                              />
+                              <datalist id={`ardoise-names-${idx}`}>
+                                {ardoiseNames.map(n => <option key={n} value={n} />)}
+                              </datalist>
+                            </div>
+                            <input
+                              value={item.ardoise.comment}
+                              onChange={e => {
+                                const newCart = [...cart];
+                                newCart[idx] = { ...newCart[idx], ardoise: { ...newCart[idx].ardoise, comment: e.target.value } };
+                                updateTicket({ cart: newCart });
+                              }}
+                              onClick={e => e.stopPropagation()}
+                              placeholder="Commentaire (optionnel)..."
+                              className="w-full h-7 text-xs px-2 border border-amber-200 rounded bg-background focus:outline-none focus:ring-1 focus:ring-amber-300 text-foreground"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })
@@ -561,58 +897,60 @@ export default function POS() {
             </div>
           </div>
 
-          {/* Customer + Réparation + Service — 3 colonnes même ligne */}
+          {/* Client + actions */}
           <div className="border-t border-border relative">
-            <div className="flex items-stretch">
-              {/* Col 1 : Client */}
-              <div className="flex-1 flex items-center gap-1.5 px-2 py-2 border-r border-border min-w-0" style={{width:'33.33%'}}>
-                <div className={cn(
-                  "h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold",
-                  clientName && clientName !== 'Client passager'
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted-foreground/20 text-muted-foreground"
-                )}>
-                  {clientName && clientName !== 'Client passager'
-                    ? clientName.charAt(0).toUpperCase()
-                    : <User className="h-3 w-3" />}
-                </div>
-                <input
-                  ref={clientInputRef}
-                  type="text"
-                  placeholder="Client..."
-                  value={clientInputValue}
-                  onChange={e => {
-                    setClientInputValue(e.target.value);
-                    setShowClientDropdown(true);
-                    if (!e.target.value) updateTicket({ clientName: '', clientPhone: '' });
-                  }}
-                  onFocus={() => setShowClientDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowClientDropdown(false), 150)}
-                  className="flex-1 min-w-0 text-xs bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
-                />
-                {clientName && clientName !== 'Client passager' && (
-                  <button onClick={() => { updateTicket({ clientName: '', clientPhone: '' }); setClientInputValue(''); }} className="text-muted-foreground hover:text-destructive flex-shrink-0">
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
+            {/* Ligne client */}
+            <div className="flex items-center gap-1.5 px-2 py-2 border-b border-border">
+              <div className={cn(
+                "h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold",
+                clientName && clientName !== 'Client passager'
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted-foreground/20 text-muted-foreground"
+              )}>
+                {clientName && clientName !== 'Client passager'
+                  ? clientName.charAt(0).toUpperCase()
+                  : <User className="h-3 w-3" />}
               </div>
+              <input
+                ref={clientInputRef}
+                type="text"
+                placeholder="Client..."
+                value={clientInputValue}
+                onChange={e => {
+                  setClientInputValue(e.target.value);
+                  setShowClientDropdown(true);
+                  if (!e.target.value) updateTicket({ clientName: '', clientPhone: '' });
+                }}
+                onFocus={() => setShowClientDropdown(true)}
+                onBlur={() => setTimeout(() => setShowClientDropdown(false), 150)}
+                className="flex-1 min-w-0 text-xs bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
+              />
+              {clientName && clientName !== 'Client passager' && (
+                <button onClick={() => { updateTicket({ clientName: '', clientPhone: '' }); setClientInputValue(''); }} className="text-muted-foreground hover:text-destructive flex-shrink-0">
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
 
-              {/* Col 2 : Réparation */}
+            {/* Ligne actions : Répar. | Service | Retour */}
+            <div className="flex items-stretch">
               <button
-                onClick={() => { setHistoryTab('repairs'); setHistorySearch(''); setShowHistoryDialog(true); }}
-                className="flex items-center justify-center gap-1 px-2 py-2 text-orange-600 bg-orange-500/5 hover:bg-orange-500/15 transition-colors border-r border-border text-xs font-semibold whitespace-nowrap"
-                style={{width:'33.33%'}}
+                onClick={() => { setRepairSearch(''); setRepairStatusFilter('ouvertes'); setRepairPicking(null); setRepairAmount(''); setNewRepairMode(false); setShowRepairPickerDialog(true); }}
+                className="flex-1 flex items-center justify-center gap-1 px-2 py-2 text-orange-600 bg-orange-500/5 hover:bg-orange-500/15 transition-colors border-r border-border text-xs font-semibold whitespace-nowrap"
               >
                 <Wrench className="h-3.5 w-3.5" /> Répar.
               </button>
-
-              {/* Col 3 : Service */}
               <button
-                onClick={() => { setHistoryTab('services'); setHistorySearch(''); setShowHistoryDialog(true); }}
-                className="flex items-center justify-center gap-1 px-2 py-2 text-blue-600 bg-blue-500/5 hover:bg-blue-500/15 transition-colors text-xs font-semibold whitespace-nowrap"
-                style={{width:'33.33%'}}
+                onClick={() => { setServiceCatFilter('tous'); setServicePicking(null); setServiceAmount(''); setShowServicePickerDialog(true); }}
+                className="flex-1 flex items-center justify-center gap-1 px-2 py-2 text-blue-600 bg-blue-500/5 hover:bg-blue-500/15 transition-colors border-r border-border text-xs font-semibold whitespace-nowrap"
               >
-                <Clock className="h-3.5 w-3.5" /> Service
+                <Tag className="h-3.5 w-3.5" /> Service
+              </button>
+              <button
+                onClick={() => { setReturnSearchQuery(''); setReturnStep('search'); setReturnPicking(null); setReturnQty(1); setReturnMethod('especes'); setLastReturnNum(''); setShowReturnDialog(true); }}
+                className="flex-1 flex items-center justify-center gap-1 px-2 py-2 text-rose-600 bg-rose-500/5 hover:bg-rose-500/15 transition-colors text-xs font-semibold whitespace-nowrap"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Retour
               </button>
             </div>
 
@@ -791,6 +1129,268 @@ export default function POS() {
         </div>
       </div>
 
+      {/* SERVICE PICKER DIALOG */}
+      <Dialog open={showServicePickerDialog} onOpenChange={v => { if (!v) { setShowServicePickerDialog(false); setServicePicking(null); setServiceAmount(''); setNewSvcCatMode(false); setNewSvcCatName(''); setNewServiceMode(false); setNewServiceForm({ name: '', category_id: '', sell_price: '', cost_price: '' }); } }}>
+        <DialogContent className="max-w-xl p-0 overflow-hidden">
+
+          {/* Header */}
+          <DialogHeader className="px-5 pt-5 pb-4 border-b border-border">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              {(servicePicking || newServiceMode) && (
+                <button
+                  onClick={() => {
+                    if (servicePicking) { setServicePicking(null); setServiceAmount(''); }
+                    else { setNewServiceMode(false); setNewServiceForm({ name: '', category_id: '', sell_price: '', cost_price: '' }); }
+                  }}
+                  className="h-9 w-9 flex items-center justify-center rounded-lg bg-muted hover:bg-muted/80 transition-colors mr-1 flex-shrink-0"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+              )}
+              <Tag className="h-4 w-4 text-blue-500 flex-shrink-0" />
+              <span>{servicePicking ? servicePicking.name : newServiceMode ? 'Nouveau service' : 'Choisir un service'}</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* ── ÉTAPE 1 : sélection ── */}
+          {!servicePicking && !newServiceMode && (
+            <div className="flex flex-col" style={{ maxHeight: 'calc(85vh - 76px)' }}>
+
+              {/* Barre catégories */}
+              <div className="px-4 py-3 border-b border-border flex flex-wrap gap-2 items-center">
+                <button
+                  onClick={() => setServiceCatFilter('tous')}
+                  className={`h-10 px-4 rounded-full text-sm font-medium border transition-all ${serviceCatFilter === 'tous' ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/50 text-muted-foreground border-border'}`}
+                >
+                  Toutes
+                </button>
+                {serviceCategories.map(c => (
+                  <button key={c.id} onClick={() => setServiceCatFilter(c.id)}
+                    className={`h-10 px-4 rounded-full text-sm font-medium border transition-all ${serviceCatFilter === c.id ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/50 text-muted-foreground border-border'}`}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+
+                {newSvcCatMode ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      autoFocus
+                      value={newSvcCatName}
+                      onChange={e => setNewSvcCatName(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && newSvcCatName.trim()) createServiceCatMutation.mutate(newSvcCatName.trim());
+                        if (e.key === 'Escape') { setNewSvcCatMode(false); setNewSvcCatName(''); }
+                      }}
+                      placeholder="Nom de la catégorie..."
+                      className="h-10 px-3 rounded-full border border-primary text-sm outline-none bg-background w-44"
+                    />
+                    <button
+                      disabled={!newSvcCatName.trim() || createServiceCatMutation.isPending}
+                      onClick={() => createServiceCatMutation.mutate(newSvcCatName.trim())}
+                      className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-50 flex-shrink-0"
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => { setNewSvcCatMode(false); setNewSvcCatName(''); }}
+                      className="h-10 w-10 rounded-full border border-border flex items-center justify-center hover:bg-muted flex-shrink-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setNewSvcCatMode(true)}
+                    className="h-10 px-4 rounded-full text-sm font-medium border border-dashed border-muted-foreground/40 text-muted-foreground hover:border-primary/60 hover:text-primary transition-all flex items-center gap-1.5"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Catégorie
+                  </button>
+                )}
+              </div>
+
+              {/* Grille services */}
+              <div className="overflow-y-auto p-4">
+                <div className="grid grid-cols-2 gap-3">
+                  {serviceItems
+                    .filter(s => serviceCatFilter === 'tous' || s.category_id === serviceCatFilter)
+                    .map(s => (
+                      <button
+                        key={s.id}
+                        onClick={() => { setServicePicking(s); setServiceAmount(s.sell_price ? String(s.sell_price) : ''); }}
+                        className="flex flex-col items-start gap-2 p-4 min-h-[90px] rounded-xl border border-border bg-card active:scale-[0.97] active:bg-primary/5 transition-all text-left"
+                      >
+                        <span className="text-base font-semibold text-foreground leading-tight">{s.name}</span>
+                        {s.category_name && (
+                          <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">{s.category_name}</span>
+                        )}
+                        <span className={`text-base font-bold mt-auto ${s.sell_price ? 'text-primary' : 'text-muted-foreground text-sm italic'}`}>
+                          {s.sell_price ? formatCurrency(s.sell_price) : 'Prix libre'}
+                        </span>
+                      </button>
+                    ))}
+
+                  {/* Carte + Nouveau service */}
+                  <button
+                    onClick={() => {
+                      setNewServiceForm({ name: '', category_id: serviceCatFilter !== 'tous' ? serviceCatFilter : '', sell_price: '', cost_price: '' });
+                      setNewServiceMode(true);
+                    }}
+                    className="flex flex-col items-center justify-center gap-2 p-4 min-h-[90px] rounded-xl border-2 border-dashed border-muted-foreground/30 text-muted-foreground hover:border-primary/50 hover:text-primary transition-all"
+                  >
+                    <Plus className="h-6 w-6" />
+                    <span className="text-sm font-medium">Nouveau service</span>
+                  </button>
+                </div>
+
+                {serviceItems.filter(s => serviceCatFilter === 'tous' || s.category_id === serviceCatFilter).length === 0 && (
+                  <p className="text-center text-muted-foreground text-sm pt-4 pb-2">
+                    Aucun service dans cette catégorie
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── FORMULAIRE nouveau service ── */}
+          {!servicePicking && newServiceMode && (
+            <div className="p-5 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(85vh - 76px)' }}>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Nom du service *</label>
+                <Input
+                  autoFocus
+                  placeholder="ex : Recharge Djezzy 500 MB..."
+                  value={newServiceForm.name}
+                  onChange={e => setNewServiceForm(f => ({ ...f, name: e.target.value }))}
+                  className="h-12 text-base"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Catégorie</label>
+                <select
+                  value={newServiceForm.category_id}
+                  onChange={e => setNewServiceForm(f => ({ ...f, category_id: e.target.value }))}
+                  className="w-full h-12 rounded-lg border border-border bg-background px-3 text-base text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="">Sans catégorie</option>
+                  {serviceCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">Prix de vente ({settings.currency_symbol || 'DT'})</label>
+                  <Input
+                    type="number" min="0" step="0.01" placeholder="0.00"
+                    value={newServiceForm.sell_price}
+                    onChange={e => setNewServiceForm(f => ({ ...f, sell_price: e.target.value }))}
+                    className="h-12 text-base"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">Coût carte (optionnel)</label>
+                  <Input
+                    type="number" min="0" step="0.01" placeholder="0.00"
+                    value={newServiceForm.cost_price}
+                    onChange={e => setNewServiceForm(f => ({ ...f, cost_price: e.target.value }))}
+                    className="h-12 text-base"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <Button variant="outline" className="flex-1 h-12"
+                  onClick={() => { setNewServiceMode(false); setNewServiceForm({ name: '', category_id: '', sell_price: '', cost_price: '' }); }}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  className="flex-1 h-12 gap-2"
+                  disabled={!newServiceForm.name.trim() || createServiceItemMutation.isPending}
+                  onClick={() => {
+                    const cat = serviceCategories.find(c => c.id === newServiceForm.category_id);
+                    createServiceItemMutation.mutate({
+                      name: newServiceForm.name.trim(),
+                      category_id: newServiceForm.category_id || undefined,
+                      category_name: cat?.name || '',
+                      sell_price: parseFloat(newServiceForm.sell_price) || 0,
+                      cost_price: parseFloat(newServiceForm.cost_price) || 0,
+                    });
+                  }}
+                >
+                  {createServiceItemMutation.isPending ? 'Création...' : <><Plus className="h-4 w-4" /> Créer et sélectionner</>}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* ── ÉTAPE 2 : montant ── */}
+          {servicePicking && (
+            <div className="px-5 py-6 space-y-6">
+              {servicePicking.description && (
+                <p className="text-sm text-muted-foreground">{servicePicking.description}</p>
+              )}
+              <div className="space-y-2">
+                <label className="text-base font-medium">Montant à encaisser</label>
+                <div className="relative">
+                  <Input
+                    type="number" min="0" step="0.01" autoFocus
+                    value={serviceAmount}
+                    onChange={e => setServiceAmount(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && serviceAmount !== '' && parseFloat(serviceAmount) >= 0) {
+                        const customId = `svc_${servicePicking.id}_${Date.now()}`;
+                        const amt = parseFloat(serviceAmount) || 0;
+                        setTickets(prev => prev.map(t => {
+                          if (t.id !== activeTicketId) return t;
+                          const newCart = [...t.cart, { id: customId, name: `🔧 ${servicePicking.name}`, qty: 1, unit_price: amt, discount: 0, isCustom: true, isService: true }];
+                          return { ...t, cart: newCart, selectedCartIdx: newCart.length - 1, numpadBuffer: '' };
+                        }));
+                        setShowServicePickerDialog(false); setServicePicking(null); setServiceAmount('');
+                      }
+                    }}
+                    className="text-3xl font-bold h-16 text-center pr-16"
+                    placeholder="0.00"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xl font-bold text-muted-foreground">
+                    {settings.currency_symbol || 'DT'}
+                  </span>
+                </div>
+                {servicePicking.cost_price > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Coût : {formatCurrency(servicePicking.cost_price)} — Marge :{' '}
+                    <span className="font-semibold text-green-600">{formatCurrency((parseFloat(serviceAmount) || 0) - servicePicking.cost_price)}</span>
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <Button variant="outline" className="flex-1 h-12" onClick={() => { setServicePicking(null); setServiceAmount(''); }}>
+                  Retour
+                </Button>
+                <Button
+                  className="flex-1 h-12 gap-2 text-base"
+                  disabled={serviceAmount === '' || parseFloat(serviceAmount) < 0}
+                  onClick={() => {
+                    const customId = `svc_${servicePicking.id}_${Date.now()}`;
+                    const amt = parseFloat(serviceAmount) || 0;
+                    setTickets(prev => prev.map(t => {
+                      if (t.id !== activeTicketId) return t;
+                      const newCart = [...t.cart, { id: customId, name: `🔧 ${servicePicking.name}`, qty: 1, unit_price: amt, discount: 0, isCustom: true, isService: true }];
+                      return { ...t, cart: newCart, selectedCartIdx: newCart.length - 1, numpadBuffer: '' };
+                    }));
+                    setShowServicePickerDialog(false); setServicePicking(null); setServiceAmount('');
+                  }}
+                >
+                  <Plus className="h-5 w-5" /> Ajouter au ticket
+                </Button>
+              </div>
+            </div>
+          )}
+
+        </DialogContent>
+      </Dialog>
+
       {/* PERTE ANTICASSE DIALOG */}
       <Dialog open={perteDialog.open} onOpenChange={v => !v && setPerteDialog(d => ({ ...d, open: false }))}>
         <DialogContent className="max-w-sm">
@@ -818,6 +1418,521 @@ export default function POS() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* REPAIR PICKER DIALOG */}
+      <Dialog open={showRepairPickerDialog} onOpenChange={v => { if (!v) { setShowRepairPickerDialog(false); setRepairPicking(null); setRepairAmount(''); setNewRepairMode(false); setNewRepairForm({ client_name: '', client_phone: '', device_type: 'telephone', description: '', amount: '' }); } }}>
+        <DialogContent className="max-w-xl p-0 overflow-hidden">
+
+          {/* Header */}
+          <DialogHeader className="px-5 pt-5 pb-4 border-b border-border">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              {(repairPicking || newRepairMode) && (
+                <button
+                  onClick={() => {
+                    if (repairPicking) { setRepairPicking(null); setRepairAmount(''); }
+                    else { setNewRepairMode(false); setNewRepairForm({ client_name: '', client_phone: '', device_type: 'telephone', description: '', amount: '' }); }
+                  }}
+                  className="h-9 w-9 flex items-center justify-center rounded-lg bg-muted hover:bg-muted/80 transition-colors mr-1 flex-shrink-0"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+              )}
+              <Wrench className="h-4 w-4 text-orange-500 flex-shrink-0" />
+              <span>
+                {repairPicking
+                  ? `${repairPicking.client_name} — ${repairPicking.device_brand || ''} ${repairPicking.device_model || ''}`.trim()
+                  : newRepairMode ? 'Nouvelle réparation rapide' : 'Réparations'}
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* ── LISTE réparations ouvertes ── */}
+          {!repairPicking && !newRepairMode && (() => {
+            const openRepairs = repairs
+              .filter(r => r.status !== 'terminee' && r.status !== 'annulee')
+              .filter(r => {
+                if (repairStatusFilter === 'pret') return r.status === 'pret';
+                if (repairStatusFilter === 'en_cours') return r.status !== 'pret' && r.status !== 'reception';
+                if (repairStatusFilter === 'reception') return r.status === 'reception';
+                return true;
+              })
+              .filter(r => {
+                if (!repairSearch) return true;
+                const q = repairSearch.toLowerCase();
+                return r.client_name?.toLowerCase().includes(q) ||
+                  r.client_phone?.includes(q) ||
+                  r.device_brand?.toLowerCase().includes(q) ||
+                  r.device_model?.toLowerCase().includes(q) ||
+                  r.ticket_number?.toLowerCase().includes(q);
+              })
+              .sort((a, b) => {
+                const order = { pret: 0, en_cours: 1, en_attente_pieces: 2, diagnostic: 3, reception: 4 };
+                return (order[a.status] ?? 5) - (order[b.status] ?? 5);
+              });
+
+            return (
+              <div className="flex flex-col" style={{ maxHeight: 'calc(85vh - 76px)' }}>
+                {/* Barre recherche + filtres */}
+                <div className="px-4 pt-3 pb-2 space-y-2 border-b border-border">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <input
+                      autoFocus
+                      value={repairSearch}
+                      onChange={e => setRepairSearch(e.target.value)}
+                      placeholder="Client, appareil, N° ticket..."
+                      className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-background text-sm outline-none focus:ring-1 focus:ring-ring"
+                    />
+                  </div>
+                  <div className="flex gap-2 flex-wrap pb-1">
+                    {[
+                      { id: 'ouvertes', label: 'Toutes ouvertes' },
+                      { id: 'pret', label: '✓ Prêtes' },
+                      { id: 'en_cours', label: 'En cours' },
+                      { id: 'reception', label: 'Réception' },
+                    ].map(f => (
+                      <button key={f.id} onClick={() => setRepairStatusFilter(f.id)}
+                        className={`h-9 px-4 rounded-full text-sm font-medium border transition-all ${repairStatusFilter === f.id ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/50 text-muted-foreground border-border'}`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Cards */}
+                <div className="overflow-y-auto p-3 space-y-2">
+                  {openRepairs.map(r => {
+                    const totalPaid = (r.payments || []).reduce((s, p) => s + (p.amount || 0), 0);
+                    const price = r.final_cost || r.estimated_cost || 0;
+                    const remaining = Math.max(0, price - totalPaid);
+                    const st = STATUS_REPAIR[r.status] || { label: r.status, cls: 'bg-muted text-muted-foreground' };
+                    return (
+                      <button
+                        key={r.id}
+                        onClick={() => { setRepairPicking(r); setRepairAmount(String(remaining || price)); }}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl border border-border bg-card active:scale-[0.98] active:bg-orange-500/5 transition-all text-left"
+                      >
+                        <div className="h-11 w-11 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0 text-base font-bold text-orange-600">
+                          {r.client_name?.[0]?.toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-semibold text-foreground truncate">{r.client_name}</p>
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${st.cls}`}>{st.label}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">
+                            {[r.device_brand, r.device_model].filter(Boolean).join(' ') || DEVICE_TYPES.find(d => d.value === r.device_type)?.label || ''}
+                            {r.ticket_number && <span className="ml-2 opacity-60">#{r.ticket_number}</span>}
+                          </p>
+                          {r.problem_description && <p className="text-xs text-muted-foreground truncate opacity-70">{r.problem_description}</p>}
+                        </div>
+                        <div className="text-right flex-shrink-0 ml-2">
+                          <p className="text-base font-bold text-foreground">{formatCurrency(remaining || price)}</p>
+                          {totalPaid > 0 && <p className="text-[10px] text-green-600">Versé : {formatCurrency(totalPaid)}</p>}
+                        </div>
+                      </button>
+                    );
+                  })}
+
+                  {/* Carte nouvelle réparation rapide */}
+                  <button
+                    onClick={() => setNewRepairMode(true)}
+                    className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-dashed border-muted-foreground/30 text-muted-foreground hover:border-orange-400 hover:text-orange-500 transition-all"
+                  >
+                    <div className="h-11 w-11 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                      <Plus className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">Nouvelle réparation rapide</p>
+                      <p className="text-xs opacity-70">Créer et encaisser sans pré-enregistrement</p>
+                    </div>
+                  </button>
+
+                  {openRepairs.length === 0 && repairSearch && (
+                    <p className="text-center text-sm text-muted-foreground py-6">Aucune réparation trouvée pour "{repairSearch}"</p>
+                  )}
+                  {openRepairs.length === 0 && !repairSearch && repairStatusFilter === 'ouvertes' && (
+                    <p className="text-center text-sm text-muted-foreground py-4">Aucune réparation ouverte</p>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* ── FORMULAIRE nouvelle réparation rapide ── */}
+          {!repairPicking && newRepairMode && (
+            <div className="p-5 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(85vh - 76px)' }}>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5 col-span-2 sm:col-span-1">
+                  <label className="text-sm font-medium">Nom du client *</label>
+                  <Input autoFocus placeholder="Prénom Nom" value={newRepairForm.client_name}
+                    onChange={e => setNewRepairForm(f => ({ ...f, client_name: e.target.value }))}
+                    className="h-12 text-base" />
+                </div>
+                <div className="space-y-1.5 col-span-2 sm:col-span-1">
+                  <label className="text-sm font-medium">Téléphone</label>
+                  <Input placeholder="0X XX XX XX" value={newRepairForm.client_phone}
+                    onChange={e => setNewRepairForm(f => ({ ...f, client_phone: e.target.value }))}
+                    className="h-12 text-base" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Type d'appareil</label>
+                <div className="grid grid-cols-5 gap-2">
+                  {DEVICE_TYPES.map(d => (
+                    <button key={d.value} onClick={() => setNewRepairForm(f => ({ ...f, device_type: d.value }))}
+                      className={`flex flex-col items-center justify-center gap-1 h-16 rounded-xl border-2 text-xs font-medium transition-all ${newRepairForm.device_type === d.value ? 'border-primary bg-primary/5 text-primary' : 'border-border text-muted-foreground hover:border-muted-foreground/50'}`}
+                    >
+                      <span className="text-2xl">{d.icon}</span>
+                      <span>{d.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Problème / Description</label>
+                <Input placeholder="ex : Écran cassé, batterie morte..." value={newRepairForm.description}
+                  onChange={e => setNewRepairForm(f => ({ ...f, description: e.target.value }))}
+                  className="h-12 text-base" />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Montant de la réparation ({settings.currency_symbol || 'DT'})</label>
+                <div className="relative">
+                  <Input type="number" min="0" step="0.01" placeholder="0.00" value={newRepairForm.amount}
+                    onChange={e => setNewRepairForm(f => ({ ...f, amount: e.target.value }))}
+                    className="h-14 text-2xl font-bold text-center pr-14" />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-lg font-bold text-muted-foreground">{settings.currency_symbol || 'DT'}</span>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <Button variant="outline" className="flex-1 h-12"
+                  onClick={() => { setNewRepairMode(false); setNewRepairForm({ client_name: '', client_phone: '', device_type: 'telephone', description: '', amount: '' }); }}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  className="flex-1 h-12 gap-2 bg-orange-600 hover:bg-orange-700 text-white"
+                  disabled={!newRepairForm.client_name.trim() || createQuickRepairMutation.isPending}
+                  onClick={() => createQuickRepairMutation.mutate(newRepairForm)}
+                >
+                  {createQuickRepairMutation.isPending ? 'Création...' : <><Plus className="h-4 w-4" /> Créer et encaisser</>}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* ── ÉTAPE montant ── */}
+          {repairPicking && (() => {
+            const totalPaid = (repairPicking.payments || []).reduce((s, p) => s + (p.amount || 0), 0);
+            const price = repairPicking.final_cost || repairPicking.estimated_cost || 0;
+            const remaining = Math.max(0, price - totalPaid);
+            const st = STATUS_REPAIR[repairPicking.status] || { label: repairPicking.status, cls: 'bg-muted text-muted-foreground' };
+            return (
+              <div className="px-5 py-6 space-y-5">
+                {/* Résumé réparation */}
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/40 border border-border">
+                  <div className="h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0 text-sm font-bold text-orange-600">
+                    {repairPicking.client_name?.[0]?.toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm">{repairPicking.client_name}</p>
+                    <p className="text-xs text-muted-foreground">{[repairPicking.device_brand, repairPicking.device_model].filter(Boolean).join(' ')}</p>
+                    {repairPicking.problem_description && <p className="text-xs text-muted-foreground truncate opacity-70">{repairPicking.problem_description}</p>}
+                  </div>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 ${st.cls}`}>{st.label}</span>
+                </div>
+
+                {totalPaid > 0 && (
+                  <div className="flex justify-between text-sm px-1">
+                    <span className="text-muted-foreground">Total réparation</span>
+                    <span className="font-semibold">{formatCurrency(price)}</span>
+                  </div>
+                )}
+                {totalPaid > 0 && (
+                  <div className="flex justify-between text-sm px-1">
+                    <span className="text-green-600">Déjà versé</span>
+                    <span className="font-semibold text-green-600">− {formatCurrency(totalPaid)}</span>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label className="text-base font-medium">Montant à encaisser</label>
+                  <div className="relative">
+                    <Input type="number" min="0" step="0.01" autoFocus
+                      value={repairAmount}
+                      onChange={e => setRepairAmount(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && repairAmount !== '' && parseFloat(repairAmount) >= 0) {
+                          const customId = `rep_${repairPicking.id}_${Date.now()}`;
+                          const amt = parseFloat(repairAmount) || 0;
+                          const label = `🔧 ${repairPicking.client_name} — ${[repairPicking.device_brand, repairPicking.device_model].filter(Boolean).join(' ') || DEVICE_TYPES.find(d => d.value === repairPicking.device_type)?.label || 'Réparation'}`;
+                          setTickets(prev => prev.map(t => {
+                            if (t.id !== activeTicketId) return t;
+                            const newCart = [...t.cart, { id: customId, name: label, qty: 1, unit_price: amt, discount: 0, isCustom: true, isRepair: true, refId: repairPicking.id, refType: 'repair' }];
+                            return { ...t, cart: newCart, selectedCartIdx: newCart.length - 1, numpadBuffer: '', clientName: t.clientName || repairPicking.client_name, clientPhone: t.clientPhone || repairPicking.client_phone };
+                          }));
+                          setShowRepairPickerDialog(false); setRepairPicking(null); setRepairAmount('');
+                        }
+                      }}
+                      className="text-3xl font-bold h-16 text-center pr-16"
+                      placeholder={remaining > 0 ? String(remaining) : '0.00'}
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xl font-bold text-muted-foreground">{settings.currency_symbol || 'DT'}</span>
+                  </div>
+                  {remaining > 0 && <p className="text-sm text-muted-foreground text-center">Reste à payer : <span className="font-semibold text-orange-600">{formatCurrency(remaining)}</span></p>}
+                </div>
+
+                <div className="flex gap-3">
+                  <Button variant="outline" className="flex-1 h-12" onClick={() => { setRepairPicking(null); setRepairAmount(''); }}>
+                    Retour
+                  </Button>
+                  <Button
+                    className="flex-1 h-12 gap-2 text-base bg-orange-600 hover:bg-orange-700 text-white"
+                    disabled={repairAmount === '' || parseFloat(repairAmount) < 0}
+                    onClick={() => {
+                      const customId = `rep_${repairPicking.id}_${Date.now()}`;
+                      const amt = parseFloat(repairAmount) || 0;
+                      const label = `🔧 ${repairPicking.client_name} — ${[repairPicking.device_brand, repairPicking.device_model].filter(Boolean).join(' ') || DEVICE_TYPES.find(d => d.value === repairPicking.device_type)?.label || 'Réparation'}`;
+                      setTickets(prev => prev.map(t => {
+                        if (t.id !== activeTicketId) return t;
+                        const newCart = [...t.cart, { id: customId, name: label, qty: 1, unit_price: amt, discount: 0, isCustom: true, isRepair: true, refId: repairPicking.id, refType: 'repair' }];
+                        return { ...t, cart: newCart, selectedCartIdx: newCart.length - 1, numpadBuffer: '', clientName: t.clientName || repairPicking.client_name, clientPhone: t.clientPhone || repairPicking.client_phone };
+                      }));
+                      setShowRepairPickerDialog(false); setRepairPicking(null); setRepairAmount('');
+                    }}
+                  >
+                    <Plus className="h-5 w-5" /> Ajouter au ticket
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+
+        </DialogContent>
+      </Dialog>
+
+      {/* RETURN DIALOG */}
+      <Dialog open={showReturnDialog} onOpenChange={v => { if (!v) { setShowReturnDialog(false); setReturnStep('search'); setReturnSearchQuery(''); setReturnPicking(null); setReturnQty(1); setLastReturnNum(''); } }}>
+        <DialogContent className="max-w-lg p-0 overflow-hidden">
+          <DialogHeader className="px-5 pt-5 pb-4 border-b border-border">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              {returnStep === 'confirm' && (
+                <button onClick={() => { setReturnStep('search'); setReturnPicking(null); setReturnQty(1); }}
+                  className="h-9 w-9 flex items-center justify-center rounded-lg bg-muted hover:bg-muted/80 transition-colors mr-1 flex-shrink-0">
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+              )}
+              <RotateCcw className="h-4 w-4 text-rose-500 flex-shrink-0" />
+              <span className="text-rose-600">
+                {returnStep === 'search' ? 'Retour produit — 90 derniers jours' : returnStep === 'confirm' ? 'Confirmer le retour' : 'Retour enregistré'}
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* ── ÉTAPE RECHERCHE ── */}
+          {returnStep === 'search' && (() => {
+            const ninetyDaysAgo = new Date();
+            ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+            const q = returnSearchQuery.toLowerCase().trim();
+            const matches = q.length < 1 ? [] : recentSales
+              .filter(s => (s.type === 'vente' || !s.type) && new Date(s.created_date || s.created_at || 0) >= ninetyDaysAgo)
+              .flatMap(sale => (sale.items || []).map(item => ({ sale, item })))
+              .filter(({ sale, item }) => {
+                const prod = products.find(p => p.id === item.product_id);
+                return (
+                  item.product_name?.toLowerCase().includes(q) ||
+                  sale.sale_number?.toLowerCase().includes(q) ||
+                  sale.client_name?.toLowerCase().includes(q) ||
+                  prod?.barcode?.toLowerCase() === q ||
+                  prod?.sku?.toLowerCase() === q ||
+                  prod?.imei?.toLowerCase() === q
+                );
+              })
+              .slice(0, 20);
+
+            return (
+              <div className="p-4 space-y-3" style={{ maxHeight: 'calc(85vh - 76px)', overflowY: 'auto' }}>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    autoFocus
+                    value={returnSearchQuery}
+                    onChange={e => setReturnSearchQuery(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && matches.length === 1) {
+                        setReturnPicking(matches[0]);
+                        setReturnQty(1);
+                        setReturnStep('confirm');
+                      }
+                    }}
+                    placeholder="Scanner code-barres ou saisir nom / N° vente / client..."
+                    className="w-full h-11 pl-9 pr-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-rose-400 text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+
+                {q.length === 0 && (
+                  <div className="flex flex-col items-center py-8 text-muted-foreground/50 gap-2">
+                    <RotateCcw className="h-10 w-10" />
+                    <p className="text-sm">Scannez ou recherchez un article vendu</p>
+                  </div>
+                )}
+
+                {q.length > 0 && matches.length === 0 && (
+                  <p className="text-center text-sm text-muted-foreground py-6">Aucune vente trouvée pour « {returnSearchQuery} » dans les 90 derniers jours</p>
+                )}
+
+                {matches.length > 0 && (
+                  <div className="space-y-2">
+                    {matches.map(({ sale, item }, i) => {
+                      const lineTotal = item.quantity * item.unit_price * (1 - (item.discount || 0) / 100);
+                      const saleDate = new Date(sale.created_date || sale.created_at || 0).toLocaleDateString('fr-FR');
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => { setReturnPicking({ sale, item }); setReturnQty(1); setReturnStep('confirm'); }}
+                          className="w-full flex items-center gap-3 px-3 py-3 rounded-xl border border-border hover:border-rose-400 hover:bg-rose-50/50 dark:hover:bg-rose-950/20 transition-all text-left group"
+                        >
+                          <div className="h-10 w-10 rounded-full bg-rose-500/10 flex items-center justify-center flex-shrink-0">
+                            <Package className="h-5 w-5 text-rose-500" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold truncate group-hover:text-rose-700">{item.product_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {sale.client_name || 'Client comptoir'} · {saleDate}
+                              {sale.sale_number ? ` · ${sale.sale_number}` : ''}
+                            </p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-sm font-bold">{formatCurrency(lineTotal)}</p>
+                            <p className="text-xs text-muted-foreground">Qté : {item.quantity}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* ── ÉTAPE CONFIRMATION ── */}
+          {returnStep === 'confirm' && returnPicking && (() => {
+            const { sale, item } = returnPicking;
+            const unitPrice = item.unit_price * (1 - (item.discount || 0) / 100);
+            const refundTotal = returnQty * unitPrice;
+            const saleDate = new Date(sale.created_date || sale.created_at || 0).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+            return (
+              <div className="p-5 space-y-5" style={{ maxHeight: 'calc(85vh - 76px)', overflowY: 'auto' }}>
+                {/* Récap article */}
+                <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-1.5">
+                  <p className="font-semibold text-base">{item.product_name}</p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                    <span>Vendu le {saleDate}</span>
+                    {sale.client_name && <span>Client : {sale.client_name}</span>}
+                    {sale.sale_number && <span>N° {sale.sale_number}</span>}
+                  </div>
+                  <div className="flex items-baseline gap-2 pt-1">
+                    <span className="text-sm text-muted-foreground">Prix unitaire :</span>
+                    <span className="font-bold text-foreground">{formatCurrency(unitPrice)}</span>
+                    {item.discount > 0 && <span className="text-xs text-orange-500">(remise {item.discount}%)</span>}
+                  </div>
+                </div>
+
+                {/* Quantité */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Quantité à retourner</label>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => setReturnQty(q => Math.max(1, q - 1))}
+                      className="h-12 w-12 rounded-xl border-2 border-border text-xl font-bold flex items-center justify-center hover:border-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors">−</button>
+                    <span className="flex-1 text-center text-3xl font-bold">{returnQty}</span>
+                    <button onClick={() => setReturnQty(q => Math.min(item.quantity, q + 1))}
+                      className="h-12 w-12 rounded-xl border-2 border-border text-xl font-bold flex items-center justify-center hover:border-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors">+</button>
+                  </div>
+                  <p className="text-xs text-center text-muted-foreground">Max : {item.quantity} unité(s)</p>
+                </div>
+
+                {/* Méthode */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Mode de remboursement</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { value: 'especes', label: '💵 Espèces', desc: 'Cash immédiat' },
+                      { value: 'carte', label: '💳 Carte', desc: 'Crédit CB' },
+                      { value: 'bon_achat', label: '🎫 Bon d\'achat', desc: 'Avoir boutique' },
+                    ].map(m => (
+                      <button key={m.value} onClick={() => setReturnMethod(m.value)}
+                        className={cn(
+                          "flex flex-col items-center justify-center gap-0.5 h-16 rounded-xl border-2 text-xs font-semibold transition-all",
+                          returnMethod === m.value
+                            ? "border-rose-500 bg-rose-50 text-rose-700 dark:bg-rose-950/30"
+                            : "border-border text-muted-foreground hover:border-rose-300"
+                        )}>
+                        <span className="text-lg">{m.label.split(' ')[0]}</span>
+                        <span>{m.label.split(' ').slice(1).join(' ')}</span>
+                        <span className="text-[10px] font-normal opacity-70">{m.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Montant + bouton */}
+                <div className="rounded-xl bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800 p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Montant à rembourser</p>
+                    <p className="text-2xl font-bold text-rose-600">{formatCurrency(refundTotal)}</p>
+                  </div>
+                  <Receipt className="h-8 w-8 text-rose-300" />
+                </div>
+
+                <Button
+                  className="w-full h-13 text-base gap-2 bg-rose-600 hover:bg-rose-700 text-white"
+                  disabled={createReturnMutation.isPending}
+                  onClick={() => createReturnMutation.mutate({ sale, item, qty: returnQty, method: returnMethod })}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  {createReturnMutation.isPending ? 'Traitement...' : `Valider le retour — ${formatCurrency(refundTotal)}`}
+                </Button>
+              </div>
+            );
+          })()}
+
+          {/* ── ÉTAPE SUCCÈS ── */}
+          {returnStep === 'done' && (
+            <div className="p-6 flex flex-col items-center gap-4 text-center">
+              <div className="h-16 w-16 rounded-full bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center">
+                <CheckCircle className="h-8 w-8 text-emerald-500" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold">Retour enregistré !</h3>
+                {lastReturnNum && <p className="text-sm text-muted-foreground mt-1">N° <span className="font-mono font-bold text-foreground">{lastReturnNum}</span></p>}
+              </div>
+              {returnPicking && (() => {
+                const { item } = returnPicking;
+                const unitPrice = item.unit_price * (1 - (item.discount || 0) / 100);
+                const refundTotal = returnQty * unitPrice;
+                const methodLabel = { especes: '💵 Espèces', carte: '💳 Carte', bon_achat: '🎫 Bon d\'achat' }[returnMethod] || returnMethod;
+                return (
+                  <div className="w-full bg-muted/30 rounded-xl p-4 text-left space-y-2">
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Article</span><span className="font-medium truncate max-w-[180px]">{item.product_name}</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Quantité</span><span className="font-medium">{returnQty}</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Mode</span><span className="font-medium">{methodLabel}</span></div>
+                    <div className="flex justify-between font-bold border-t border-border/50 pt-2"><span>Remboursé</span><span className="text-emerald-500">{formatCurrency(refundTotal)}</span></div>
+                  </div>
+                );
+              })()}
+              <Button className="w-full mt-2" onClick={() => { setShowReturnDialog(false); setReturnStep('search'); setReturnSearchQuery(''); setReturnPicking(null); }}>
+                Fermer
+              </Button>
+            </div>
+          )}
+
         </DialogContent>
       </Dialog>
 
@@ -968,41 +2083,82 @@ export default function POS() {
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Paiement — {formatCurrency(total)}</DialogTitle>
+            <DialogTitle>
+              {ardoiseTotal > 0 && paidTotal === 0
+                ? `Ardoise — ${formatCurrency(ardoiseTotal)}`
+                : ardoiseTotal > 0
+                  ? `Paiement ${formatCurrency(paidTotal)} + ardoise ${formatCurrency(ardoiseTotal)}`
+                  : `Paiement — ${formatCurrency(total)}`}
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="rounded-lg bg-muted/30 p-3 space-y-1.5">
-              {cart.map((item, i) => (
-                <div key={i} className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">{item.name} × {item.qty}</span>
-                  <span>{formatCurrency(item.qty * item.unit_price * (1 - (item.discount || 0) / 100))}</span>
+          <div className="space-y-3">
+            {/* Articles payés maintenant */}
+            {paidTotal > 0 && (
+              <div className="rounded-lg bg-muted/30 p-3 space-y-1.5">
+                {cart.filter(i => !i.ardoise).map((item, i) => (
+                  <div key={i} className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">{item.name} × {item.qty}</span>
+                    <span>{formatCurrency(item.qty * item.unit_price * (1 - (item.discount || 0) / 100))}</span>
+                  </div>
+                ))}
+                <div className="border-t border-border/50 pt-1.5 flex justify-between font-bold text-sm">
+                  <span>Payé maintenant</span>
+                  <span className="text-primary">{formatCurrency(paidTotal)}</span>
                 </div>
-              ))}
-              <div className="border-t border-border/50 pt-1.5 flex justify-between font-bold">
-                <span>Total</span>
-                <span className="text-primary">{formatCurrency(total)}</span>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { value: 'especes', label: '💵 Espèces' },
-                { value: 'carte', label: '💳 Carte' },
-                { value: 'virement', label: '🏦 Virement' },
-                { value: 'mixte', label: '🔀 Mixte' },
-              ].map(pm => (
-                <button
-                  key={pm.value}
-                  onClick={() => setPaymentMethod(pm.value)}
-                  className={cn(
-                    "py-2.5 rounded-lg border text-sm font-medium transition-all",
-                    paymentMethod === pm.value ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40"
-                  )}
-                >{pm.label}</button>
-              ))}
-            </div>
+            )}
+
+            {/* Articles sur ardoise */}
+            {ardoiseTotal > 0 && (
+              <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-3 space-y-1.5">
+                <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5 mb-2">
+                  <BookOpen className="h-3 w-3" /> Sur ardoise (non payé)
+                </p>
+                {[...new Set(cart.filter(i => i.ardoise).map(i => i.ardoise.personName?.trim() || 'Non identifié'))].map(name => {
+                  const items = cart.filter(i => i.ardoise && (i.ardoise.personName?.trim() || 'Non identifié') === name);
+                  const personTotal = items.reduce((s, i) => s + i.qty * i.unit_price * (1 - (i.discount || 0) / 100), 0);
+                  return (
+                    <div key={name} className="flex justify-between text-xs">
+                      <span className="text-amber-700 dark:text-amber-400 font-medium">
+                        👤 {name} <span className="font-normal opacity-70">({items.length} art.)</span>
+                      </span>
+                      <span className="font-bold text-amber-700 dark:text-amber-400">{formatCurrency(personTotal)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Mode de paiement — uniquement pour les articles payés */}
+            {paidTotal > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: 'especes', label: '💵 Espèces' },
+                  { value: 'carte', label: '💳 Carte' },
+                  { value: 'virement', label: '🏦 Virement' },
+                  { value: 'mixte', label: '🔀 Mixte' },
+                ].map(pm => (
+                  <button
+                    key={pm.value}
+                    onClick={() => setPaymentMethod(pm.value)}
+                    className={cn(
+                      "py-2.5 rounded-lg border text-sm font-medium transition-all",
+                      paymentMethod === pm.value ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40"
+                    )}
+                  >{pm.label}</button>
+                ))}
+              </div>
+            )}
+
             <Button className="w-full" size="lg" onClick={() => saleMutation.mutate()} disabled={saleMutation.isPending}>
               <CheckCircle className="h-4 w-4 mr-2" />
-              {saleMutation.isPending ? 'Traitement...' : `Valider — ${formatCurrency(total)}`}
+              {saleMutation.isPending
+                ? 'Traitement...'
+                : ardoiseTotal > 0 && paidTotal === 0
+                  ? `Enregistrer ardoise — ${formatCurrency(ardoiseTotal)}`
+                  : ardoiseTotal > 0
+                    ? `Valider ${formatCurrency(paidTotal)} + ardoise`
+                    : `Valider — ${formatCurrency(total)}`}
             </Button>
           </div>
         </DialogContent>

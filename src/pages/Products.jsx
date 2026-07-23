@@ -14,6 +14,7 @@ import { Package, Plus, Search, AlertTriangle, Upload, X, Pencil, Trash2, Shield
 import { cn } from "@/lib/utils";
 import { useAppSettings } from "@/components/settings/SettingsContext";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
+import { useAuth } from "@/lib/AuthContext";
 
 const categories = [
   { value: 'telephone', label: 'Téléphone' },
@@ -61,6 +62,7 @@ const emptyForm = { name: '', sku: '', category: 'telephone', brand: '', model: 
 
 export default function Products() {
   const { formatCurrency, settings } = useAppSettings();
+  const { isResponsableOrAbove } = useAuth();
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -148,7 +150,7 @@ export default function Products() {
       </div>
     )},
     { header: "Catégorie", render: r => <Badge variant="outline" className="text-xs">{categories.find(c => c.value === r.category)?.label || r.category}</Badge> },
-    { header: "Prix achat", render: r => <span className="text-sm">{formatCurrency(r.buy_price || 0)}</span> },
+    ...(isResponsableOrAbove ? [{ header: "Prix achat", render: r => <span className="text-sm">{formatCurrency(r.buy_price || 0)}</span> }] : []),
     { header: "Prix vente", render: r => <span className="text-sm font-medium">{formatCurrency(r.sell_price || 0)}</span> },
     { header: "Stock", render: r => (
       <div className="flex items-center gap-2">
@@ -284,7 +286,7 @@ export default function Products() {
 
             {/* Prix + Stock + État */}
             <div className="grid grid-cols-3 gap-4">
-              <div><Label>Prix achat ({settings.currency_symbol || 'DT'})</Label><Input type="number" value={form.buy_price} onChange={e => setForm({...form, buy_price: parseFloat(e.target.value) || 0})} /></div>
+              {isResponsableOrAbove && <div><Label>Prix achat ({settings.currency_symbol || 'DT'})</Label><Input type="number" value={form.buy_price} onChange={e => setForm({...form, buy_price: parseFloat(e.target.value) || 0})} /></div>}
               <div><Label>Prix vente ({settings.currency_symbol || 'DT'}) *</Label><Input type="number" value={form.sell_price} onChange={e => setForm({...form, sell_price: parseFloat(e.target.value) || 0})} /></div>
               <div><Label>État</Label>
                 <Select value={form.condition} onValueChange={v => setForm({...form, condition: v})}>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import PageHeader from "@/components/ui/PageHeader";
-import { ShoppingBag, Plus, Search, CreditCard, Settings, TrendingUp, Wallet, Trash2, ArrowDownCircle, ArrowUpCircle, RefreshCw, ShoppingCart } from 'lucide-react';
+import { ShoppingBag, Plus, Search, CreditCard, Settings, TrendingUp, Wallet, Trash2, ArrowDownCircle, ArrowUpCircle, RefreshCw, ShoppingCart, X, Tag, Check, Pencil } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format } from 'date-fns';
@@ -37,6 +37,15 @@ export default function ServicesPage() {
   const [dateTo, setDateTo] = useState('');
   const [activeTab, setActiveTab] = useState('ventes');
   const [deleteSaleTarget, setDeleteSaleTarget] = useState(null);
+  // Catégories inline
+  const [catSearch, setCatSearch] = useState('');
+  const [newCatMode, setNewCatMode] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatError, setNewCatError] = useState('');
+  const [deleteCatTarget, setDeleteCatTarget] = useState(null);
+  const [editCatTarget, setEditCatTarget] = useState(null); // { id, name }
+  const newCatInputRef = useRef(null);
+  const editCatInputRef = useRef(null);
 
   const { data: sales = [], isLoading } = useQuery({
     queryKey: ['service-sales'],
@@ -101,6 +110,33 @@ export default function ServicesPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['prepaid-cards'] });
       qc.invalidateQueries({ queryKey: ['card-topups'] });
+    },
+  });
+
+  const createCatMutation = useMutation({
+    mutationFn: (name) => base44.entities.ServiceCategory.create({ name, color: 'blue' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['service-categories'] });
+      setNewCatName('');
+      setNewCatMode(false);
+      setNewCatError('');
+    },
+    onError: (err) => setNewCatError(err.message || 'Erreur'),
+  });
+
+  const deleteCatMutation = useMutation({
+    mutationFn: (id) => base44.entities.ServiceCategory.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['service-categories'] });
+      if (filterCat === deleteCatTarget) setFilterCat('tous');
+    },
+  });
+
+  const updateCatMutation = useMutation({
+    mutationFn: ({ id, name }) => base44.entities.ServiceCategory.update(id, { name }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['service-categories'] });
+      setEditCatTarget(null);
     },
   });
 
@@ -190,6 +226,158 @@ export default function ServicesPage() {
             <div><p className="text-xl font-bold text-orange-500">{totalCardBalance.toFixed(0)} {sym}</p><p className="text-xs text-muted-foreground">Solde total cartes</p></div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* ── Barre catégories inline ── */}
+      <div className="mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              className="pl-8 h-8 text-sm"
+              placeholder="Rechercher une catégorie..."
+              value={catSearch}
+              onChange={e => setCatSearch(e.target.value)}
+            />
+            {catSearch && (
+              <button onClick={() => setCatSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          {!newCatMode ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => { setNewCatMode(true); setTimeout(() => newCatInputRef.current?.focus(), 50); }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {catSearch && !categories.some(c => c.name.toLowerCase() === catSearch.toLowerCase())
+                ? `Créer "${catSearch}"`
+                : 'Nouvelle catégorie'}
+            </Button>
+          ) : (
+            <div className="flex items-center gap-1">
+              <Input
+                ref={newCatInputRef}
+                className="h-8 text-sm w-48"
+                placeholder="Nom de la catégorie..."
+                value={newCatName}
+                onChange={e => { setNewCatName(e.target.value); setNewCatError(''); }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && newCatName.trim()) createCatMutation.mutate(newCatName.trim());
+                  if (e.key === 'Escape') { setNewCatMode(false); setNewCatName(''); setNewCatError(''); }
+                }}
+              />
+              <button
+                className="h-8 w-8 flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                disabled={!newCatName.trim() || createCatMutation.isPending}
+                onClick={() => createCatMutation.mutate(newCatName.trim())}
+              >
+                <Check className="h-3.5 w-3.5" />
+              </button>
+              <button
+                className="h-8 w-8 flex items-center justify-center rounded-md border border-border hover:bg-muted"
+                onClick={() => { setNewCatMode(false); setNewCatName(''); setNewCatError(''); }}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+              {newCatError && <span className="text-xs text-destructive">{newCatError}</span>}
+            </div>
+          )}
+        </div>
+
+        {/* Chips */}
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setFilterCat('tous')}
+            className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-all border ${
+              filterCat === 'tous'
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-muted/50 text-muted-foreground border-border hover:border-primary/50 hover:text-foreground'
+            }`}
+          >
+            <Tag className="h-3 w-3" />
+            Toutes
+            <span className="ml-0.5 opacity-70">({categories.length})</span>
+          </button>
+
+          {categories
+            .filter(c => !catSearch || c.name.toLowerCase().includes(catSearch.toLowerCase()))
+            .map(c => {
+              const count = sales.filter(s => s.category_id === c.id).length;
+              const isActive = filterCat === c.id;
+              const isEditing = editCatTarget?.id === c.id;
+
+              if (isEditing) {
+                return (
+                  <span key={c.id} className="inline-flex items-center gap-1">
+                    <Input
+                      ref={editCatInputRef}
+                      className="h-7 text-xs w-36 px-2"
+                      value={editCatTarget.name}
+                      onChange={e => setEditCatTarget(t => ({ ...t, name: e.target.value }))}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && editCatTarget.name.trim()) updateCatMutation.mutate({ id: c.id, name: editCatTarget.name.trim() });
+                        if (e.key === 'Escape') setEditCatTarget(null);
+                      }}
+                      autoFocus
+                    />
+                    <button
+                      className="h-7 w-7 flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                      disabled={!editCatTarget.name.trim() || updateCatMutation.isPending}
+                      onClick={() => updateCatMutation.mutate({ id: c.id, name: editCatTarget.name.trim() })}
+                    >
+                      <Check className="h-3 w-3" />
+                    </button>
+                    <button
+                      className="h-7 w-7 flex items-center justify-center rounded-md border border-border hover:bg-muted"
+                      onClick={() => setEditCatTarget(null)}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                );
+              }
+
+              return (
+                <span key={c.id} className="group relative inline-flex items-center">
+                  <button
+                    onClick={() => setFilterCat(isActive ? 'tous' : c.id)}
+                    className={`inline-flex items-center gap-1 pl-3 pr-14 py-1 rounded-full text-xs font-medium transition-all border ${
+                      isActive
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted/50 text-muted-foreground border-border hover:border-primary/50 hover:text-foreground'
+                    }`}
+                  >
+                    {c.name}
+                    {count > 0 && <span className="ml-0.5 opacity-70">({count})</span>}
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditCatTarget({ id: c.id, name: c.name }); }}
+                    className="absolute right-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary"
+                    title="Renommer"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setDeleteCatTarget(c.id); }}
+                    className="absolute right-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                    title="Supprimer"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              );
+            })}
+
+          {catSearch && !categories.some(c => c.name.toLowerCase().includes(catSearch.toLowerCase())) && (
+            <span className="text-xs text-muted-foreground italic self-center">
+              Aucune catégorie trouvée — cliquez "+ Créer" pour l'ajouter
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -317,13 +505,6 @@ export default function ServicesPage() {
                     {cards.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <Select value={filterCat} onValueChange={setFilterCat}>
-                  <SelectTrigger className="w-44"><SelectValue placeholder="Catégorie" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tous">Toutes catégories</SelectItem>
-                    {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
                 <Input type="date" className="w-36" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
                 <Input type="date" className="w-36" value={dateTo} onChange={e => setDateTo(e.target.value)} />
               </div>
@@ -424,6 +605,13 @@ export default function ServicesPage() {
         title="Supprimer cette vente ?"
         description="Le solde de la carte sera rétabli. Cette action est irréversible."
         onConfirm={() => { deleteSaleMutation.mutate(deleteSaleTarget); setDeleteSaleTarget(null); }}
+      />
+      <ConfirmDialog
+        open={!!deleteCatTarget}
+        onOpenChange={v => !v && setDeleteCatTarget(null)}
+        title="Supprimer cette catégorie ?"
+        description="Les ventes associées ne seront pas supprimées, mais elles n'auront plus de catégorie."
+        onConfirm={() => { deleteCatMutation.mutate(deleteCatTarget); setDeleteCatTarget(null); }}
       />
     </div>
   );

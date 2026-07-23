@@ -24,7 +24,8 @@ export default function Dashboard() {
   const { data: expenses = [] } = useQuery({ queryKey: ['expenses'], queryFn: () => base44.entities.Expense.list('-created_date', 50) });
 
   const todaySales = sales.filter(s => s.status === 'completee');
-  const totalCA = todaySales.reduce((sum, s) => sum + (s.total || 0), 0);
+  const saleSign = s => s.type === 'retour' ? -1 : 1;
+  const totalCA = todaySales.reduce((sum, s) => sum + saleSign(s) * (s.total || 0), 0);
   const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
   const activeRepairs = repairs.filter(r => !['livre', 'annule'].includes(r.status));
   const lowStockProducts = products.filter(p => p.quantity <= (p.min_stock || 2) && p.is_active !== false);
@@ -35,7 +36,7 @@ export default function Dashboard() {
     const dayStr = format(day, 'yyyy-MM-dd');
     const dayRevenue = todaySales
       .filter(s => s.created_date?.startsWith(dayStr))
-      .reduce((sum, s) => sum + (s.total || 0), 0);
+      .reduce((sum, s) => sum + saleSign(s) * (s.total || 0), 0);
     return { name: format(day, 'EEE', { locale: fr }), revenue: dayRevenue };
   });
 

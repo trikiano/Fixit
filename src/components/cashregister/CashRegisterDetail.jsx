@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { format } from 'date-fns';
-import { ShoppingCart, Package, CreditCard, Banknote, Receipt } from 'lucide-react';
+import { ShoppingCart, Package, CreditCard, Banknote, Receipt, BookOpen } from 'lucide-react';
 import { useAppSettings } from "@/components/settings/SettingsContext";
 
 function fmtDate(d) {
@@ -17,7 +17,7 @@ export default function CashRegisterDetail({ register, onClose }) {
   const { formatCurrency } = useAppSettings();
   const { data: allSales = [], isLoading } = useQuery({
     queryKey: ['sales-all'],
-    queryFn: () => base44.entities.Sale.filter({ status: 'completee' }, '-created_date', 500),
+    queryFn: () => base44.entities.Sale.list('-created_date', 500),
   });
 
   const { data: allExpenses = [] } = useQuery({
@@ -32,7 +32,13 @@ export default function CashRegisterDetail({ register, onClose }) {
   const closeTime = register.closing_date ? new Date(register.closing_date) : (isOpen ? new Date() : new Date(`${regDate}T23:59:59`));
 
   const sales = allSales.filter(s => {
-    if (!s.created_date) return false;
+    if (!s.created_date || s.status === 'non_payee') return false;
+    const d = new Date(s.created_date);
+    return d >= openTime && d <= closeTime;
+  });
+
+  const ardoiseSales = allSales.filter(s => {
+    if (!s.created_date || s.status !== 'non_payee') return false;
     const d = new Date(s.created_date);
     return d >= openTime && d <= closeTime;
   });
@@ -42,17 +48,18 @@ export default function CashRegisterDetail({ register, onClose }) {
     return d;
   });
 
+  const sign = s => s.type === 'retour' ? -1 : 1;
   const totalCash = sales.filter(s => s.payment_method === 'especes' || s.payments?.some(p => p.method === 'especes')).reduce((sum, s) => {
-    if (s.payment_method === 'especes') return sum + (s.total || 0);
+    if (s.payment_method === 'especes') return sum + sign(s) * (s.total || 0);
     const cashPayment = s.payments?.find(p => p.method === 'especes');
-    return sum + (cashPayment?.amount || 0);
+    return sum + sign(s) * (cashPayment?.amount || 0);
   }, 0);
   const totalCard = sales.filter(s => s.payment_method === 'carte' || s.payments?.some(p => p.method === 'carte')).reduce((sum, s) => {
-    if (s.payment_method === 'carte') return sum + (s.total || 0);
+    if (s.payment_method === 'carte') return sum + sign(s) * (s.total || 0);
     const cardPayment = s.payments?.find(p => p.method === 'carte');
-    return sum + (cardPayment?.amount || 0);
+    return sum + sign(s) * (cardPayment?.amount || 0);
   }, 0);
-  const totalSales = sales.reduce((s, v) => s + (v.total || 0), 0);
+  const totalSales = sales.reduce((s, v) => s + sign(v) * (v.total || 0), 0);
   const totalExp = expenses.reduce((s, e) => s + (e.amount || 0), 0);
 
   return (
@@ -161,6 +168,57 @@ export default function CashRegisterDetail({ register, onClose }) {
                 <div key={e.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border/50 bg-muted/20 text-sm">
                   <span>{e.description}</span>
                   <span className="font-medium text-destructive">-{formatCurrency(e.amount || 0)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Ardoises / Non payé */}
+        {ardoiseSales.length > 0 && (
+          <div>
+            <p className="text-sm font-semibold mb-2 flex items-center gap-2 text-amber-600 dark:text-amber-400">
+              <BookOpen className="h-4 w-4" />
+              Ardoises — Non payé ({ardoiseSales.length})
+              <span className="ml-auto font-bold">
+                {formatCurrency(ardoiseSales.reduce((s, v) => s + (v.total || 0), 0))}
+              </span>
+            </p>
+            <div className="space-y-2">
+              {ardoiseSales.map(sale => (
+                <div key={sale.id} className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/10 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-amber-100/50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-mono font-bold text-amber-700 dark:text-amber-400">{sale.sale_number || '-'}</span>
+                      <span className="text-sm font-medium text-amber-800 dark:text-amber-300">👤 {sale.client_name || 'Non identifié'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 font-semibold">NON PAYÉ</span>
+                      <span className="text-sm font-bold text-amber-700 dark:text-amber-400">{formatCurrency(sale.total || 0)}</span>
+                    </div>
+                  </div>
+                  {sale.items?.length > 0 && (
+                    <div className="px-4 py-2">
+                      {sale.items.map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between py-1 text-sm border-b last:border-0 border-amber-100 dark:border-amber-900/50">
+                          <div className="flex items-center gap-2">
+                            <Package className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                            <span className="text-foreground">{item.product_name}</span>
+                            <span className="text-muted-foreground">× {item.quantity}</span>
+                          </div>
+                          <span className="font-medium">{formatCurrency(item.total || 0)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {sale.notes && (
+                    <div className="px-4 pb-2 text-xs text-amber-600 dark:text-amber-400 italic">
+                      💬 {sale.notes}
+                    </div>
+                  )}
+                  <div className="px-4 py-1 text-xs text-muted-foreground bg-amber-50/50 dark:bg-amber-950/5">
+                    {fmtDate(sale.created_date)}
+                  </div>
                 </div>
               ))}
             </div>

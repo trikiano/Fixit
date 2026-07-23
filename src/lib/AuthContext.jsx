@@ -55,6 +55,12 @@ export const AuthProvider = ({ children }) => {
     window.location.href = '/login';
   };
 
+  // 'admin' legacy → traité comme 'superadmin'
+  const effectiveRole = user?.role === 'admin' ? 'superadmin' : (user?.role || null);
+  const isSuperAdmin = effectiveRole === 'superadmin';
+  const isResponsableOrAbove = ['superadmin', 'responsable'].includes(effectiveRole);
+  const can = (...roles) => roles.includes(effectiveRole);
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -63,6 +69,10 @@ export const AuthProvider = ({ children }) => {
       isLoadingPublicSettings,
       authError,
       appPublicSettings,
+      effectiveRole,
+      isSuperAdmin,
+      isResponsableOrAbove,
+      can,
       login,
       logout,
       navigateToLogin,
